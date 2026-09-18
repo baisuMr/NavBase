@@ -411,7 +411,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  /* 自由空间的分配交给时钟组的 margin-top 与滚动提示的 margin-top，时钟与搜索保持紧凑 */
+  justify-content: flex-start;
   width: 100%;
   min-height: 100vh;
   /* 顶部避开 fixed 顶栏（64px），首行内容不被遮挡 */
@@ -520,7 +521,8 @@
   justify-content: center;
   width: 100%;
   max-width: 768px;
-  margin: auto;
+  /* 仅上方吸收自由空间使时钟组居中，底部 0 保证与搜索块紧凑相邻 */
+  margin: auto auto 0;
   text-align: center;
   padding: var(--space-md) var(--space-sm);
 }
@@ -714,6 +716,11 @@
 
 .hero-search-input::placeholder {
   color: rgba(187, 202, 191, 0.6);
+}
+
+/* 聚焦指示由外层 wrap 的边框与辉光承担，屏蔽全局 :focus-visible 的内层绿框 */
+.hero-search-input:focus-visible {
+  outline: none;
 }
 
 .hero-search-clear {
@@ -1019,6 +1026,8 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  /* 吸收上方剩余空间，使提示始终贴近视口底部 */
+  margin-top: auto;
   padding: var(--space-sm) 0;
   color: var(--color-on-surface-variant);
   font-family: var(--font-mono);
