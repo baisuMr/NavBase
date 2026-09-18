@@ -30,10 +30,6 @@
         />
       </div>
       <div style="display:flex;gap:var(--space-sm,8px);">
-        <button class="explorer-add-btn" type="button" @click="$emit('import-bookmarks')">
-          <span class="material-symbols-outlined">upload</span>
-          <span>导入书签</span>
-        </button>
         <button class="explorer-add-btn" type="button" @click="$emit('add-bookmark')">
           <span class="material-symbols-outlined">add</span>
           <span>添加新书签</span>
@@ -63,6 +59,15 @@
       >
         <span>{{ cat.name }}</span>
         <span class="category-pill-count">{{ cat.count }}</span>
+      </button>
+      <button
+        type="button"
+        class="category-pill-add"
+        @click="$emit('add-category')"
+        aria-label="新建分类"
+        title="新建分类"
+      >
+        <span class="material-symbols-outlined">add</span>
       </button>
     </div>
 
@@ -107,7 +112,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['add-bookmark', 'import-bookmarks', 'select-category', 'category-menu', 'menu', 'update:filter-text'])
+defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu', 'update:filter-text'])
 
 const totalCount = computed(() => props.bookmarks.length)
 

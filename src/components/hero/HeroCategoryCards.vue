@@ -7,6 +7,7 @@
       class="hero-category-card"
       :class="cat.accent"
       @click.prevent="$emit('select', cat.id)"
+      @contextmenu="onContextMenu($event, cat)"
     >
       <div class="hero-category-card-left">
         <span class="hero-category-icon">
@@ -27,5 +28,12 @@ defineProps({
   }
 })
 
-defineEmits(['select'])
+const emit = defineEmits(['select', 'category-menu'])
+
+// 「全部」是虚拟卡片不可管理，仅真实分类响应右键菜单
+function onContextMenu(event, cat) {
+  if (cat.id === 'all') return
+  event.preventDefault()
+  emit('category-menu', event, cat)
+}
 </script>
