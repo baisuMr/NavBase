@@ -51,3 +51,34 @@ export function validateCategoryPayload(data) {
   if (!isOptionalNonNegInt(data?.sort_order)) return '排序字段类型不正确';
   return null;
 }
+
+// 头像 dataURL 白名单：仅允许前端压缩后的 png/jpeg/webp
+const IMAGE_DATA_URL_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+// 网站名称长度上限
+const MAX_SITE_NAME_LENGTH = 30;
+// 头像 dataURL 长度上限（128×128 压缩后通常 <40KB，留足余量）
+const MAX_AVATAR_LENGTH = 200 * 1024;
+
+// 站点设置载荷校验：返回错误消息，通过时返回 null
+// 约定：字段值为空字符串表示清除/恢复默认，缺省（undefined）表示不修改
+export function validateSettingsPayload(data) {
+  if (data == null || typeof data !== 'object' || Array.isArray(data)) {
+    return '请求体格式不正确';
+  }
+  if (data.site_name !== undefined) {
+    const name = data.site_name;
+    if (name !== '' && !isNonEmptyString(name)) return '网站名称不能为空白';
+    if (typeof name === 'string' && name.trim().length > MAX_SITE_NAME_LENGTH) {
+      return `网站名称不能超过 ${MAX_SITE_NAME_LENGTH} 个字`;
+    }
+  }
+  if (data.avatar !== undefined) {
+    const avatar = data.avatar;
+    if (typeof avatar !== 'string') return '头像数据类型不正确';
+    if (avatar !== '') {
+      if (!IMAGE_DATA_URL_RE.test(avatar)) return '头像仅支持 png/jpeg/webp 图片';
+      if (avatar.length > MAX_AVATAR_LENGTH) return '头像图片过大，请更换图片后重试';
+    }
+  }
+  return null;
+}

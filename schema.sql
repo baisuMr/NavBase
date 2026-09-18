@@ -40,3 +40,10 @@ INSERT INTO categories (name, icon, color, sort_order)
   SELECT '学习', '📚', '#3B82F6', 4 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '学习');
 INSERT INTO categories (name, icon, color, sort_order)
   SELECT '娱乐', '🎮', '#6366F1', 5 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '娱乐');
+
+-- 站点设置表（KV 结构：site_name / avatar）
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
