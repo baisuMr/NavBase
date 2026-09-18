@@ -37,6 +37,12 @@ pnpm dev:full
 # 构建生产版本
 pnpm build
 
+# 运行单元测试（vitest，覆盖 middleware 校验/协议白名单/书签解析/农历等核心逻辑）
+pnpm test
+
+# 监听模式运行测试
+pnpm test:watch
+
 # 预览构建结果
 pnpm preview
 
