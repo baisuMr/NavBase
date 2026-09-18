@@ -17,7 +17,16 @@ export async function onRequest(context) {
 
   // Pages 中间件对静态资源同样生效；前端页面与 SPA 路由不携带敏感数据，
   // 直接放行（否则未登录时连登录页都无法加载），仅保护 /api/*
-  if (!url.pathname.startsWith('/api/')) {
+  // 注意：函数路由对路径大小写不敏感（实测 /API/ 变体可绕过小写前缀判断），
+  // 因此先归一化再判断——解码百分号编码、合并连续斜杠、小写化，fail-closed
+  let path = url.pathname;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    // 畸形编码路径按原值参与判断
+  }
+  const normalized = path.replace(/\/{2,}/g, '/').toLowerCase();
+  if (!normalized.startsWith('/api/')) {
     return context.next();
   }
 
