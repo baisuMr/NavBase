@@ -7,12 +7,9 @@
     <meta name="robots" content="noindex">
     <meta name="theme-color" content="#121316">
     <title>NavManager · 栞记</title>
-    <!-- 字体走国内可访问的 loli.net 镜像（Google Fonts 在大陆不可达，会导致图标退化为文字）。
-         如需自托管，下载 woff2 后替换这两个链接即可 -->
-    <link rel="preconnect" href="https://fonts.loli.net">
-    <link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
-    <link href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.loli.net/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <!-- 字体已全部本地化（Material Symbols 图标子集 + 正文字体 latin 子集），
+         由 src/styles/fonts.css 提供 @font-face，无任何外部 CDN 依赖，离线可用。
+         新增图标名时需重新生成图标子集（material-symbols-subset.woff2） -->
     <style>
       html, body { margin: 0; padding: 0; background: #121316; }
       body {
