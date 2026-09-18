@@ -63,9 +63,9 @@ src/
 │   ├── bookmark/       # 书签相关组件（BookmarkExplorer, BookmarkCard, BookmarkForm）
 │   ├── category/       # 分类相关组件
 │   ├── hero/           # 首屏组件（HeroClock, HeroSearch, HeroCategoryCards）
-│   └── common/         # 通用组件（ContextMenu, Modal, ColorPicker, EmojiPicker）
+│   └── common/         # 通用组件（ContextMenu, Modal, SettingsPanel, ColorPicker, EmojiPicker）
 ├── composables/        # 组合式函数（业务逻辑复用）
-├── stores/             # Pinia 状态管理
+├── stores/             # Pinia 状态管理（auth / bookmarks / categories / settings）
 ├── api/                # API 调用封装（统一带认证头）
 ├── styles/             # CSS 样式文件
 ├── utils/              # 工具函数（浏览器书签 HTML 解析等）
@@ -75,17 +75,24 @@ functions/              # Cloudflare Functions（API 后端）
 ├── api/
 │   ├── bookmarks/      # 书签 CRUD + 批量导入 API
 │   ├── categories/     # 分类 CRUD API
+│   ├── settings/       # 站点设置 GET/PUT（网站名称、头像）
 │   ├── favicon/        # 获取网站图标 API
 │   └── auth/           # 认证 API
+├── utils/              # 共享校验工具（validate.js）
 └── _middleware.js       # 中间件（Basic Auth 认证，未配置密码时拒绝一切访问）
+
+scripts/
+└── generate-fonts.mjs  # 字体/图标子集本地化生成脚本（新增图标名后重跑）
 ```
 
 ## 核心设计
 
-- **单页面应用**: 主页面 Home.vue 同时具备浏览和管理功能
-- **右键菜单操作**: 分类（分类 pill）和书签（书签卡片）的编辑、删除等操作通过右键菜单触发
+- **单页面应用**: 主页面 Home.vue 同时具备浏览和管理功能，第一屏占满视口高度、第二屏最小视口高度
+- **右键菜单操作**: 分类（分类 pill 与第一屏分类卡片）和书签（书签卡片）的编辑、删除等操作通过右键菜单触发
+- **设置面板**: 顶栏齿轮打开，集中网站名称、头像（前端压缩 128×128）、深浅色切换入口、导入导出、退出登录
+- **站点设置持久化**: 存于 D1 `settings` 表（KV），经 `GET/PUT /api/settings` 读写，空值表示恢复默认
 - **自动获取图标**: 书签的 favicon 通过 `/api/favicon/:domain` 获取（favicon.im、DuckDuckGo等），前端必须走带认证头的 api 封装
-- **导入导出**: 支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条）与 JSON 导出
+- **导入导出**: 在设置面板中进行，支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条、自动去重）与 JSON 导出
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（前后端共同校验）
 - **预设数据**: 分类支持预设的 Emoji 图标和 10 种常用颜色
 - **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Pages Secret（线上），未配置时服务端拒绝一切访问
@@ -95,6 +102,7 @@ functions/              # Cloudflare Functions（API 后端）
 
 - `categories`: id, name, icon (emoji), color, sort_order, created_at, updated_at
 - `bookmarks`: id, title, url, description, category_id, icon_url, sort_order, created_at, updated_at
+- `settings`: key (site_name / avatar), value, updated_at
 
 ## 配置文件
 
