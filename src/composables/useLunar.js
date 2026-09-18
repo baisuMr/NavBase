@@ -1,17 +1,25 @@
-import { Solar, Lunar } from 'lunar-javascript'
-
 /**
  * 农历与周数计算
  * 用法：
  *   const { lunarText, weekOfYear } = useDateInfo()
+ *
+ * lunar-javascript 体积较大（约占 Home 主包 2/3），故通过动态 import
+ * 拆为独立 chunk 按需加载：农历文字稍后异步填充，不影响首屏渲染
  */
+let lunarModulePromise = null
+function loadLunar() {
+  if (!lunarModulePromise) lunarModulePromise = import('lunar-javascript')
+  return lunarModulePromise
+}
+
 export function useDateInfo() {
   /**
    * 当前公历日期对应的农历干支文字
    * 形如："乙巳年 农历四月廿一"
    */
-  function getLunarText(date = new Date()) {
+  async function getLunarText(date = new Date()) {
     try {
+      const { Solar } = await loadLunar()
       const solar = Solar.fromDate(date)
       const lunar = solar.getLunar()
       const yearGanZhi = lunar.getYearInGanZhi() // 乙巳
@@ -66,6 +74,3 @@ export function useDateInfo() {
     getGreeting
   }
 }
-
-// 单独导出，方便单点使用
-export { Lunar, Solar }
