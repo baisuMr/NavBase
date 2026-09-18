@@ -1,0 +1,304 @@
+<template>
+  <Modal title="设置" @close="$emit('close')">
+    <div class="settings">
+      <!-- 网站名称 -->
+      <section class="settings-section">
+        <label class="form-label" for="settings-site-name">网站名称</label>
+        <div class="settings-row">
+          <input
+            id="settings-site-name"
+            v-model="nameInput"
+            type="text"
+            class="input"
+            maxlength="30"
+            placeholder="栞记"
+          />
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="!nameChanged || nameSaving"
+            @click="saveSiteName"
+          >
+            保存
+          </button>
+        </div>
+      </section>
+
+      <!-- 头像 -->
+      <section class="settings-section">
+        <span class="form-label">头像</span>
+        <div class="settings-row">
+          <div class="settings-avatar-preview">
+            <img v-if="settings.avatar" :src="settings.avatar" alt="当前头像" />
+            <span v-else class="material-symbols-outlined">person</span>
+          </div>
+          <div class="settings-avatar-actions">
+            <button type="button" class="btn btn-secondary" :disabled="avatarSaving" @click="triggerAvatarUpload">
+              <span class="material-symbols-outlined" style="font-size:18px;">add_a_photo</span>
+              <span>{{ avatarSaving ? '上传中…' : '上传图片' }}</span>
+            </button>
+            <button
+              v-if="settings.avatar"
+              type="button"
+              class="btn btn-ghost"
+              :disabled="avatarSaving"
+              @click="removeAvatar"
+            >
+              移除
+            </button>
+          </div>
+        </div>
+        <p class="form-hint">支持 png / jpeg / webp，自动裁剪压缩为 128×128。</p>
+        <input
+          ref="avatarInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          style="display:none"
+          @change="handleAvatarFile"
+        />
+      </section>
+
+      <!-- 外观 -->
+      <section class="settings-section">
+        <span class="form-label">外观</span>
+        <div class="settings-theme-toggle" role="group" aria-label="深色浅色模式切换">
+          <button
+            type="button"
+            :class="['settings-theme-option', { active: themePick === 'light' }]"
+            @click="pickTheme('light')"
+          >
+            <span class="material-symbols-outlined">light_mode</span>
+            <span>浅色</span>
+          </button>
+          <button
+            type="button"
+            :class="['settings-theme-option', { active: themePick === 'dark' }]"
+            @click="pickTheme('dark')"
+          >
+            <span class="material-symbols-outlined">dark_mode</span>
+            <span>深色</span>
+          </button>
+        </div>
+        <p class="form-hint">主题切换功能即将上线，当前仅支持深色。</p>
+      </section>
+
+      <!-- 数据管理 -->
+      <section class="settings-section">
+        <span class="form-label">数据管理</span>
+        <div class="settings-data-actions">
+          <button type="button" class="btn btn-secondary" @click="triggerImport">
+            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+            <span>导入书签</span>
+          </button>
+          <button type="button" class="btn btn-secondary" @click="exportBookmarks">
+            <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+            <span>导出书签</span>
+          </button>
+        </div>
+        <p class="form-hint">
+          导入支持 Chrome、Edge、Firefox 等浏览器书签管理器导出的 HTML 文件
+          （Netscape 书签格式）：文件夹会展开为分类，非网页链接自动跳过，重复书签自动去重；
+          导出为 JSON 备份文件。
+        </p>
+        <input
+          ref="importInputRef"
+          type="file"
+          accept=".html,text/html"
+          style="display:none"
+          @change="handleImportFile"
+        />
+      </section>
+
+      <!-- 账号 -->
+      <section class="settings-section settings-section-last">
+        <span class="form-label">账号</span>
+        <div class="settings-row">
+          <span class="settings-username">{{ username }}</span>
+          <button type="button" class="btn btn-danger" @click="handleLogout">
+            <span class="material-symbols-outlined" style="font-size:18px;">logout</span>
+            <span>退出登录</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  </Modal>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+import Modal from './Modal.vue'
+import { useSettingsStore } from '../../stores/settings'
+import { useBookmarks } from '../../composables/useBookmarks'
+import { useCategories } from '../../composables/useCategories'
+import { useAuth } from '../../composables/useAuth'
+import { useToast } from '../../composables/useToast'
+import { parseNetscapeBookmarks } from '../../utils/importBookmarks'
+
+defineEmits(['close'])
+
+const router = useRouter()
+const settings = useSettingsStore()
+const { bookmarks, importBookmarks } = useBookmarks()
+const { categories, createCategory } = useCategories()
+const { username, logout } = useAuth()
+const { success, error: showError, info } = useToast()
+
+// ── 网站名称 ──
+const nameInput = ref(settings.siteName)
+const nameSaving = ref(false)
+const nameChanged = computed(() => nameInput.value.trim() !== settings.siteName)
+
+async function saveSiteName() {
+  nameSaving.value = true
+  try {
+    await settings.updateSettings({ site_name: nameInput.value.trim() })
+    nameInput.value = settings.siteName
+    success(settings.siteName ? '网站名称已更新' : '已恢复默认名称')
+  } catch (err) {
+    showError('保存失败: ' + err.message)
+  } finally {
+    nameSaving.value = false
+  }
+}
+
+// ── 头像 ──
+const avatarInputRef = ref(null)
+const avatarSaving = ref(false)
+
+function triggerAvatarUpload() {
+  avatarInputRef.value?.click()
+}
+
+// 图片居中裁剪压缩为 128×128 dataURL，控制入库体积
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = 128
+      const ctx = canvas.getContext('2d')
+      const side = Math.min(img.width, img.height)
+      ctx.drawImage(
+        img,
+        (img.width - side) / 2, (img.height - side) / 2, side, side,
+        0, 0, 128, 128
+      )
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('图片读取失败'))
+    }
+    img.src = url
+  })
+}
+
+async function handleAvatarFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  avatarSaving.value = true
+  try {
+    const dataUrl = await compressImage(file)
+    await settings.updateSettings({ avatar: dataUrl })
+    success('头像已更新')
+  } catch (err) {
+    showError('头像上传失败: ' + err.message)
+  } finally {
+    avatarSaving.value = false
+  }
+}
+
+async function removeAvatar() {
+  avatarSaving.value = true
+  try {
+    await settings.updateSettings({ avatar: '' })
+    success('头像已移除')
+  } catch (err) {
+    showError('移除失败: ' + err.message)
+  } finally {
+    avatarSaving.value = false
+  }
+}
+
+// ── 外观（主题功能未实现，仅保留入口） ──
+const themePick = ref('dark')
+
+function pickTheme(mode) {
+  themePick.value = mode
+  info('主题切换功能即将上线，敬请期待')
+}
+
+// ── 导入书签 ──
+const importInputRef = ref(null)
+
+function triggerImport() {
+  importInputRef.value?.click()
+}
+
+async function handleImportFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  try {
+    const html = await file.text()
+    const { categories: importCats, roots } = parseNetscapeBookmarks(html)
+
+    if (!importCats.length && !roots.length) {
+      showError('未从文件中解析到任何书签')
+      return
+    }
+
+    // 创建缺失的分类（同名分类自动复用）
+    const catIdByName = new Map(categories.value.map(c => [c.name, c.id]))
+    let newCatCount = 0
+    for (const cat of importCats) {
+      if (catIdByName.has(cat.name)) continue
+      const id = await createCategory({ name: cat.name })
+      catIdByName.set(cat.name, id)
+      newCatCount++
+    }
+
+    const items = [
+      ...roots,
+      ...importCats.flatMap(cat =>
+        cat.links.map(link => ({ ...link, category_id: catIdByName.get(cat.name) }))
+      )
+    ]
+
+    const { count, skipped } = await importBookmarks(items)
+    success(
+      `已导入 ${count} 个书签` +
+      (skipped ? `（跳过 ${skipped} 条重复）` : '') +
+      (newCatCount ? `、新建 ${newCatCount} 个分类` : '')
+    )
+  } catch (err) {
+    showError('导入失败: ' + err.message)
+  }
+}
+
+// ── 导出书签 ──
+function exportBookmarks() {
+  const data = JSON.stringify(bookmarks.value, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `navmanager-bookmarks-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  success('已导出书签')
+}
+
+// ── 退出登录 ──
+function handleLogout() {
+  logout()
+  router.push('/login')
+}
+</script>

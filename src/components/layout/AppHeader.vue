@@ -5,10 +5,7 @@
       <div style="display:flex;align-items:center;gap:var(--space-lg);">
         <a class="app-header-brand" href="#startpage-hero">
           <span class="material-symbols-outlined">bookmark_heart</span>
-          <span class="app-header-brand-text">
-            <span class="app-header-brand-name">Atelier</span>
-            <span class="app-header-brand-tag">栞记</span>
-          </span>
+          <span class="app-header-brand-name">{{ siteName }}</span>
         </a>
 
         <nav class="app-header-nav" aria-label="主导航">
@@ -17,17 +14,16 @@
         </nav>
       </div>
 
-      <!-- 右侧：搜索触发 + 添加 + 头像 -->
+      <!-- 右侧：设置 + 添加 + 头像 -->
       <div class="app-header-actions">
         <button
           type="button"
-          class="app-header-search-trigger"
-          @click="$emit('focus-search')"
-          aria-label="聚焦搜索"
+          class="btn-icon-circle"
+          @click="$emit('open-settings')"
+          aria-label="设置"
+          title="设置"
         >
-          <span class="material-symbols-outlined">search</span>
-          <span>Search marks &amp; web...</span>
-          <kbd>Ctrl K</kbd>
+          <span class="material-symbols-outlined" style="font-size:20px;">settings</span>
         </button>
 
         <button
@@ -40,21 +36,20 @@
           <span class="material-symbols-outlined" style="font-size:20px;">add</span>
         </button>
 
-        <button
-          type="button"
-          class="app-header-avatar"
-          @click="$emit('logout')"
-          aria-label="退出登录"
-          :title="`退出登录 (${username})`"
-        >
-          <span class="material-symbols-outlined">person</span>
-        </button>
+        <!-- 头像仅作展示，退出登录在设置面板中 -->
+        <div class="app-header-avatar" :title="username">
+          <img v-if="avatar" :src="avatar" alt="头像" />
+          <span v-else class="material-symbols-outlined">person</span>
+        </div>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useSettingsStore } from '../../stores/settings'
+
 defineProps({
   username: {
     type: String,
@@ -62,5 +57,9 @@ defineProps({
   }
 })
 
-defineEmits(['focus-search', 'add-bookmark', 'logout'])
+defineEmits(['open-settings', 'add-bookmark'])
+
+const settings = useSettingsStore()
+const siteName = computed(() => settings.displayName)
+const avatar = computed(() => settings.avatar)
 </script>

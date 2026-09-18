@@ -8,13 +8,13 @@
             <span class="material-symbols-outlined">bookmarks</span>
           </div>
           <h1 class="login-brand-title">欢迎登录</h1>
-          <p class="login-brand-sub">登录您的 Atelier 栞记空间</p>
+          <p class="login-brand-sub">登录您的栞记空间</p>
         </div>
 
         <!-- 登录表单 -->
         <form class="login-form" @submit.prevent="handleLogin">
           <div class="login-input-wrap">
-            <label class="form-label" for="login-username">账号 / 邮箱</label>
+            <label class="form-label" for="login-username">账号</label>
             <div class="login-input-inner">
               <span class="login-input-icon">
                 <span class="material-symbols-outlined">alternate_email</span>
@@ -32,7 +32,7 @@
           </div>
 
           <div class="login-input-wrap">
-            <label class="form-label" for="login-password">密匙 / 密码</label>
+            <label class="form-label" for="login-password">密码</label>
             <div class="login-input-inner">
               <span class="login-input-icon">
                 <span class="material-symbols-outlined">lock</span>
@@ -85,7 +85,7 @@
 
     <div class="login-footer">
       <span style="font-family:var(--font-mono);font-size:var(--fs-label-sm);opacity:0.6;letter-spacing:0.04em;">
-        Atelier Marks · 栞记
+        栞记
       </span>
     </div>
   </div>

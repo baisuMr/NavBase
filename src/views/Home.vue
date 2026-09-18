@@ -3,9 +3,8 @@
     <!-- 顶栏 -->
     <AppHeader
       :username="username"
-      @focus-search="focusSearch"
+      @open-settings="settingsModal.visible = true"
       @add-bookmark="showBookmarkForm()"
-      @logout="handleLogout"
     />
 
     <!-- 主区域 -->
@@ -45,6 +44,7 @@
         <HeroCategoryCards
           :categories="heroCategories"
           @select="scrollToCategory"
+          @category-menu="showCategoryMenu"
         />
 
         <!-- 滚动提示 -->
@@ -62,7 +62,7 @@
         :filter-text="filterText"
         @update:filter-text="filterText = $event"
         @add-bookmark="showBookmarkForm()"
-        @import-bookmarks="triggerImport"
+        @add-category="showCategoryForm()"
         @select-category="onSelectCategory"
         @category-menu="showCategoryMenu"
         @menu="showBookmarkMenu"
@@ -85,7 +85,6 @@
         </div>
         <div class="app-footer-links">
           <a href="#" @click.prevent="showCategoryForm()">分类管理</a>
-          <a href="#" @click.prevent="exportBookmarks">导出</a>
         </div>
       </div>
     </footer>
@@ -131,13 +130,10 @@
       />
     </Modal>
 
-    <!-- 导入书签的隐藏文件选择框 -->
-    <input
-      ref="importInputRef"
-      type="file"
-      accept=".html,text/html"
-      style="display:none"
-      @change="handleImportFile"
+    <!-- 设置面板 -->
+    <SettingsPanel
+      v-if="settingsModal.visible"
+      @close="settingsModal.visible = false"
     />
 
     <!-- Toast -->
@@ -152,7 +148,6 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 
 import AppHeader from '../components/layout/AppHeader.vue'
 import HeroClock from '../components/hero/HeroClock.vue'
@@ -163,6 +158,7 @@ import BookmarkForm from '../components/bookmark/BookmarkForm.vue'
 import CategoryForm from '../components/category/CategoryForm.vue'
 import ContextMenu from '../components/common/ContextMenu.vue'
 import Modal from '../components/common/Modal.vue'
+import SettingsPanel from '../components/common/SettingsPanel.vue'
 import ToastMessage from '../components/common/ToastMessage.vue'
 
 import { useBookmarks } from '../composables/useBookmarks'
@@ -172,9 +168,9 @@ import { useContextMenu } from '../composables/useContextMenu'
 import { useKeyboard } from '../composables/useKeyboard'
 import { useToast } from '../composables/useToast'
 import { useDateInfo } from '../composables/useLunar'
-import { parseNetscapeBookmarks } from '../utils/importBookmarks'
+import { useSettingsStore } from '../stores/settings'
 
-const router = useRouter()
+const settingsStore = useSettingsStore()
 
 // ── 预设数据 ──
 const presetColors = [
@@ -202,22 +198,22 @@ const presetEmojis = [
 const ICON_FALLBACK = 'folder'
 
 // ── 组合式函数 ──
-const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, deleteBookmark, importBookmarks } = useBookmarks()
+const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, deleteBookmark } = useBookmarks()
 const { categories, fetchCategories, createCategory, updateCategory, deleteCategory } = useCategories()
-const { username, logout } = useAuth()
+const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
 const { toast, showToast, hideToast, success, error: showError } = useToast()
 const { getGreeting } = useDateInfo()
 
 // ── 本地状态 ──
 const heroSearchRef = ref(null)
-const importInputRef = ref(null)
 const activeCategory = ref('all')
 const filterText = ref('')
 const greeting = ref(getGreeting())
 
 const categoryModal = ref({ visible: false, data: null, loading: false })
 const bookmarkModal = ref({ visible: false, data: null, loading: false })
+const settingsModal = ref({ visible: false })
 
 // ── 计算属性 ──
 
@@ -309,6 +305,7 @@ useKeyboard({
   close: () => {
     categoryModal.value.visible = false
     bookmarkModal.value.visible = false
+    settingsModal.value.visible = false
     hideContextMenu()
   }
 })
@@ -324,11 +321,6 @@ function onSelectCategory(id) {
   activeCategory.value = id
   const el = document.getElementById('explorer-section')
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function focusSearch() {
-  heroSearchRef.value?.focus()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // ── 右键菜单 ──
@@ -434,75 +426,11 @@ async function handleBookmarkSubmit(formData) {
   }
 }
 
-function handleLogout() {
-  logout()
-  router.push('/login')
-}
-
-function exportBookmarks() {
-  const data = JSON.stringify(bookmarks.value, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `navmanager-bookmarks-${Date.now()}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-  success('已导出书签')
-}
-
-// ── 导入书签 ──
-function triggerImport() {
-  importInputRef.value?.click()
-}
-
-async function handleImportFile(event) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-
-  try {
-    const html = await file.text()
-    const { categories: importCats, roots } = parseNetscapeBookmarks(html)
-
-    if (!importCats.length && !roots.length) {
-      showError('未从文件中解析到任何书签')
-      return
-    }
-
-    // 创建缺失的分类（同名分类自动复用）
-    const catIdByName = new Map(categories.value.map(c => [c.name, c.id]))
-    let newCatCount = 0
-    for (const cat of importCats) {
-      if (catIdByName.has(cat.name)) continue
-      const id = await createCategory({ name: cat.name })
-      catIdByName.set(cat.name, id)
-      newCatCount++
-    }
-
-    const items = [
-      ...roots,
-      ...importCats.flatMap(cat =>
-        cat.links.map(link => ({ ...link, category_id: catIdByName.get(cat.name) }))
-      )
-    ]
-
-    const { count, skipped } = await importBookmarks(items)
-    success(
-      `已导入 ${count} 个书签` +
-      (skipped ? `（跳过 ${skipped} 条重复）` : '') +
-      (newCatCount ? `、新建 ${newCatCount} 个分类` : '')
-    )
-  } catch (err) {
-    showError('导入失败: ' + err.message)
-  }
-}
-
 // ── 生命周期 ──
 onMounted(async () => {
   tick()
   timer = setInterval(tick, 60000)
-  await Promise.all([fetchBookmarks(), fetchCategories()])
+  await Promise.all([fetchBookmarks(), fetchCategories(), settingsStore.fetchSettings()])
 })
 
 onUnmounted(() => {
