@@ -1,20 +1,42 @@
 // POST /api/bookmarks/batch - 批量创建书签（用于导入）
 // 说明：Pages Functions 静态路由优先于 [id] 动态路由，此文件不会与书签详情接口冲突
+import { validateBookmarkPayload } from '../../utils/validate.js';
+
 const MAX_BATCH_SIZE = 500;
 const CHUNK_SIZE = 50;
+// D1 单条语句 bind 参数上限为 100，留余量分块做 IN 查询
+const QUERY_CHUNK_SIZE = 90;
 
-function validateBookmark(item) {
-  if (!item || !item.title || !item.url) return '标题和URL不能为空';
-  let parsed;
-  try {
-    parsed = new URL(item.url);
-  } catch {
-    return 'URL格式不正确';
+// 供单元测试直接复用协议/字段校验逻辑
+export function validateBookmark(item) {
+  return validateBookmarkPayload(item);
+}
+
+// 按 url 字面值去重（保留首条）；比对库内已有书签，跳过重复
+async function dedupe(env, items) {
+  const seen = new Set();
+  const batchUnique = [];
+  for (const item of items) {
+    if (seen.has(item.url)) continue;
+    seen.add(item.url);
+    batchUnique.push(item);
   }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    return '仅支持 http/https 链接';
+
+  const existing = new Set();
+  const urls = batchUnique.map(i => i.url);
+  for (let i = 0; i < urls.length; i += QUERY_CHUNK_SIZE) {
+    const slice = urls.slice(i, i + QUERY_CHUNK_SIZE);
+    const placeholders = slice.map(() => '?').join(',');
+    const { results } = await env.DB.prepare(
+      `SELECT url FROM bookmarks WHERE url IN (${placeholders})`
+    ).bind(...slice).all();
+    for (const row of results) existing.add(row.url);
   }
-  return null;
+
+  return {
+    toInsert: batchUnique.filter(i => !existing.has(i.url)),
+    skipped: items.length - batchUnique.filter(i => !existing.has(i.url)).length
+  };
 }
 
 export async function onRequest(context) {
@@ -53,15 +75,18 @@ export async function onRequest(context) {
       }
     }
 
+    // 批内 + 库内双重去重，避免重复导入产生冗余书签
+    const { toInsert, skipped } = await dedupe(env, items);
+
     // D1 单次 batch 有语句数限制，分块提交
     let count = 0;
-    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-      const chunk = items.slice(i, i + CHUNK_SIZE);
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
       const stmts = chunk.map(item =>
         env.DB.prepare(
           'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
         ).bind(
-          item.title,
+          item.title.trim(),
           item.url,
           item.description || '',
           item.category_id || null,
@@ -73,7 +98,7 @@ export async function onRequest(context) {
       count += chunk.length;
     }
 
-    return Response.json({ success: true, count }, { headers });
+    return Response.json({ success: true, count, skipped }, { headers });
   } catch (error) {
     console.error('Batch import error:', error);
     return Response.json({ error: '服务器错误' }, { status: 500, headers });

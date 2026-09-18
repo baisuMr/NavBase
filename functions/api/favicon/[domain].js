@@ -30,23 +30,21 @@ export async function onRequest(context) {
     `https://${domain}/favicon.ico`
   ];
 
-  // 依次尝试各个源
-  for (const url of sources) {
-    try {
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(3000) // 3秒超时
-      });
+  // 并发探测各源，取最先成功的一个（串行最坏 4×3s，并发上限 3s）
+  const attempts = sources.map(async url => {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(3000) // 3秒超时
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return url;
+  });
 
-      if (response.ok) {
-        return Response.json({ url }, { headers });
-      }
-    } catch {
-      // 继续尝试下一个源
-      continue;
-    }
+  try {
+    const url = await Promise.any(attempts);
+    return Response.json({ url }, { headers });
+  } catch {
+    // 所有源都失败，返回null
+    return Response.json({ url: null }, { headers });
   }
-
-  // 所有源都失败，返回null
-  return Response.json({ url: null }, { headers });
 }

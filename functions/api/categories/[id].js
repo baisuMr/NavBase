@@ -1,6 +1,8 @@
 // GET /api/categories/:id - 获取单个分类
 // PUT /api/categories/:id - 更新分类
 // DELETE /api/categories/:id - 删除分类
+import { validateCategoryPayload } from '../../utils/validate.js';
+
 export async function onRequest(context) {
   const { request, env, params } = context;
   const { id } = params;
@@ -38,14 +40,11 @@ export async function onRequest(context) {
     // PUT - 更新分类
     if (request.method === 'PUT') {
       const data = await request.json();
-      const { name, icon, color, sort_order } = data;
-
-      if (!name) {
-        return Response.json(
-          { error: '分类名称不能为空' },
-          { status: 400, headers }
-        );
+      const err = validateCategoryPayload(data);
+      if (err) {
+        return Response.json({ error: err }, { status: 400, headers });
       }
+      const { name, icon, color, sort_order } = data;
 
       // 检查分类是否存在
       const existing = await env.DB.prepare(
@@ -61,7 +60,7 @@ export async function onRequest(context) {
 
       await env.DB.prepare(
         'UPDATE categories SET name = ?, icon = ?, color = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).bind(name, icon || '📁', color || '#10b981', sort_order || 0, id).run();
+      ).bind(name.trim(), icon || '📁', color || '#10b981', sort_order || 0, id).run();
 
       return Response.json({ success: true }, { headers });
     }

@@ -1,5 +1,7 @@
 // GET /api/bookmarks - 获取所有书签
 // POST /api/bookmarks - 创建书签
+import { validateBookmarkPayload } from '../../utils/validate.js';
+
 export async function onRequest(context) {
   const { request, env } = context;
 
@@ -32,36 +34,16 @@ export async function onRequest(context) {
     // POST - 创建书签
     if (request.method === 'POST') {
       const data = await request.json();
+      const err = validateBookmarkPayload(data);
+      if (err) {
+        return Response.json({ error: err }, { status: 400, headers });
+      }
       const { title, url, description, category_id, icon_url, sort_order } = data;
-
-      if (!title || !url) {
-        return Response.json(
-          { error: '标题和URL不能为空' },
-          { status: 400, headers }
-        );
-      }
-
-      // 验证URL格式，仅允许 http/https（拦截 javascript:、data: 等协议）
-      let parsed;
-      try {
-        parsed = new URL(url);
-      } catch {
-        return Response.json(
-          { error: 'URL格式不正确' },
-          { status: 400, headers }
-        );
-      }
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return Response.json(
-          { error: '仅支持 http/https 链接' },
-          { status: 400, headers }
-        );
-      }
 
       const result = await env.DB.prepare(
         'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
       ).bind(
-        title,
+        title.trim(),
         url,
         description || '',
         category_id || null,

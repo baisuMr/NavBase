@@ -1,5 +1,7 @@
 // GET /api/categories - 获取所有分类
 // POST /api/categories - 创建分类
+import { validateCategoryPayload } from '../../utils/validate.js';
+
 export async function onRequest(context) {
   const { request, env } = context;
 
@@ -29,18 +31,15 @@ export async function onRequest(context) {
     // POST - 创建分类
     if (request.method === 'POST') {
       const data = await request.json();
-      const { name, icon, color, sort_order } = data;
-
-      if (!name) {
-        return Response.json(
-          { error: '分类名称不能为空' },
-          { status: 400, headers }
-        );
+      const err = validateCategoryPayload(data);
+      if (err) {
+        return Response.json({ error: err }, { status: 400, headers });
       }
+      const { name, icon, color, sort_order } = data;
 
       const result = await env.DB.prepare(
         'INSERT INTO categories (name, icon, color, sort_order) VALUES (?, ?, ?, ?)'
-      ).bind(name, icon || '📁', color || '#10b981', sort_order || 0).run();
+      ).bind(name.trim(), icon || '📁', color || '#10b981', sort_order || 0).run();
 
       return Response.json(
         { id: result.meta.last_row_id, success: true },

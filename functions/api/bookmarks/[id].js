@@ -1,6 +1,8 @@
 // GET /api/bookmarks/:id - 获取单个书签
 // PUT /api/bookmarks/:id - 更新书签
 // DELETE /api/bookmarks/:id - 删除书签
+import { validateBookmarkPayload } from '../../utils/validate.js';
+
 export async function onRequest(context) {
   const { request, env, params } = context;
   const { id } = params;
@@ -41,31 +43,11 @@ export async function onRequest(context) {
     // PUT - 更新书签
     if (request.method === 'PUT') {
       const data = await request.json();
+      const err = validateBookmarkPayload(data);
+      if (err) {
+        return Response.json({ error: err }, { status: 400, headers });
+      }
       const { title, url, description, category_id, icon_url, sort_order } = data;
-
-      if (!title || !url) {
-        return Response.json(
-          { error: '标题和URL不能为空' },
-          { status: 400, headers }
-        );
-      }
-
-      // 验证URL格式，仅允许 http/https（拦截 javascript:、data: 等协议）
-      let parsed;
-      try {
-        parsed = new URL(url);
-      } catch {
-        return Response.json(
-          { error: 'URL格式不正确' },
-          { status: 400, headers }
-        );
-      }
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return Response.json(
-          { error: '仅支持 http/https 链接' },
-          { status: 400, headers }
-        );
-      }
 
       // 检查书签是否存在
       const existing = await env.DB.prepare(
@@ -82,7 +64,7 @@ export async function onRequest(context) {
       await env.DB.prepare(
         'UPDATE bookmarks SET title = ?, url = ?, description = ?, category_id = ?, icon_url = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
       ).bind(
-        title,
+        title.trim(),
         url,
         description || '',
         category_id || null,

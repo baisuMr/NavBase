@@ -6,6 +6,12 @@ function jsonResponse(body, status) {
   });
 }
 
+// 简易防爆破：所有认证失败路径统一延迟后再返回，拉高直接对 API 爆破凭据的成本
+// （更完整的限速可配合 Cloudflare WAF 速率限制规则）
+function bruteDelay() {
+  return new Promise(resolve => setTimeout(resolve, 800));
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -45,6 +51,7 @@ export async function onRequest(context) {
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
+    await bruteDelay();
     return jsonResponse({ error: '未授权访问', code: 'UNAUTHORIZED' }, 401);
   }
 
@@ -56,6 +63,7 @@ export async function onRequest(context) {
     const password = sep === -1 ? '' : decoded.slice(sep + 1);
 
     if (username !== adminUsername || password !== env.ADMIN_PASSWORD) {
+      await bruteDelay();
       return jsonResponse({ error: '用户名或密码错误', code: 'INVALID_CREDENTIALS' }, 401);
     }
 
@@ -63,6 +71,7 @@ export async function onRequest(context) {
     return context.next();
   } catch (error) {
     console.error('Auth error:', error);
+    await bruteDelay();
     return jsonResponse({ error: '认证失败', code: 'AUTH_ERROR' }, 401);
   }
 }

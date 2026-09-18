@@ -42,11 +42,11 @@ export const useBookmarksStore = defineStore('bookmarks', {
       await this.fetchBookmarks()
     },
 
-    // 批量导入书签，返回导入数量
+    // 批量导入书签，返回 { count, skipped }（skipped 为重复跳过数）
     async importBookmarks(items) {
-      const { count } = await bookmarksApi.importMany(items)
+      const data = await bookmarksApi.importMany(items)
       await this.fetchBookmarks()
-      return count
+      return { count: data.count, skipped: data.skipped || 0 }
     }
   }
 })

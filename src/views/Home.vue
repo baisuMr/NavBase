@@ -487,8 +487,12 @@ async function handleImportFile(event) {
       )
     ]
 
-    const count = await importBookmarks(items)
-    success(`已导入 ${count} 个书签` + (newCatCount ? `、新建 ${newCatCount} 个分类` : ''))
+    const { count, skipped } = await importBookmarks(items)
+    success(
+      `已导入 ${count} 个书签` +
+      (skipped ? `（跳过 ${skipped} 条重复）` : '') +
+      (newCatCount ? `、新建 ${newCatCount} 个分类` : '')
+    )
   } catch (err) {
     showError('导入失败: ' + err.message)
   }
