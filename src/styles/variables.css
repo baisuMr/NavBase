@@ -1,0 +1,131 @@
+:root {
+  /* ── Stitch 设计系统：Quiet Luxury Minimalism + Frosted Glassmorphism ── */
+
+  /* Surface — 深色玻璃底色 */
+  --color-surface: #121316;
+  --color-surface-dim: #121316;
+  --color-surface-bright: #38393c;
+  --color-surface-container-lowest: #0d0e11;
+  --color-surface-container-low: #1b1b1f;
+  --color-surface-container: #1f1f23;
+  --color-surface-container-high: #292a2d;
+  --color-surface-container-highest: #343538;
+  --color-surface-variant: #343538;
+
+  /* On-Surface — 文字层级 */
+  --color-on-surface: #e3e2e6;
+  --color-on-surface-variant: #bbcabf;
+  --color-inverse-surface: #e3e2e6;
+  --color-inverse-on-surface: #2f3034;
+
+  /* Primary — Emerald Verdant */
+  --color-primary: #4edea3;
+  --color-primary-container: #10b981;
+  --color-on-primary: #003824;
+  --color-on-primary-container: #00422b;
+  --color-inverse-primary: #006c49;
+  --color-primary-fixed: #6ffbbe;
+  --color-primary-fixed-dim: #4edea3;
+  --color-surface-tint: #4edea3;
+
+  /* Secondary — Indigo Iris */
+  --color-secondary: #c0c1ff;
+  --color-secondary-container: #3131c0;
+  --color-on-secondary: #1000a9;
+  --color-on-secondary-container: #b0b2ff;
+
+  /* Tertiary — Amber Lumina */
+  --color-tertiary: #ffb95f;
+  --color-tertiary-container: #e29100;
+  --color-on-tertiary: #472a00;
+  --color-on-tertiary-container: #523200;
+
+  /* Outline */
+  --color-outline: #86948a;
+  --color-outline-variant: #3c4a42;
+
+  /* Error */
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+
+  /* 语义色 */
+  --color-success: #4edea3;
+  --color-danger: #ffb4ab;
+  --color-warning: #ffb95f;
+  --color-info: #c0c1ff;
+
+  /* 文字透明度层级 */
+  --text-primary: rgba(255, 255, 255, 0.94);
+  --text-secondary: rgba(240, 243, 246, 0.62);
+  --text-muted: rgba(240, 243, 246, 0.38);
+
+  /* 玻璃面板 */
+  --glass-bg: rgba(26, 28, 35, 0.55);
+  --glass-bg-hover: rgba(38, 41, 51, 0.70);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+  --backdrop-blur: blur(20px) saturate(140%);
+  --backdrop-blur-strong: blur(36px) saturate(160%);
+
+  /* 边框 */
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color-strong: rgba(255, 255, 255, 0.16);
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 9999px;
+
+  /* 阴影 — Stitch 三级深度 */
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.5), 0 0 24px -2px rgba(16, 185, 129, 0.12);
+  --shadow-modal: 0 24px 64px -8px rgba(0, 0, 0, 0.75);
+  --shadow-glow-emerald: 0 0 16px rgba(78, 222, 163, 0.3);
+  --shadow-header: 0 4px 24px rgba(0, 0, 0, 0.2);
+
+  /* 间距 */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --margin: 1.5rem;
+  --margin-desktop: 3rem;
+  --gutter: 1.25rem;
+  --gutter-desktop: 1.5rem;
+
+  /* 字体 */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  --font-icon: 'Material Symbols Outlined';
+
+  /* 字号 */
+  --fs-display-clock: 96px;
+  --fs-display-clock-mobile: 56px;
+  --fs-headline-lg: 32px;
+  --fs-headline-md: 24px;
+  --fs-headline-sm: 18px;
+  --fs-body-lg: 16px;
+  --fs-body-md: 14px;
+  --fs-body-sm: 12px;
+  --fs-label-md: 13px;
+  --fs-label-sm: 11px;
+
+  /* 字重 */
+  --fw-light: 300;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  /* 过渡 */
+  --t-fast: 150ms ease;
+  --t-base: 250ms ease;
+  --t-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 布局 */
+  --content-max-width: 1440px;
+}

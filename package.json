@@ -1,0 +1,26 @@
+{
+  "name": "nav-manager",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "wrangler pages dev",
+    "dev:full": "concurrently \"pnpm dev\" \"pnpm dev:api\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "wrangler pages deploy dist"
+  },
+  "dependencies": {
+    "lunar-javascript": "^1.6.12",
+    "pinia": "^2.1.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "concurrently": "^10.0.5",
+    "vite": "^5.0.0",
+    "wrangler": "^3.0.0"
+  }
+}
