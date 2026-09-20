@@ -2,14 +2,12 @@ import { ref } from 'vue'
 
 /**
  * 多搜索引擎定义与跳转
- * 默认 Google，可切换 GitHub / 开发者文档 / 百度 / 哔哩哔哩
+ * 默认百度，可切换 Google / GitHub
  */
 export const SEARCH_ENGINES = [
-  { id: 'google',  label: 'Google',     url: 'https://www.google.com/search?q=',                accent: 'primary'   },
-  { id: 'github',  label: 'GitHub',     url: 'https://github.com/search?q=',                   accent: 'neutral'   },
-  { id: 'devdocs', label: '开发者文档',  url: 'https://devdocs.io/#q=',                        accent: 'neutral'   },
-  { id: 'baidu',   label: '百度',       url: 'https://www.baidu.com/s?wd=',                    accent: 'neutral'   },
-  { id: 'bilibili',label: '哔哩哔哩',    url: 'https://search.bilibili.com/all?keyword=',       accent: 'neutral'   }
+  { id: 'baidu',  label: '百度',   url: 'https://www.baidu.com/s?wd='      },
+  { id: 'google', label: 'Google', url: 'https://www.google.com/search?q=' },
+  { id: 'github', label: 'GitHub', url: 'https://github.com/search?q='     }
 ]
 
 export function useSearchEngines() {
