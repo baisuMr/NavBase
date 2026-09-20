@@ -8,7 +8,6 @@
         class="input"
         placeholder="https://example.com"
         required
-        @blur="fetchFavicon"
       />
       <div class="form-hint">输入网址后将自动获取网站图标</div>
     </div>
@@ -44,16 +43,16 @@
       </select>
     </div>
 
-    <div v-if="form.icon_url" class="form-group">
+    <div v-if="iconPreview && !iconPreviewFailed" class="form-group">
       <label class="form-label">图标预览</label>
       <div class="form-hint" style="display:flex;align-items:center;gap:var(--space-sm);">
         <img
-          :src="form.icon_url"
+          :src="iconPreview"
           :alt="form.title"
           style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:contain;background:var(--color-surface-container-highest);padding:4px;"
-          @error="form.icon_url = ''"
+          @error="iconPreviewFailed = true"
         />
-        <span>已自动获取</span>
+        <span>保存后自动加载网站图标</span>
       </div>
     </div>
 
@@ -67,8 +66,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
-import { api } from '../../api'
+import { reactive, ref, computed, watch } from 'vue'
 
 const props = defineProps({
   bookmark: { type: Object, default: null },
@@ -98,17 +96,20 @@ watch(() => props.bookmark, (val) => {
   }
 }, { immediate: true })
 
-async function fetchFavicon() {
-  if (!form.url || !/^https?:\/\//i.test(form.url)) return
+// 图标预览：icon_url 已有（编辑）优先，否则走 /api/favicon 图片代理；
+// 探测在保存后的渲染阶段由代理统一完成，表单期不做网络请求
+const iconPreviewFailed = ref(false)
+const iconPreview = computed(() => {
+  if (!form.url || !/^https?:\/\//i.test(form.url)) return ''
   try {
     const { hostname } = new URL(form.url)
-    // 必须走带认证头的 api 封装，裸 fetch 会被中间件 401 拦截
-    const { url } = await api.get(`/favicon/${hostname}`)
-    if (url) form.icon_url = url
+    return form.icon_url || `/api/favicon/${hostname.replace(/^www\./, '')}`
   } catch {
-    // 静默失败（401 由 api 层统一处理跳转登录）
+    return ''
   }
-}
+})
+
+watch(() => form.url, () => { iconPreviewFailed.value = false })
 
 function handleSubmit() {
   emit('submit', { ...form })

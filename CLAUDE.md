@@ -91,7 +91,7 @@ scripts/
 - **右键菜单操作**: 分类（分类 pill 与第一屏分类卡片）和书签（书签卡片）的编辑、删除等操作通过右键菜单触发
 - **设置面板**: 顶栏齿轮打开，集中网站名称、头像（前端压缩 128×128）、深浅色切换入口、导入导出、退出登录
 - **站点设置持久化**: 存于 D1 `settings` 表（KV），经 `GET/PUT /api/settings` 读写；字段空字符串表示恢复默认，缺省表示不修改；服务端按键白名单（site_name / avatar）校验
-- **自动获取图标**: 书签的 favicon 通过 `/api/favicon/:domain` 获取（并发探测 favicon.im、DuckDuckGo 等源取最先成功者），前端必须走带认证头的 api 封装
+- **站点图标代理**: `/api/favicon/:domain` 为免认证的图片代理（中间件放行；并发探测目标站 favicon.ico、favicon.im、DuckDuckGo、Google s2，魔数校验 + Cache API 缓存 7 天，全失败负面缓存 10 分钟）。书签 `icon_url` 为空时前端经 `useFavicon` 组合式函数自动拼该代理地址渲染，加载失败回退「标题首字头像」
 - **导入导出**: 在设置面板中进行，支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条、批内与库内双重去重）与 JSON 导出
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（前后端共同校验，后端逻辑在 `functions/utils/validate.js`）
 - **预设数据**: 分类支持预设的 Emoji 图标和 10 种常用颜色

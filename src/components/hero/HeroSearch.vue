@@ -60,8 +60,8 @@
           @click="onResultClick"
         >
           <span class="hero-search-result-favicon">
-            <img v-if="bm.icon_url" :src="bm.icon_url" :alt="bm.title" loading="lazy" @error="hideImg" />
-            <span v-else class="material-symbols-outlined" style="font-size:var(--icon-size-sm);color:var(--color-on-surface-variant)">link</span>
+            <img v-if="iconSrc(bm)" :src="iconSrc(bm)" :alt="bm.title" loading="lazy" @error="onIconError(bm)" />
+            <span v-else class="favicon-fallback">{{ iconInitial(bm) }}</span>
           </span>
           <span class="hero-search-result-info">
             <span class="hero-search-result-title">{{ bm.title }}</span>
@@ -87,6 +87,7 @@
 import { ref, computed } from 'vue'
 import SearchEngineTabs from '../common/SearchEngineTabs.vue'
 import { useSearchEngines } from '../../composables/useSearchEngines'
+import { useFavicon } from '../../composables/useFavicon'
 
 const props = defineProps({
   bookmarks: {
@@ -164,9 +165,7 @@ function onSubmit() {
   hasFocus.value = false
 }
 
-function hideImg(e) {
-  e.target.style.display = 'none'
-}
+const { iconSrc, onIconError, iconInitial } = useFavicon()
 
 function focus() {
   inputEl.value?.focus()

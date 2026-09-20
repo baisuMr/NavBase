@@ -41,6 +41,12 @@ export async function onRequest(context) {
     return context.next();
   }
 
+  // favicon 图片代理免认证：<img> 标签无法携带 Basic Auth 头，
+  // 且该端点仅返回公开网站图标（域名由调用方提供），不含任何用户数据
+  if (request.method === 'GET' && normalized.startsWith('/api/favicon/')) {
+    return context.next();
+  }
+
   // 未配置密码时直接拒绝，避免出现无密码的公开实例
   const adminUsername = env.ADMIN_USERNAME || 'admin';
   if (!env.ADMIN_PASSWORD) {

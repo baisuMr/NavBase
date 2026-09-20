@@ -7,8 +7,8 @@
     @contextmenu.prevent="$emit('menu', $event)"
   >
     <span class="bookmark-card-favicon">
-      <img v-if="bookmark.icon_url" :src="bookmark.icon_url" :alt="bookmark.title" loading="lazy" @error="hideImg" />
-      <span v-else class="material-symbols-outlined" style="font-size:var(--icon-size-md);color:var(--color-on-surface-variant)">link</span>
+      <img v-if="iconSrc(bookmark)" :src="iconSrc(bookmark)" :alt="bookmark.title" loading="lazy" @error="onIconError(bookmark)" />
+      <span v-else class="favicon-fallback">{{ iconInitial(bookmark) }}</span>
     </span>
     <span class="bookmark-card-info">
       <span class="bookmark-card-title">{{ bookmark.title }}</span>
@@ -23,6 +23,8 @@
 <script setup>
 import { computed } from 'vue'
 
+import { useFavicon } from '../../composables/useFavicon'
+
 const props = defineProps({
   bookmark: {
     type: Object,
@@ -32,6 +34,8 @@ const props = defineProps({
 
 defineEmits(['menu'])
 
+const { iconSrc, onIconError, iconInitial } = useFavicon()
+
 const domain = computed(() => {
   try {
     return new URL(props.bookmark.url).hostname.replace(/^www\./, '')
@@ -39,8 +43,4 @@ const domain = computed(() => {
     return props.bookmark.url
   }
 })
-
-function hideImg(e) {
-  e.target.style.display = 'none'
-}
 </script>
