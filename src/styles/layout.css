@@ -189,8 +189,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-label-md);
 }
 
 .app-footer-meta-dot {
@@ -286,18 +286,19 @@
 .login-brand-icon {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-md);
+  /* border-radius: var(--radius-md);
   background: var(--color-surface-container-high);
-  border: 1px solid var(--glass-border-strong);
+  border: 1px solid var(--glass-border-strong); */
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-sm);
-  box-shadow: 0 2px 8px rgba(var(--shadow-tint), 0.25);
+  /* box-shadow: 0 2px 8px rgba(var(--shadow-tint), 0.25); */
 }
 
 .login-brand-icon .material-symbols-outlined {
-  font-size: var(--icon-size-lg);
+  font-size: 48px;
+  /* font-size: var(--icon-size-xl); */
   color: var(--color-primary);
   font-variation-settings: 'FILL' 1;
 }
@@ -307,7 +308,7 @@
   font-size: var(--fs-headline-md);
   font-weight: var(--fw-medium);
   color: var(--color-on-surface);
-  letter-spacing: -0.015em;
+  letter-spacing: 6px;
 }
 
 .login-brand-sub {
@@ -391,8 +392,8 @@
   margin-top: var(--space-xs);
   padding: 10px var(--space-lg);
   font-family: var(--font-display);
-  font-size: var(--fs-headline-sm);
-  font-weight: var(--fw-medium);
+  font-size: var(--fs-body-lg);
+  font-weight: var(--fw-semibold);
 }
 
 .login-loading-spinner {
@@ -400,7 +401,8 @@
   width: 16px;
   height: 16px;
   border: 2px solid rgba(var(--rgb-on-primary), 0.4);
-  border-top-color: var(--color-on-primary-container);
+  /* 跟随按钮文字色（浅色白字/深色墨绿字），与实心按钮底保持同系 */
+  border-top-color: var(--color-on-primary);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -481,8 +483,8 @@
   border-radius: var(--radius-pill);
   backdrop-filter: var(--backdrop-blur);
   -webkit-backdrop-filter: var(--backdrop-blur);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-label-md);
   color: var(--color-on-surface-variant);
 }
 
@@ -588,7 +590,7 @@
 }
 
 .hero-meta-week {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: var(--fs-label-md);
   color: var(--color-primary);
   letter-spacing: 0.02em;
@@ -624,6 +626,7 @@
   box-shadow: 0 1px 2px rgba(var(--shadow-tint), 0.15);
 }
 
+/* 引擎名中英混排（百度/Google/GitHub）→ 正文字体，13px 保证中文可读性 */
 .engine-tab {
   display: inline-flex;
   align-items: center;
@@ -631,8 +634,8 @@
   padding: 4px 14px;
   border-radius: var(--radius-pill);
   background: transparent;
-  font-family: var(--font-mono);
-  font-size: var(--fs-label-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-label-md);
   color: var(--color-on-surface-variant);
   cursor: pointer;
   transition: all var(--t-fast);
@@ -715,7 +718,7 @@
 }
 
 .hero-search-input::placeholder {
-  color: rgba(var(--rgb-sage), 0.6);
+  color: rgba(var(--rgb-sage), 0.55);
 }
 
 /* 聚焦指示由外层 wrap 的边框与辉光承担，屏蔽全局 :focus-visible 的内层绿框 */
@@ -978,9 +981,10 @@
   color: var(--color-on-surface);
 }
 
+/* 中性卡 hover：柔和的灰面加深，避免「黑底白字」强反转在浅色下突兀 */
 .hero-category-card.neutral:hover .hero-category-icon {
-  background: var(--color-on-surface);
-  color: var(--color-surface);
+  background: rgba(var(--rgb-sage), 0.24);
+  color: var(--color-on-surface);
 }
 
 .hero-category-icon .material-symbols-outlined {
@@ -1030,10 +1034,9 @@
   margin-top: auto;
   padding: var(--space-sm) 0;
   color: var(--color-on-surface-variant);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label-sm);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: var(--fs-label-md);
+  letter-spacing: 0.02em;
   text-decoration: none;
   transition: color var(--t-fast);
 }
@@ -1152,7 +1155,7 @@
   border-radius: var(--radius-lg);
   backdrop-filter: var(--backdrop-blur-strong);
   -webkit-backdrop-filter: var(--backdrop-blur-strong);
-  box-shadow: 0 4px 16px rgba(var(--shadow-tint), 0.2);
+  box-shadow: 0 4px 16px rgba(var(--shadow-tint), 0.12);
 }
 
 @media (min-width: 1024px) {
@@ -1200,7 +1203,7 @@
 }
 
 .explorer-add-btn:hover {
-  background: var(--color-primary-container);
+  background: var(--color-primary-hover);
 }
 
 .explorer-add-btn .material-symbols-outlined {
@@ -1208,12 +1211,13 @@
 }
 
 /* ── 分类 pill ── */
+/* 分类 pill 多为中文（mono 无中文字形，回退雅黑产生混排拼接感）→ 正文字体 */
 .category-pills {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: var(--fs-label-md);
 }
 
@@ -1225,13 +1229,12 @@
   border-radius: var(--radius-pill);
   background: transparent;
   border: 1px solid var(--glass-border);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: var(--fs-label-md);
   color: var(--color-on-surface-variant);
   white-space: nowrap;
   cursor: pointer;
   transition: all var(--t-fast);
-  border: 1px solid var(--glass-border);
 }
 
 .category-pill:hover {
@@ -1331,7 +1334,8 @@
   transform: translateY(-2px);
   background: var(--color-card-bg-hover);
   border-color: var(--color-primary-a40);
-  box-shadow: 0 8px 24px rgba(var(--shadow-tint), 0.35);
+  /* 浅色下重投影显脏，收敛为克制的抬升阴影 */
+  box-shadow: 0 12px 28px -6px rgba(var(--shadow-tint), 0.18);
   color: inherit;
 }
 
@@ -1402,8 +1406,8 @@
 .bookmark-card-domain {
   font-family: var(--font-mono);
   font-size: var(--fs-label-sm);
+  /* 单层透明度（去掉叠加的 opacity 0.7）：12px 小字对比度从 ~3.6:1 修复到 ~6:1 */
   color: var(--color-on-surface-variant);
-  opacity: 0.7;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1412,7 +1416,7 @@
 
 .bookmark-card-arrow {
   color: var(--color-on-surface-variant);
-  opacity: 0.4;
+  opacity: 0.55;
   transition: all var(--t-fast);
   flex-shrink: 0;
 }

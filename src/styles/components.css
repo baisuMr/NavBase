@@ -26,15 +26,16 @@
   cursor: not-allowed;
 }
 
+/* 实心主按钮：primary 底 + on-primary 字（浅色为深翡翠+白字 ≥AA；hover 走主题 hover token） */
 .btn-primary {
-  background: var(--color-primary-container);
-  color: var(--color-on-primary-container);
-  border-color: var(--color-primary-container);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: transparent;
   box-shadow: var(--shadow-glow-emerald);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary);
+  background: var(--color-primary-hover);
   color: var(--color-on-primary);
 }
 
@@ -119,7 +120,7 @@
 
 .input::placeholder,
 .textarea::placeholder {
-  color: rgba(var(--rgb-sage), 0.4);
+  color: rgba(var(--rgb-sage), 0.55);
 }
 
 .textarea {
@@ -131,7 +132,7 @@
 
 .select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbcabf' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
@@ -147,15 +148,15 @@
   margin-bottom: var(--space-md);
 }
 
+/* 标签常为中文（账号/密码/分类名）：mono 无中文字形、uppercase 对中文无效，改用正文字体 */
 .form-label {
   display: block;
-  font-family: var(--font-mono);
-  font-size: var(--fs-label-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-label-md);
   font-weight: var(--fw-medium);
   color: var(--color-on-surface-variant);
   margin-bottom: var(--space-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 .form-hint {

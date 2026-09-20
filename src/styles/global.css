@@ -45,18 +45,18 @@ body::after {
   opacity: var(--bg-glow-opacity);
 }
 
-/* 左上 emerald 光晕 */
+/* 左上 emerald 光晕（色值走 token：浅色主题覆盖为清透明亮色） */
 body::before {
   background:
-    radial-gradient(55vw 55vw at -10% -12%, rgba(16, 185, 129, 0.10) 0%, transparent 60%),
-    radial-gradient(45vw 45vw at 110% 45%, rgba(49, 49, 192, 0.14) 0%, transparent 65%),
-    radial-gradient(50vw 50vw at 20% 115%, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+    radial-gradient(55vw 55vw at -10% -12%, var(--glow-primary) 0%, transparent 60%),
+    radial-gradient(45vw 45vw at 110% 45%, var(--glow-secondary) 0%, transparent 65%),
+    radial-gradient(50vw 50vw at 20% 115%, var(--glow-primary-soft) 0%, transparent 70%);
   filter: blur(80px);
 }
 
 /* 中央 emerald 微光（Hero 时钟区） */
 body::after {
-  background: radial-gradient(45vw 22.5vw at 50% 38%, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+  background: radial-gradient(45vw 22.5vw at 50% 38%, var(--glow-primary-soft) 0%, transparent 70%);
   filter: blur(80px);
 }
 

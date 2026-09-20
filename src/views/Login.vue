@@ -8,7 +8,6 @@
             <span class="material-symbols-outlined">bookmarks</span>
           </div>
           <h1 class="login-brand-title">欢迎登录</h1>
-          <p class="login-brand-sub">登录您的栞记空间</p>
         </div>
 
         <!-- 登录表单 -->
@@ -24,7 +23,7 @@
                 v-model="form.username"
                 type="text"
                 class="input"
-                placeholder="name@domain.com"
+                placeholder="username"
                 required
                 autocomplete="username"
               />
@@ -85,7 +84,7 @@
 
     <div class="login-footer">
       <span style="font-family:var(--font-mono);font-size:var(--fs-label-sm);opacity:0.6;letter-spacing:0.04em;">
-        栞记
+        NavBase
       </span>
     </div>
   </div>
