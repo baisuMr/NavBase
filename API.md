@@ -158,7 +158,8 @@ Content-Type: application/json
 
 **说明**：
 - 单次最多 500 条，URL 仅允许 http/https 协议
-- 返回 `{ "success": true, "count": 1 }`，count 为实际导入数量
+- 批内与库内双重去重，重复书签自动跳过
+- 返回 `{ "success": true, "count": 3, "skipped": 2 }`，count 为实际导入数量，skipped 为去重跳过数量
 
 ---
 
@@ -176,11 +177,45 @@ GET /api/favicon/:domain
 }
 ```
 
-**说明**：按以下顺序尝试获取图标：
+**说明**：并发探测以下图标源（单源 3 秒超时），取最先成功者；全部失败返回 `{ "url": null }`：
 1. favicon.im（国内源）
 2. DuckDuckGo
 3. Google Favicon
 4. 网站根目录
+
+---
+
+### 站点设置 API
+
+#### 读取站点设置
+```
+GET /api/settings
+```
+
+**响应示例**：
+```json
+{
+  "site_name": "栞记",
+  "avatar": "data:image/webp;base64,..."
+}
+```
+
+#### 更新站点设置
+```
+PUT /api/settings
+Authorization: Basic base64(admin:password)
+Content-Type: application/json
+
+{
+  "site_name": "我的导航",
+  "avatar": "data:image/webp;base64,..."
+}
+```
+
+**说明**：
+- 仅支持 `site_name` 与 `avatar` 两个键（服务端白名单）
+- 字段值为**空字符串**表示清除并恢复默认；**缺省**（不传）表示不修改
+- `site_name` 不超过 30 字；`avatar` 为前端压缩后的 128×128 png/jpeg/webp dataURL（上限 200KB）
 
 ---
 
@@ -192,6 +227,7 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
+  "username": "admin",
   "password": "your-password"
 }
 ```
@@ -200,11 +236,18 @@ Content-Type: application/json
 ```json
 {
   "token": "YWRtaW46eW91ci1wYXNzd29yZA==",
+  "expiresAt": 1758240000000,
+  "durationDays": 7,
+  "username": "admin",
   "success": true
 }
 ```
 
-**说明**：返回的 token 是 Base64 编码的 `admin:password`，可用于后续请求的 Basic Auth 认证。
+**说明**：
+- `username` 与 `password` 均必填，缺失返回 400
+- token 是 Base64 编码的 `username:password`，可用于后续请求的 Basic Auth 认证
+- `expiresAt` 为过期时间戳（毫秒），前端存 localStorage 据此控制登录保持；保持天数由 `LOGIN_DURATION_DAYS` 配置（默认 7 天）
+- 登录失败统一延迟约 800ms 后返回，作为简易防爆破措施
 
 ---
 

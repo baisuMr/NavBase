@@ -8,6 +8,7 @@
 - 🔗 **书签管理** - 自动获取网站图标，支持一键导入浏览器书签（HTML）
 - 🔍 **搜索功能** - 站内即时搜索 + 多引擎网页搜索（Google/GitHub/百度等）
 - 🕐 **导航首页** - 时钟/农历/分类卡片，书签快速到达
+- ⚙️ **站点设置** - 自定义网站名称与头像
 - 🔒 **Basic Auth** - 简单的密码保护
 - 📤 **导入导出** - 支持浏览器书签 HTML 导入与 JSON 导出
 - ⌨️ **快捷键** - 提升操作效率
@@ -19,6 +20,7 @@
 - **后端**: Cloudflare Pages Functions
 - **数据库**: Cloudflare D1 (SQLite)
 - **CSS**: 纯 CSS（无框架依赖）
+- **测试**: Vitest
 
 ## 快捷键
 
@@ -94,6 +96,14 @@ pnpm dev:api  # 仅 API（绑定与配置读取自 wrangler.toml / .dev.vars）
 pnpm build
 ```
 
+### 测试
+
+```bash
+pnpm test                                    # 全量运行
+pnpm test:watch                              # 监听模式
+pnpm test src/composables/useLunar.test.js   # 运行单个测试文件
+```
+
 ## 部署到 Cloudflare Pages
 
 ### 方式一：命令行部署
@@ -151,6 +161,11 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 2. 进入书签资料库，点击「导入书签」选择该文件
 3. 文件夹自动转为分类（同名合并），书签批量导入
 
+### 站点设置
+
+- 顶栏齿轮打开设置面板，可自定义网站名称与头像（png/jpeg/webp，自动压缩为 128×128）
+- 导入导出与退出登录也在设置面板中
+
 ### 分类管理
 
 - 点击分类卡片/分类 pills 筛选书签
@@ -180,7 +195,9 @@ nav-manager/
 │   ├── styles/           # CSS 样式
 │   └── views/            # 页面视图
 ├── functions/            # Cloudflare Functions
-│   └── api/              # API 端点
+│   ├── api/              # API 端点
+│   └── utils/            # 共享校验工具（URL 协议白名单等）
+├── scripts/              # 字体/图标子集生成脚本
 ├── schema.sql            # 数据库 Schema
 └── wrangler.toml         # Cloudflare 配置
 ```
