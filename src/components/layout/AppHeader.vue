@@ -23,7 +23,7 @@
           aria-label="设置"
           title="设置"
         >
-          <span class="material-symbols-outlined" style="font-size:20px;">settings</span>
+          <span class="material-symbols-outlined" style="font-size:var(--icon-size-lg);">settings</span>
         </button>
 
         <button
@@ -33,7 +33,7 @@
           aria-label="添加书签"
           title="添加书签 (Alt+N)"
         >
-          <span class="material-symbols-outlined" style="font-size:20px;">add</span>
+          <span class="material-symbols-outlined" style="font-size:var(--icon-size-lg);">add</span>
         </button>
 
         <!-- 头像仅作展示，退出登录在设置面板中 -->

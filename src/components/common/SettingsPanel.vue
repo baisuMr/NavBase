@@ -34,7 +34,7 @@
           </div>
           <div class="settings-avatar-actions">
             <button type="button" class="btn btn-secondary" :disabled="avatarSaving" @click="triggerAvatarUpload">
-              <span class="material-symbols-outlined" style="font-size:18px;">add_a_photo</span>
+              <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">add_a_photo</span>
               <span>{{ avatarSaving ? '上传中…' : '上传图片' }}</span>
             </button>
             <button
@@ -87,11 +87,11 @@
         <span class="form-label">数据管理</span>
         <div class="settings-data-actions">
           <button type="button" class="btn btn-secondary" @click="triggerImport">
-            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+            <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">upload</span>
             <span>导入书签</span>
           </button>
           <button type="button" class="btn btn-secondary" @click="exportBookmarks">
-            <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+            <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">download</span>
             <span>导出书签</span>
           </button>
         </div>
@@ -115,7 +115,7 @@
         <div class="settings-row">
           <span class="settings-username">{{ username }}</span>
           <button type="button" class="btn btn-danger" @click="handleLogout">
-            <span class="material-symbols-outlined" style="font-size:18px;">logout</span>
+            <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">logout</span>
             <span>退出登录</span>
           </button>
         </div>

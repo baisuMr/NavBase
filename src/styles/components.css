@@ -66,7 +66,7 @@
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: rgba(255, 180, 171, 0.12);
+  background: var(--color-error-a12);
   border-color: var(--color-error);
 }
 
@@ -114,7 +114,7 @@
   outline: none;
   border-color: var(--color-primary);
   background: var(--color-surface-container-high);
-  box-shadow: 0 0 0 3px rgba(78, 222, 163, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-a15);
 }
 
 .input::placeholder,
@@ -169,8 +169,8 @@
   color: var(--color-error);
   margin-top: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 180, 171, 0.08);
-  border: 1px solid rgba(255, 180, 171, 0.2);
+  background: var(--color-error-a08);
+  border: 1px solid var(--color-error-a20);
   border-radius: var(--radius-md);
   text-align: center;
 }
@@ -237,7 +237,7 @@
 }
 
 .modal-close .material-symbols-outlined {
-  font-size: 20px;
+  font-size: var(--icon-size-lg);
 }
 
 .modal-body {
@@ -285,7 +285,7 @@
 }
 
 .context-menu-item .material-symbols-outlined {
-  font-size: 18px;
+  font-size: var(--fs-headline-sm);
   color: var(--color-on-surface-variant);
 }
 
@@ -302,7 +302,7 @@
 }
 
 .context-menu-item.danger:hover {
-  background: rgba(255, 180, 171, 0.12);
+  background: var(--color-error-a12);
 }
 
 .context-menu-divider {
@@ -332,15 +332,15 @@
 }
 
 .toast.success {
-  border-color: rgba(78, 222, 163, 0.3);
+  border-color: var(--color-primary-a30);
 }
 
 .toast.error {
-  border-color: rgba(255, 180, 171, 0.3);
+  border-color: var(--color-error-a30);
 }
 
 .toast.warning {
-  border-color: rgba(255, 185, 95, 0.3);
+  border-color: var(--color-tertiary-a30);
 }
 
 .toast-enter-active,
@@ -400,7 +400,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: var(--icon-size-lg);
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all var(--t-fast);
@@ -412,7 +412,7 @@
 }
 
 .emoji-picker .emoji-item.active {
-  background: rgba(78, 222, 163, 0.15);
+  background: var(--color-primary-a15);
   box-shadow: inset 0 0 0 1.5px var(--color-primary);
 }
 
@@ -486,7 +486,7 @@
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 0 14px rgba(78, 222, 163, 0.25);
+  box-shadow: 0 0 14px var(--color-primary-a20);
 }
 
 .settings-avatar-preview img {
@@ -496,7 +496,7 @@
 }
 
 .settings-avatar-preview .material-symbols-outlined {
-  font-size: 28px;
+  font-size: var(--icon-size-xl);
 }
 
 .settings-avatar-actions {
@@ -540,7 +540,7 @@
 }
 
 .settings-theme-option .material-symbols-outlined {
-  font-size: 18px;
+  font-size: var(--fs-headline-sm);
 }
 
 .settings-data-actions {

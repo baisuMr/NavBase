@@ -12,7 +12,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: var(--fs-body-lg);
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   scrollbar-width: thin;
@@ -164,6 +164,21 @@ input, textarea, select {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(78, 222, 163, 0.8); }
-  50% { box-shadow: 0 0 16px rgba(78, 222, 163, 1); }
+  0%, 100% { box-shadow: 0 0 8px var(--color-primary-a80); }
+  50% { box-shadow: 0 0 16px var(--color-primary); }
+}
+
+/* ── 动效减弱偏好：尊重系统"减少动态效果"设置 ── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

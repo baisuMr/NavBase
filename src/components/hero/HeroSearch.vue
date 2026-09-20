@@ -61,7 +61,7 @@
         >
           <span class="hero-search-result-favicon">
             <img v-if="bm.icon_url" :src="bm.icon_url" :alt="bm.title" loading="lazy" @error="hideImg" />
-            <span v-else class="material-symbols-outlined" style="font-size:16px;color:var(--color-on-surface-variant)">link</span>
+            <span v-else class="material-symbols-outlined" style="font-size:var(--icon-size-sm);color:var(--color-on-surface-variant)">link</span>
           </span>
           <span class="hero-search-result-info">
             <span class="hero-search-result-title">{{ bm.title }}</span>

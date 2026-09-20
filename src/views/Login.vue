@@ -71,12 +71,12 @@
               <span>登录中…</span>
             </template>
             <template v-else-if="success">
-              <span class="material-symbols-outlined" style="font-size:18px;">check_circle</span>
+              <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">check_circle</span>
               <span>登录成功</span>
             </template>
             <template v-else>
               <span>登 录</span>
-              <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+              <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">arrow_forward</span>
             </template>
           </button>
         </form>

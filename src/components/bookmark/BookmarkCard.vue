@@ -8,7 +8,7 @@
   >
     <span class="bookmark-card-favicon">
       <img v-if="bookmark.icon_url" :src="bookmark.icon_url" :alt="bookmark.title" loading="lazy" @error="hideImg" />
-      <span v-else class="material-symbols-outlined" style="font-size:18px;color:var(--color-on-surface-variant)">link</span>
+      <span v-else class="material-symbols-outlined" style="font-size:var(--icon-size-md);color:var(--color-on-surface-variant)">link</span>
     </span>
     <span class="bookmark-card-info">
       <span class="bookmark-card-title">{{ bookmark.title }}</span>
