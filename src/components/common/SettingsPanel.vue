@@ -64,22 +64,22 @@
         <div class="settings-theme-toggle" role="group" aria-label="深色浅色模式切换">
           <button
             type="button"
-            :class="['settings-theme-option', { active: themePick === 'light' }]"
-            @click="pickTheme('light')"
+            :class="['settings-theme-option', { active: theme === 'light' }]"
+            @click="setTheme('light')"
           >
             <span class="material-symbols-outlined">light_mode</span>
             <span>浅色</span>
           </button>
           <button
             type="button"
-            :class="['settings-theme-option', { active: themePick === 'dark' }]"
-            @click="pickTheme('dark')"
+            :class="['settings-theme-option', { active: theme === 'dark' }]"
+            @click="setTheme('dark')"
           >
             <span class="material-symbols-outlined">dark_mode</span>
             <span>深色</span>
           </button>
         </div>
-        <p class="form-hint">主题切换功能即将上线，当前仅支持深色。</p>
+        <p class="form-hint">主题偏好保存在本设备浏览器中。</p>
       </section>
 
       <!-- 数据管理 -->
@@ -134,6 +134,7 @@ import { useBookmarks } from '../../composables/useBookmarks'
 import { useCategories } from '../../composables/useCategories'
 import { useAuth } from '../../composables/useAuth'
 import { useToast } from '../../composables/useToast'
+import { useTheme } from '../../composables/useTheme'
 import { parseNetscapeBookmarks } from '../../utils/importBookmarks'
 
 defineEmits(['close'])
@@ -143,7 +144,7 @@ const settings = useSettingsStore()
 const { bookmarks, importBookmarks } = useBookmarks()
 const { categories, createCategory } = useCategories()
 const { username, logout } = useAuth()
-const { success, error: showError, info } = useToast()
+const { success, error: showError } = useToast()
 
 // ── 网站名称 ──
 const nameInput = ref(settings.siteName)
@@ -226,13 +227,8 @@ async function removeAvatar() {
   }
 }
 
-// ── 外观（主题功能未实现，仅保留入口） ──
-const themePick = ref('dark')
-
-function pickTheme(mode) {
-  themePick.value = mode
-  info('主题切换功能即将上线，敬请期待')
-}
+// ── 外观 ──
+const { theme, setTheme } = useTheme()
 
 // ── 导入书签 ──
 const importInputRef = ref(null)
