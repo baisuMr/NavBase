@@ -198,7 +198,7 @@ GET /api/settings
 **响应示例**：
 ```json
 {
-  "site_name": "栞记",
+  "site_name": "NavBase",
   "avatar": "data:image/webp;base64,..."
 }
 ```

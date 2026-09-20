@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { settingsApi } from '../api/settings'
 
 // 站点名称的默认值（设置表为空或已清除时生效，可在设置面板修改）
-export const DEFAULT_SITE_NAME = '栞记'
+export const DEFAULT_SITE_NAME = 'NavBase'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({

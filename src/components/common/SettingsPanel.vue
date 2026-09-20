@@ -11,7 +11,7 @@
             type="text"
             class="input"
             maxlength="30"
-            placeholder="栞记"
+            placeholder="NavBase"
           />
           <button
             type="button"
