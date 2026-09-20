@@ -1210,17 +1210,11 @@
 /* ── 分类 pill ── */
 .category-pills {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  overflow-x: auto;
-  padding-bottom: 4px;
   font-family: var(--font-mono);
   font-size: var(--fs-label-md);
-  scrollbar-width: none;
-}
-
-.category-pills::-webkit-scrollbar {
-  display: none;
 }
 
 .category-pill {

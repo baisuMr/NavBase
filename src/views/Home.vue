@@ -227,7 +227,7 @@ const categoryCountMap = computed(() => {
   return map
 })
 
-// Hero 分类卡片：最多展示前 5 个分类 + "全部"
+// Hero 分类卡片：按书签数量取前 5 个分类 + "全部"（同数量时保持 sort_order 次序）
 const heroCategories = computed(() => {
   const all = {
     id: 'all',
@@ -236,13 +236,16 @@ const heroCategories = computed(() => {
     count: bookmarks.value.length,
     accent: 'primary'
   }
-  const list = categories.value.slice(0, 5).map((c, idx) => ({
-    id: c.id,
-    name: c.name,
-    icon: iconForCategory(c, idx),
-    count: categoryCountMap.value[c.id] || 0,
-    accent: accentForIndex(idx)
-  }))
+  const list = [...categories.value]
+    .sort((a, b) => (categoryCountMap.value[b.id] || 0) - (categoryCountMap.value[a.id] || 0))
+    .slice(0, 5)
+    .map((c, idx) => ({
+      id: c.id,
+      name: c.name,
+      icon: iconForCategory(c, idx),
+      count: categoryCountMap.value[c.id] || 0,
+      accent: accentForIndex(idx)
+    }))
   return [all, ...list]
 })
 
