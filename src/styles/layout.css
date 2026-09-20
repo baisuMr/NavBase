@@ -1223,7 +1223,7 @@
   gap: 6px;
   padding: 8px var(--space-md);
   border-radius: var(--radius-pill);
-  background: var(--color-surface-container-low);
+  background: transparent;
   border: 1px solid var(--glass-border);
   font-family: var(--font-mono);
   font-size: var(--fs-label-md);
@@ -1235,7 +1235,7 @@
 }
 
 .category-pill:hover {
-  background: var(--color-surface-container);
+  background: var(--color-surface-hover);
   color: var(--color-on-surface);
 }
 
@@ -1268,7 +1268,7 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
-  background: var(--color-surface-container-low);
+  background: transparent;
   border: 1px dashed var(--glass-border-strong);
   color: var(--color-on-surface-variant);
   cursor: pointer;
@@ -1276,7 +1276,7 @@
 }
 
 .category-pill-add:hover {
-  background: var(--color-surface-container-high);
+  background: var(--color-surface-hover);
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
@@ -1315,8 +1315,8 @@
   align-items: center;
   gap: 14px;
   padding: var(--space-md);
-  background: rgba(27, 27, 31, 0.75);
-  border: 1px solid var(--glass-border);
+  background: rgba(34, 35, 41, 0.85);
+  border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
   backdrop-filter: var(--backdrop-blur);
   -webkit-backdrop-filter: var(--backdrop-blur);
@@ -1329,7 +1329,7 @@
 
 .bookmark-card:hover {
   transform: translateY(-2px);
-  background: rgba(41, 42, 45, 0.9);
+  background: rgba(45, 46, 53, 0.95);
   border-color: var(--color-primary-a40);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   color: inherit;

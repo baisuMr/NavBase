@@ -16,6 +16,8 @@
   --color-surface-container-high: #292a2d;
   --color-surface-container-highest: #343538;
   --color-surface-variant: #343538;
+  /* ghost 元素（pill/标签）hover 时的中性微亮填充 */
+  --color-surface-hover: rgba(232, 234, 238, 0.06);
 
   /* On-Surface — 文字层级（中性白系，与玻璃边框同色相） */
   --color-on-surface: #e6e6ea;
