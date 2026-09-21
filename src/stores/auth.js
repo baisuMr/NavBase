@@ -1,10 +1,19 @@
 import { defineStore } from 'pinia'
 
+const TOKEN_KEY = 'auth_token'
+const USERNAME_KEY = 'auth_username'
+const EXPIRES_KEY = 'auth_expires_at'
+
+// 记住设备：勾选 → localStorage（30 天）；不勾选 → sessionStorage（关浏览器即失效）
+function authStorage(remember) {
+  return remember ? localStorage : sessionStorage
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('auth_token') || '',
-    username: localStorage.getItem('auth_username') || '',
-    expiresAt: parseInt(localStorage.getItem('auth_expires_at') || '0'),
+    token: '',
+    username: '',
+    expiresAt: 0,
     isAuthenticated: false
   }),
 
@@ -24,29 +33,41 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    // 初始化时检查登录状态
+    // 初始化时检查登录状态（localStorage 优先，其次 sessionStorage）
     init() {
-      const token = localStorage.getItem('auth_token')
-      const expiresAt = parseInt(localStorage.getItem('auth_expires_at') || '0')
+      if (this.restoreFrom(localStorage)) return
+      if (this.restoreFrom(sessionStorage)) return
+      this.clearAuth()
+    },
+
+    // 从指定存储恢复登录态；过期残留会被清理。成功返回 true
+    restoreFrom(storage) {
+      const token = storage.getItem(TOKEN_KEY)
+      const expiresAt = parseInt(storage.getItem(EXPIRES_KEY) || '0')
 
       if (token && expiresAt && Date.now() < expiresAt) {
         this.token = token
-        this.username = localStorage.getItem('auth_username') || ''
+        this.username = storage.getItem(USERNAME_KEY) || ''
         this.expiresAt = expiresAt
         this.isAuthenticated = true
-      } else {
-        // 已过期，清除登录状态
-        this.clearAuth()
+        return true
       }
+
+      if (token) {
+        storage.removeItem(TOKEN_KEY)
+        storage.removeItem(USERNAME_KEY)
+        storage.removeItem(EXPIRES_KEY)
+      }
+      return false
     },
 
-    // 登录
-    async login(username, password) {
+    // 登录；remember=true 时凭据持久化到 localStorage
+    async login(username, password, remember = false) {
       try {
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ username, password, remember })
         })
 
         if (!response.ok) {
@@ -55,6 +76,7 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const data = await response.json()
+        const rememberMe = data.remember === true
 
         // 保存登录状态
         this.token = data.token
@@ -62,13 +84,20 @@ export const useAuthStore = defineStore('auth', {
         this.expiresAt = data.expiresAt
         this.isAuthenticated = true
 
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('auth_username', data.username)
-        localStorage.setItem('auth_expires_at', String(data.expiresAt))
+        // 写入所选存储并清理另一处，避免两处残留不同凭据
+        const target = authStorage(rememberMe)
+        const other = target === localStorage ? sessionStorage : localStorage
+        other.removeItem(TOKEN_KEY)
+        other.removeItem(USERNAME_KEY)
+        other.removeItem(EXPIRES_KEY)
+        target.setItem(TOKEN_KEY, data.token)
+        target.setItem(USERNAME_KEY, data.username)
+        target.setItem(EXPIRES_KEY, String(data.expiresAt))
 
         return {
           success: true,
-          durationDays: data.durationDays
+          durationDays: data.durationDays,
+          remember: rememberMe
         }
       } catch (error) {
         console.error('Login error:', error)
@@ -88,9 +117,11 @@ export const useAuthStore = defineStore('auth', {
       this.expiresAt = 0
       this.isAuthenticated = false
 
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_username')
-      localStorage.removeItem('auth_expires_at')
+      for (const storage of [localStorage, sessionStorage]) {
+        storage.removeItem(TOKEN_KEY)
+        storage.removeItem(USERNAME_KEY)
+        storage.removeItem(EXPIRES_KEY)
+      }
     },
 
     // 获取认证头

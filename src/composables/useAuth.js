@@ -14,7 +14,7 @@ export function useAuth() {
     store.init()
   })
 
-  const login = (username, password) => store.login(username, password)
+  const login = (username, password, remember) => store.login(username, password, remember)
   const logout = () => store.logout()
 
   return {

@@ -11,3 +11,4 @@ database_id = "48b599e7-54c1-494a-bb51-f6962ea41f0d"
 # 非敏感配置可放这里；ADMIN_USERNAME / ADMIN_PASSWORD 属于凭据，
 # 本地开发放 .dev.vars（已 gitignore），线上用 `wrangler pages secret put` 配置
 LOGIN_DURATION_DAYS = "7"
+REMEMBER_DURATION_DAYS = "30"

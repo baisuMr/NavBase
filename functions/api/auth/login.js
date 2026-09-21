@@ -24,7 +24,7 @@ export async function onRequest(context) {
   }
 
   try {
-    const { username, password } = await request.json();
+    const { username, password, remember } = await request.json();
 
     if (!username || !password) {
       return Response.json(
@@ -48,8 +48,11 @@ export async function onRequest(context) {
       // 生成 Basic Auth token
       const token = btoa(`${username}:${password}`);
 
-      // 从环境变量读取登录保持天数，默认7天
-      const durationDays = parseInt(env.LOGIN_DURATION_DAYS || '7', 10);
+      // 勾选记住设备 → REMEMBER_DURATION_DAYS（默认30天）；否则 LOGIN_DURATION_DAYS（默认7天）
+      const rememberMe = remember === true;
+      const durationDays = rememberMe
+        ? parseInt(env.REMEMBER_DURATION_DAYS || '30', 10)
+        : parseInt(env.LOGIN_DURATION_DAYS || '7', 10);
       const expiresIn = durationDays * 24 * 60 * 60 * 1000;
       const expiresAt = Date.now() + expiresIn;
 
@@ -58,6 +61,7 @@ export async function onRequest(context) {
           token,
           expiresAt,
           durationDays,
+          remember: rememberMe,
           username,
           success: true
         },
