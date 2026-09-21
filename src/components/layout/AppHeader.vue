@@ -16,16 +16,7 @@
 
       <!-- 右侧：设置 + 添加 + 头像 -->
       <div class="app-header-actions">
-        <button
-          type="button"
-          class="btn-icon-circle"
-          @click="$emit('open-settings')"
-          aria-label="设置"
-          title="设置"
-        >
-          <i class="ri-settings-line" style="font-size:var(--icon-size-lg);"></i>
-        </button>
-
+       
         <button
           type="button"
           class="btn-icon-circle"
@@ -34,6 +25,16 @@
           title="添加书签 (Alt+N)"
         >
           <i class="ri-add-line" style="font-size:var(--icon-size-lg);"></i>
+        </button>
+
+         <button
+          type="button"
+          class="btn-icon-circle"
+          @click="$emit('open-settings')"
+          aria-label="设置"
+          title="设置"
+        >
+          <i class="ri-settings-line" style="font-size:var(--icon-size-lg);"></i>
         </button>
 
         <!-- 头像仅作展示，退出登录在设置面板中 -->
