@@ -1,0 +1,36 @@
+-- 分类图标迁移：emoji → Remix Icon 名（与 src/constants/categoryIcons.js 语义对应）
+UPDATE categories SET icon='ri-folder-line'        WHERE icon='📁';
+UPDATE categories SET icon='ri-home-line'          WHERE icon='🏠';
+UPDATE categories SET icon='ri-computer-line'      WHERE icon='💻';
+UPDATE categories SET icon='ri-smartphone-line'    WHERE icon='📱';
+UPDATE categories SET icon='ri-tools-line'         WHERE icon='🔧';
+UPDATE categories SET icon='ri-book-2-line'        WHERE icon='📚';
+UPDATE categories SET icon='ri-music-2-line'       WHERE icon='🎵';
+UPDATE categories SET icon='ri-palette-line'       WHERE icon='🎨';
+UPDATE categories SET icon='ri-camera-line'        WHERE icon='📷';
+UPDATE categories SET icon='ri-shopping-cart-line' WHERE icon='🛒';
+UPDATE categories SET icon='ri-wallet-3-line'      WHERE icon='💰';
+UPDATE categories SET icon='ri-bar-chart-box-line' WHERE icon='📊';
+UPDATE categories SET icon='ri-link'               WHERE icon='🔗';
+UPDATE categories SET icon='ri-star-line'          WHERE icon='⭐';
+UPDATE categories SET icon='ri-rocket-line'        WHERE icon='🚀';
+UPDATE categories SET icon='ri-focus-3-line'       WHERE icon='🎯';
+UPDATE categories SET icon='ri-pushpin-line'       WHERE icon='📌';
+UPDATE categories SET icon='ri-search-line'        WHERE icon='🔍';
+UPDATE categories SET icon='ri-file-text-line'     WHERE icon='📝';
+UPDATE categories SET icon='ri-alarm-line'         WHERE icon='⏰';
+UPDATE categories SET icon='ri-global-line'        WHERE icon='🌐';
+UPDATE categories SET icon='ri-cloud-line'         WHERE icon='☁️';
+UPDATE categories SET icon='ri-lock-line'          WHERE icon='🔒';
+UPDATE categories SET icon='ri-mail-line'          WHERE icon='📧';
+UPDATE categories SET icon='ri-chat-3-line'        WHERE icon='💬';
+UPDATE categories SET icon='ri-team-line'          WHERE icon='👥';
+UPDATE categories SET icon='ri-building-2-line'    WHERE icon='🏢';
+UPDATE categories SET icon='ri-earth-line'         WHERE icon='🌍';
+UPDATE categories SET icon='ri-gamepad-line'       WHERE icon='🎮';
+UPDATE categories SET icon='ri-heart-line'         WHERE icon='❤️';
+UPDATE categories SET icon='ri-fire-line'          WHERE icon='🔥';
+UPDATE categories SET icon='ri-lightbulb-line'     WHERE icon='💡';
+-- 变体选择符兼容（部分来源可能存为不带 U+FE0F 的形式）
+UPDATE categories SET icon='ri-cloud-line'         WHERE icon='☁';
+UPDATE categories SET icon='ri-heart-line'         WHERE icon='❤';

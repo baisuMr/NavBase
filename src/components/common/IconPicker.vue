@@ -1,20 +1,20 @@
 <template>
-  <div class="emoji-picker">
+  <div class="icon-picker">
     <div
-      v-for="emoji in emojis"
-      :key="emoji"
-      class="emoji-item"
-      :class="{ active: modelValue === emoji }"
-      @click="$emit('update:modelValue', emoji)"
+      v-for="icon in icons"
+      :key="icon"
+      class="icon-item"
+      :class="{ active: modelValue === icon }"
+      @click="$emit('update:modelValue', icon)"
     >
-      {{ emoji }}
+      <i :class="icon"></i>
     </div>
   </div>
 </template>
 
 <script setup>
 defineProps({
-  emojis: {
+  icons: {
     type: Array,
     required: true
   },

@@ -108,7 +108,7 @@
       <CategoryForm
         :category="categoryModal.data"
         :colors="presetColors"
-        :emojis="presetEmojis"
+        :icons="presetIcons"
         :loading="categoryModal.loading"
         @submit="handleCategorySubmit"
         @cancel="categoryModal.visible = false"
@@ -169,6 +169,7 @@ import { useKeyboard } from '../composables/useKeyboard'
 import { useToast } from '../composables/useToast'
 import { useDateInfo } from '../composables/useLunar'
 import { useSettingsStore } from '../stores/settings'
+import { CATEGORY_ICONS, resolveCategoryIcon } from '../constants/categoryIcons'
 
 const settingsStore = useSettingsStore()
 
@@ -186,16 +187,7 @@ const presetColors = [
   { name: '灰色', value: '#6B7280' }
 ]
 
-const presetEmojis = [
-  '📁','🏠','💻','📱','🔧','📚','🎵','🎨',
-  '📷','🛒','💰','📊','🔗','⭐','🚀','🎯',
-  '📌','🔍','📝','⏰','🌐','☁️','🔒','📧',
-  '💬','👥','🏢','🌍','🎮','❤️','🔥','💡'
-]
-
-// 分类图标（Material Symbols 名称）映射，把 emoji 风格统一
-// 没匹配上时退回到 fallback 图标
-const ICON_FALLBACK = 'folder'
+const presetIcons = CATEGORY_ICONS
 
 // ── 组合式函数 ──
 const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, deleteBookmark } = useBookmarks()
@@ -232,7 +224,7 @@ const heroCategories = computed(() => {
   const all = {
     id: 'all',
     name: '全部',
-    icon: 'apps',
+    icon: 'ri-apps-2-line',
     count: bookmarks.value.length,
     accent: 'primary'
   }
@@ -242,7 +234,7 @@ const heroCategories = computed(() => {
     .map((c, idx) => ({
       id: c.id,
       name: c.name,
-      icon: iconForCategory(c, idx),
+      icon: resolveCategoryIcon(c.icon),
       count: categoryCountMap.value[c.id] || 0,
       accent: accentForIndex(idx)
     }))
@@ -257,37 +249,6 @@ const explorerCategories = computed(() => {
     count: categoryCountMap.value[c.id] || 0
   }))
 })
-
-function iconForCategory(cat, idx) {
-  // 优先用 emoji（如 💻）作为 Material Symbol 名字，否则按 idx 分配预设图标
-  const symbolMap = {
-    '💻': 'terminal',
-    '📚': 'menu_book',
-    '🎨': 'palette',
-    '🚀': 'rocket_launch',
-    '⭐': 'star',
-    '🔧': 'build',
-    '🏠': 'home',
-    '📁': 'folder',
-    '🔍': 'search',
-    '🎵': 'music_note',
-    '📷': 'photo_camera',
-    '💰': 'payments',
-    '📊': 'analytics',
-    '🔗': 'link',
-    '📌': 'push_pin',
-    '🌐': 'public',
-    '☁️': 'cloud',
-    '💬': 'chat',
-    '👥': 'group',
-    '🏢': 'business',
-    '🎮': 'sports_esports',
-    '❤️': 'favorite',
-    '🔥': 'local_fire_department',
-    '💡': 'lightbulb'
-  }
-  return symbolMap[cat.icon] || ICON_FALLBACK
-}
 
 function accentForIndex(idx) {
   const accents = ['primary', 'secondary', 'primary', 'tertiary', 'neutral']

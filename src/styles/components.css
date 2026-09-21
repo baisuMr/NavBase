@@ -382,8 +382,8 @@
               0 0 0 3.5px var(--color-primary);
 }
 
-/* ── Emoji 选择器 ── */
-.emoji-picker {
+/* ── 图标选择器 ── */
+.icon-picker {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
@@ -395,7 +395,7 @@
   border-radius: var(--radius-md);
 }
 
-.emoji-picker .emoji-item {
+.icon-picker .icon-item {
   width: 36px;
   height: 36px;
   display: flex;
@@ -407,12 +407,12 @@
   transition: all var(--t-fast);
 }
 
-.emoji-picker .emoji-item:hover {
+.icon-picker .icon-item:hover {
   background: var(--color-surface-container-high);
   transform: scale(1.1);
 }
 
-.emoji-picker .emoji-item.active {
+.icon-picker .icon-item.active {
   background: var(--color-primary-a15);
   box-shadow: inset 0 0 0 1.5px var(--color-primary);
 }

@@ -13,8 +13,8 @@
 
     <div class="form-group">
       <label class="form-label">图标</label>
-      <EmojiPicker
-        :emojis="emojis"
+      <IconPicker
+        :icons="icons"
         :model-value="form.icon"
         @update:model-value="form.icon = $event"
       />
@@ -40,13 +40,13 @@
 
 <script setup>
 import { reactive, watch } from 'vue'
-import EmojiPicker from '../common/EmojiPicker.vue'
+import IconPicker from '../common/IconPicker.vue'
 import ColorPicker from '../common/ColorPicker.vue'
 
 const props = defineProps({
   category: { type: Object, default: null },
   colors: { type: Array, required: true },
-  emojis: { type: Array, required: true },
+  icons: { type: Array, required: true },
   loading: { type: Boolean, default: false }
 })
 
@@ -54,7 +54,7 @@ const emit = defineEmits(['submit', 'cancel'])
 
 const form = reactive({
   name: '',
-  icon: '📁',
+  icon: 'ri-folder-line',
   color: '#10b981'
 })
 
@@ -62,7 +62,7 @@ watch(() => props.category, (val) => {
   if (val) {
     Object.assign(form, {
       name: val.name || '',
-      icon: val.icon || '📁',
+      icon: val.icon || 'ri-folder-line',
       color: val.color || '#10b981'
     })
   }

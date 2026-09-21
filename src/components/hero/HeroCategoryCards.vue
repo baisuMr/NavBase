@@ -11,7 +11,7 @@
     >
       <div class="hero-category-card-left">
         <span class="hero-category-icon">
-          <span class="material-symbols-outlined">{{ cat.icon }}</span>
+          <i :class="cat.icon"></i>
         </span>
         <span class="hero-category-name">{{ cat.name }}</span>
       </div>
