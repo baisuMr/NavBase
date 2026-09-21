@@ -127,21 +127,8 @@ input, textarea, select {
   border-radius: 2px;
 }
 
-/* ── Material Symbols 工具类 ── */
-.material-symbols-outlined {
-  font-family: var(--font-icon);
-  font-weight: normal;
-  font-style: normal;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  font-feature-settings: 'liga';
+/* ── Remix Icon 补充（基础字体定义由 remixicon.css 提供） ── */
+[class^="ri-"] {
   user-select: none;
 }
 

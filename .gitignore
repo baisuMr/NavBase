@@ -35,3 +35,6 @@ pnpm-debug.log*
 
 # Playwright MCP 测试产物
 .playwright-mcp/
+
+# 工作区任务文件
+.superpowers/

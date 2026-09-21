@@ -34,3 +34,6 @@ UPDATE categories SET icon='ri-lightbulb-line'     WHERE icon='💡';
 -- 变体选择符兼容（部分来源可能存为不带 U+FE0F 的形式）
 UPDATE categories SET icon='ri-cloud-line'         WHERE icon='☁';
 UPDATE categories SET icon='ri-heart-line'         WHERE icon='❤';
+-- 本地库实际存在的表外 emoji（Task 3 发现，'🛠️'/'🛠' 为变体兼容形式）
+UPDATE categories SET icon='ri-tools-line'         WHERE icon IN ('🛠️','🛠');
+UPDATE categories SET icon='ri-movie-line'         WHERE icon='🎬';

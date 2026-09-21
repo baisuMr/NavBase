@@ -44,7 +44,7 @@ pnpm test                                        # 全量运行
 pnpm test:watch                                  # 监听模式
 pnpm test src/composables/useLunar.test.js       # 运行单个测试文件（pnpm 直接透传参数，无需 --）
 
-# 字体/图标子集再生成（需可访问 fonts.googleapis.com）
+# 正文字体子集再生成（需可访问 fonts.googleapis.com）
 node scripts/generate-fonts.mjs
 
 # D1 数据库操作
@@ -61,7 +61,7 @@ src/
 │   ├── bookmark/       # 书签相关组件（BookmarkExplorer, BookmarkCard, BookmarkForm）
 │   ├── category/       # 分类相关组件（CategoryForm）
 │   ├── hero/           # 首屏组件（HeroClock, HeroSearch, HeroCategoryCards）
-│   └── common/         # 通用组件（ContextMenu, Modal, SettingsPanel, ColorPicker, EmojiPicker…）
+│   └── common/         # 通用组件（ContextMenu, Modal, SettingsPanel, ColorPicker, IconPicker…）
 ├── composables/        # 组合式函数：stores 的薄封装 + UI 逻辑（快捷键/右键菜单/搜索/农历）
 ├── stores/             # Pinia 状态管理（auth / bookmarks / categories / settings）
 ├── api/                # API 调用封装（统一带认证头，401 时清状态并跳登录页）
@@ -80,7 +80,8 @@ functions/              # Cloudflare Functions（API 后端）
 └── _middleware.js       # 中间件（Basic Auth 认证，未配置密码时拒绝一切访问）
 
 scripts/
-└── generate-fonts.mjs  # 字体/图标子集本地化生成脚本（新增图标名后重跑）
+├── generate-fonts.mjs         # 正文字体子集本地化生成脚本
+└── migrate-category-icons.sql # 存量分类图标 emoji → Remix Icon 迁移 SQL
 ```
 
 调用链分层：视图 → composables → Pinia stores → `src/api/` 封装 → Pages Functions。前端不直接 fetch，一律走 `src/api/` 封装（自动附带 Basic 认证头）。
@@ -95,9 +96,9 @@ scripts/
 - **站点图标代理**: `/api/favicon/:domain` 为免认证的图片代理（中间件放行；并发探测目标站 favicon.ico、favicon.im、DuckDuckGo、Google s2，魔数校验 + Cache API 缓存 7 天，全失败负面缓存 10 分钟）。书签 `icon_url` 为空时前端经 `useFavicon` 组合式函数自动拼该代理地址渲染，加载失败回退「标题首字头像」
 - **导入导出**: 在设置面板中进行，支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条、批内与库内双重去重）与 JSON 导出
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（前后端共同校验，后端逻辑在 `functions/utils/validate.js`）
-- **预设数据**: 分类支持预设的 Emoji 图标和 10 种常用颜色
+- **预设数据**: 分类支持预设的 Remix Icon 图标（`src/constants/categoryIcons.js`）和 10 种常用颜色
 - **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Pages Secret（线上），未配置时服务端拒绝一切访问；token 为 Basic 凭据 Base64 存 localStorage（含过期时间，默认 7 天）
-- **字体/图标本地化**: 全部字体与 Material Symbols 图标子集本地化于 `src/assets/fonts/`，无外部 CDN 依赖。**新增图标名后必须补入 `scripts/generate-fonts.mjs` 的 `ICON_NAMES` 并重跑该脚本**，否则线上显示为方块
+- **字体/图标本地化**: 正文字体子集本地化于 `src/assets/fonts/`（`scripts/generate-fonts.mjs` 生成）；图标使用 remixicon npm 包（Apache 2.0），全量字体经 Vite 本地打包，无外部 CDN。新增图标直接写 `ri-xxx-line` class（对照 https://remixicon.com/），无需重跑脚本
 - **快捷键支持**: Ctrl+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭
 
 ## 测试约定
@@ -107,7 +108,7 @@ scripts/
 
 ## 数据库表结构
 
-- `categories`: id, name, icon (emoji), color, sort_order, created_at, updated_at
+- `categories`: id, name, icon (ri-* 图标名), color, sort_order, created_at, updated_at
 - `bookmarks`: id, title, url, description, category_id, icon_url, sort_order, created_at, updated_at
 - `settings`: key (site_name / avatar), value, updated_at
 

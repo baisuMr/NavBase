@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  icon TEXT DEFAULT '📁',
+  icon TEXT DEFAULT 'ri-folder-line',
   color TEXT DEFAULT '#3B82F6',
   sort_order INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -31,15 +31,15 @@ CREATE INDEX IF NOT EXISTS idx_bookmarks_url ON bookmarks(url);
 
 -- 插入默认分类（幂等：同名分类已存在时跳过，可重复执行）
 INSERT INTO categories (name, icon, color, sort_order)
-  SELECT '常用', '⭐', '#18181B', 1 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '常用');
+  SELECT '常用', 'ri-star-line', '#18181B', 1 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '常用');
 INSERT INTO categories (name, icon, color, sort_order)
-  SELECT '开发', '💻', '#3F3F46', 2 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '开发');
+  SELECT '开发', 'ri-computer-line', '#3F3F46', 2 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '开发');
 INSERT INTO categories (name, icon, color, sort_order)
-  SELECT '工具', '🔧', '#71717A', 3 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '工具');
+  SELECT '工具', 'ri-tools-line', '#71717A', 3 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '工具');
 INSERT INTO categories (name, icon, color, sort_order)
-  SELECT '学习', '📚', '#3B82F6', 4 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '学习');
+  SELECT '学习', 'ri-book-2-line', '#3B82F6', 4 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '学习');
 INSERT INTO categories (name, icon, color, sort_order)
-  SELECT '娱乐', '🎮', '#6366F1', 5 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '娱乐');
+  SELECT '娱乐', 'ri-gamepad-line', '#6366F1', 5 WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = '娱乐');
 
 -- 站点设置表（KV 结构：site_name / avatar）
 CREATE TABLE IF NOT EXISTS settings (

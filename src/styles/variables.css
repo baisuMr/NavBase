@@ -161,7 +161,6 @@
   --font-display: 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
-  --font-icon: 'Material Symbols Outlined';
 
   /* 字号阶梯（最小 12px，保证可读性） */
   --fs-display-clock: 96px;
