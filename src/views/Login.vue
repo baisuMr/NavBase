@@ -1,102 +1,94 @@
 <template>
   <div class="login-page">
-    <main class="login-main">
-      <div class="login-card">
-        <!-- 品牌头 -->
-        <div class="login-brand">
-          <div class="login-brand-icon">
-            <i class="ri-bookmark-3-fill"></i>
-          </div>
-          <h1 class="login-brand-title">欢迎登录</h1>
+    <main class="login-card">
+      <!-- 品牌头 -->
+      <div class="login-brand">
+        <div class="login-brand-icon">
+          <i class="ri-flash-fill"></i>
+        </div>
+        <h1 class="login-brand-title">欢迎登录 {{ siteName }}</h1>
+        <p class="login-brand-subtitle">同步你的书签资料库，打造极致纯净的起始页</p>
+      </div>
+
+      <!-- 登录表单 -->
+      <form class="login-form" @submit.prevent="handleLogin">
+        <div class="login-field">
+          <label class="login-label" for="login-username">用户名</label>
+          <input
+            id="login-username"
+            v-model="form.username"
+            type="text"
+            class="login-input"
+            placeholder="username"
+            required
+            autocomplete="username"
+          />
         </div>
 
-        <!-- 登录表单 -->
-        <form class="login-form" @submit.prevent="handleLogin">
+        <div class="login-field">
+          <label class="login-label" for="login-password">密码</label>
           <div class="login-input-wrap">
-            <label class="form-label" for="login-username">账号</label>
-            <div class="login-input-inner">
-              <span class="login-input-icon">
-                <i class="ri-at-line"></i>
-              </span>
-              <input
-                id="login-username"
-                v-model="form.username"
-                type="text"
-                class="input"
-                placeholder="username"
-                required
-                autocomplete="username"
-              />
-            </div>
+            <input
+              id="login-password"
+              v-model="form.password"
+              :type="showPwd ? 'text' : 'password'"
+              class="login-input has-password"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="login-password-toggle"
+              :aria-label="showPwd ? '隐藏密码' : '显示密码'"
+              @click="showPwd = !showPwd"
+            >
+              <i :class="showPwd ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+            </button>
           </div>
+        </div>
 
-          <div class="login-input-wrap">
-            <label class="form-label" for="login-password">密码</label>
-            <div class="login-input-inner">
-              <span class="login-input-icon">
-                <i class="ri-lock-line"></i>
-              </span>
-              <input
-                id="login-password"
-                v-model="form.password"
-                :type="showPwd ? 'text' : 'password'"
-                class="input"
-                placeholder="••••••••••••"
-                required
-                autocomplete="current-password"
-              />
-              <button
-                type="button"
-                class="login-input-toggle"
-                @click="showPwd = !showPwd"
-                :aria-label="showPwd ? '隐藏密码' : '显示密码'"
-              >
-                <i :class="showPwd ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
-              </button>
-            </div>
-          </div>
+        <label class="login-remember">
+          <input v-model="remember" type="checkbox" />
+          <span class="login-checkbox"><i class="ri-check-line"></i></span>
+          <span class="login-remember-text">记住此设备（30天内免登录）</span>
+        </label>
 
-          <div v-if="error" class="form-error">{{ error }}</div>
+        <div v-if="error" class="login-error">{{ error }}</div>
 
-          <button
-            type="submit"
-            class="btn btn-primary login-submit"
-            :disabled="loading"
-          >
-            <template v-if="loading">
-              <span class="login-loading-spinner"></span>
-              <span>登录中…</span>
-            </template>
-            <template v-else-if="success">
-              <i class="ri-checkbox-circle-line" style="font-size:var(--icon-size-md);"></i>
-              <span>登录成功</span>
-            </template>
-            <template v-else>
-              <span>登 录</span>
-              <i class="ri-arrow-right-line" style="font-size:var(--icon-size-md);"></i>
-            </template>
-          </button>
-        </form>
-      </div>
+        <button type="submit" class="login-submit" :disabled="loading">
+          <template v-if="loading">
+            <span class="login-spinner"></span>
+            <span>正在登录...</span>
+          </template>
+          <template v-else-if="success">
+            <i class="ri-check-line"></i>
+            <span>登录成功</span>
+          </template>
+          <template v-else>
+            <span>立即登录</span>
+            <i class="ri-arrow-right-line"></i>
+          </template>
+        </button>
+      </form>
     </main>
-
-    <div class="login-footer">
-      <span style="font-family:var(--font-mono);font-size:var(--fs-label-sm);opacity:0.6;letter-spacing:0.04em;">
-        NavBase
-      </span>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useSettingsStore } from '../stores/settings'
 
 const router = useRouter()
 const { login } = useAuth()
+const settings = useSettingsStore()
+
+const siteName = computed(() => settings.displayName)
 
 const form = reactive({ username: '', password: '' })
+const remember = ref(true)
 const showPwd = ref(false)
 const loading = ref(false)
 const success = ref(false)
@@ -108,7 +100,7 @@ async function handleLogin() {
   success.value = false
 
   try {
-    await login(form.username, form.password)
+    await login(form.username, form.password, remember.value)
     success.value = true
     setTimeout(() => router.push('/'), 500)
   } catch (err) {
