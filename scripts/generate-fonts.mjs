@@ -12,8 +12,7 @@ const CSS_OUT = path.join(ROOT, 'src/styles/fonts.css');
 
 const FAMILIES = [
   'JetBrains+Mono:wght@400;500',
-  'Plus+Jakarta+Sans:wght@400;500;600',
-  'Space+Grotesk:wght@300;400;500;600'
+  'Inter:wght@400;500;600'
 ];
 
 async function fetchCss(url) {
