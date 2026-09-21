@@ -1,87 +1,57 @@
 <template>
   <section id="explorer-section" class="explorer">
-    <!-- 标题 -->
-    <div class="explorer-header">
-      <div class="explorer-header-left">
-        <div class="explorer-header-icon">
-          <i class="ri-bookmark-line"></i>
-        </div>
-        <div>
-          <h2 class="explorer-title">书签资料库</h2>
-          <p class="explorer-subtitle">优雅收纳、多维分类与毫秒检索的极简书签矩阵</p>
-        </div>
-      </div>
-      <div class="explorer-status">
-        <span class="dot"></span>
-        <span>共 {{ totalCount }} 条目</span>
-      </div>
-    </div>
-
-    <!-- 工具栏：搜索 + 添加 -->
+    <!-- 工具栏：分类 tabs + 添加 -->
     <div class="explorer-toolbar">
-      <div class="explorer-filter">
-        <i class="ri-filter-3-line"></i>
-        <input
-          :value="filterText"
-          type="text"
-          class="input"
-          :placeholder="`在 ${totalCount} 个书签中按标题或域名筛选...`"
-          @input="$emit('update:filter-text', $event.target.value)"
-        />
-      </div>
-      <div style="display:flex;gap:var(--space-sm,8px);">
-        <button class="explorer-add-btn" type="button" @click="$emit('add-bookmark')">
+      <div class="category-tabs">
+        <button
+          type="button"
+          class="category-tab"
+          :class="{ active: activeCat === 'all' }"
+          @click="$emit('select-category', 'all')"
+        >
+          <span>全部</span>
+          <span class="category-tab-count">{{ totalCount }}</span>
+        </button>
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          type="button"
+          class="category-tab"
+          :class="{ active: activeCat === cat.id }"
+          @click="$emit('select-category', cat.id)"
+          @contextmenu.prevent="$emit('category-menu', $event, cat)"
+        >
+          <span>{{ cat.name }}</span>
+          <span class="category-tab-count">{{ cat.count }}</span>
+        </button>
+        <button
+          type="button"
+          class="category-tab-add"
+          @click="$emit('add-category')"
+          aria-label="新建分类"
+          title="新建分类"
+        >
           <i class="ri-add-line"></i>
-          <span>添加新书签</span>
         </button>
       </div>
-    </div>
 
-    <!-- 分类 pills -->
-    <div class="category-pills scrollbar-none">
-      <button
-        type="button"
-        class="category-pill"
-        :class="{ active: activeCat === 'all' }"
-        @click="$emit('select-category', 'all')"
-      >
-        <span>全部书签</span>
-        <span class="category-pill-count">{{ totalCount }}</span>
-      </button>
-      <button
-        v-for="cat in categories"
-        :key="cat.id"
-        type="button"
-        class="category-pill"
-        :class="{ active: activeCat === cat.id }"
-        @click="$emit('select-category', cat.id)"
-        @contextmenu.prevent="$emit('category-menu', $event, cat)"
-      >
-        <span>{{ cat.name }}</span>
-        <span class="category-pill-count">{{ cat.count }}</span>
-      </button>
-      <button
-        type="button"
-        class="category-pill-add"
-        @click="$emit('add-category')"
-        aria-label="新建分类"
-        title="新建分类"
-      >
+      <button class="explorer-add-btn" type="button" @click="$emit('add-bookmark')">
         <i class="ri-add-line"></i>
+        <span>添加网址</span>
       </button>
     </div>
 
     <!-- 网格 -->
-    <div v-if="visibleBookmarks.length > 0" class="bookmark-grid">
-      <BookmarkCard
-        v-for="bm in visibleBookmarks"
-        :key="bm.id"
-        :bookmark="bm"
-        @menu="$emit('menu', $event, bm)"
-      />
-    </div>
-    <div v-else class="bookmark-grid">
-      <div class="bookmark-empty">
+    <div class="bookmark-grid">
+      <template v-if="visibleBookmarks.length > 0">
+        <BookmarkCard
+          v-for="bm in visibleBookmarks"
+          :key="bm.id"
+          :bookmark="bm"
+          @menu="$emit('menu', $event, bm)"
+        />
+      </template>
+      <div v-else class="bookmark-empty">
         <i class="ri-bookmark-line"></i>
         <div>{{ emptyText }}</div>
       </div>
@@ -105,35 +75,20 @@ const props = defineProps({
   activeCat: {
     type: [String, Number],
     default: 'all'
-  },
-  filterText: {
-    type: String,
-    default: ''
   }
 })
 
-defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu', 'update:filter-text'])
+defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu'])
 
 const totalCount = computed(() => props.bookmarks.length)
 
 const visibleBookmarks = computed(() => {
-  let list = props.bookmarks
-  if (props.activeCat !== 'all') {
-    list = list.filter(b => b.category_id === props.activeCat)
-  }
-  const q = props.filterText.trim().toLowerCase()
-  if (q) {
-    list = list.filter(b =>
-      b.title.toLowerCase().includes(q) ||
-      (b.url || '').toLowerCase().includes(q)
-    )
-  }
-  return list
+  if (props.activeCat === 'all') return props.bookmarks
+  return props.bookmarks.filter(b => b.category_id === props.activeCat)
 })
 
 const emptyText = computed(() => {
-  if (props.filterText.trim()) return '没有匹配的书签'
   if (props.activeCat !== 'all') return '该分类下暂无书签'
-  return '暂无书签，点击右上角或第一屏的 + 添加'
+  return '暂无书签，点击右上角「添加网址」添加'
 })
 </script>
