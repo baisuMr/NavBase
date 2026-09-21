@@ -198,7 +198,7 @@ nav-manager/
 ├── functions/            # Cloudflare Functions
 │   ├── api/              # API 端点
 │   └── utils/            # 共享校验工具（URL 协议白名单等）
-├── scripts/              # 字体/图标子集生成脚本
+├── scripts/              # 正文字体子集脚本与数据迁移 SQL
 ├── schema.sql            # 数据库 Schema
 └── wrangler.toml         # Cloudflare 配置
 ```

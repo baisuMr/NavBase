@@ -25,7 +25,7 @@ echo -e "\n[测试 3] POST /api/categories"
 curl -s -X POST "$BASE_URL/api/categories" \
   -u "$AUTH" \
   -H "Content-Type: application/json" \
-  -d '{"name":"测试分类","icon":"🧪","color":"#FF6B6B"}' | head -c 200
+  -d '{"name":"测试分类","icon":"ri-flask-line","color":"#FF6B6B"}' | head -c 200
 echo ""
 
 # 测试 4: 获取书签列表

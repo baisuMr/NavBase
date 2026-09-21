@@ -23,7 +23,7 @@ GET /api/categories
   {
     "id": 1,
     "name": "常用",
-    "icon": "⭐",
+    "icon": "ri-star-line",
     "color": "#3B82F6",
     "sort_order": 1,
     "created_at": "2026-09-08 02:36:25",
@@ -31,6 +31,8 @@ GET /api/categories
   }
 ]
 ```
+
+**字段说明**：`icon` 为 [Remix Icon](https://remixicon.com/) 图标名（如 `ri-folder-line`，统一使用 `-line` 变体）；非 `ri-` 开头的值前端会回退为默认图标。
 
 #### 获取单个分类
 ```
@@ -45,7 +47,7 @@ Content-Type: application/json
 
 {
   "name": "分类名称",
-  "icon": "📁",
+  "icon": "ri-folder-line",
   "color": "#3B82F6",
   "sort_order": 0
 }
@@ -59,7 +61,7 @@ Content-Type: application/json
 
 {
   "name": "新名称",
-  "icon": "📁",
+  "icon": "ri-folder-line",
   "color": "#3B82F6"
 }
 ```
@@ -95,7 +97,7 @@ GET /api/bookmarks
     "created_at": "2026-09-08 02:36:25",
     "updated_at": "2026-09-08 02:36:25",
     "category_name": "常用",
-    "category_icon": "⭐",
+    "category_icon": "ri-star-line",
     "category_color": "#3B82F6"
   }
 ]
@@ -278,7 +280,7 @@ Content-Type: application/json
 
 启动开发服务器后，运行测试脚本：
 ```bash
-bash test-api.sh
+bash scripts/test-api.sh
 ```
 
 或者使用 curl 手动测试：
