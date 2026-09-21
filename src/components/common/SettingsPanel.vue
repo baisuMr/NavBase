@@ -30,11 +30,11 @@
         <div class="settings-row">
           <div class="settings-avatar-preview">
             <img v-if="settings.avatar" :src="settings.avatar" alt="当前头像" />
-            <span v-else class="material-symbols-outlined">person</span>
+            <i v-else class="ri-user-line"></i>
           </div>
           <div class="settings-avatar-actions">
             <button type="button" class="btn btn-secondary" :disabled="avatarSaving" @click="triggerAvatarUpload">
-              <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">add_a_photo</span>
+              <i class="ri-image-add-line" style="font-size:var(--icon-size-md);"></i>
               <span>{{ avatarSaving ? '上传中…' : '上传图片' }}</span>
             </button>
             <button
@@ -67,7 +67,7 @@
             :class="['settings-theme-option', { active: theme === 'light' }]"
             @click="setTheme('light')"
           >
-            <span class="material-symbols-outlined">light_mode</span>
+            <i class="ri-sun-line"></i>
             <span>浅色</span>
           </button>
           <button
@@ -75,7 +75,7 @@
             :class="['settings-theme-option', { active: theme === 'dark' }]"
             @click="setTheme('dark')"
           >
-            <span class="material-symbols-outlined">dark_mode</span>
+            <i class="ri-moon-line"></i>
             <span>深色</span>
           </button>
         </div>
@@ -87,11 +87,11 @@
         <span class="form-label">数据管理</span>
         <div class="settings-data-actions">
           <button type="button" class="btn btn-secondary" @click="triggerImport">
-            <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">upload</span>
+            <i class="ri-upload-line" style="font-size:var(--icon-size-md);"></i>
             <span>导入书签</span>
           </button>
           <button type="button" class="btn btn-secondary" @click="exportBookmarks">
-            <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">download</span>
+            <i class="ri-download-line" style="font-size:var(--icon-size-md);"></i>
             <span>导出书签</span>
           </button>
         </div>
@@ -115,7 +115,7 @@
         <div class="settings-row">
           <span class="settings-username">{{ username }}</span>
           <button type="button" class="btn btn-danger" @click="handleLogout">
-            <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">logout</span>
+            <i class="ri-logout-box-r-line" style="font-size:var(--icon-size-md);"></i>
             <span>退出登录</span>
           </button>
         </div>

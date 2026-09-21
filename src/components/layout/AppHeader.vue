@@ -4,7 +4,7 @@
       <!-- 左侧：品牌 + 导航 -->
       <div style="display:flex;align-items:center;gap:var(--space-lg);">
         <a class="app-header-brand" href="#startpage-hero">
-          <span class="material-symbols-outlined">bookmark_heart</span>
+          <i class="ri-bookmark-3-line"></i>
           <span class="app-header-brand-name">{{ siteName }}</span>
         </a>
 
@@ -23,7 +23,7 @@
           aria-label="设置"
           title="设置"
         >
-          <span class="material-symbols-outlined" style="font-size:var(--icon-size-lg);">settings</span>
+          <i class="ri-settings-line" style="font-size:var(--icon-size-lg);"></i>
         </button>
 
         <button
@@ -33,13 +33,13 @@
           aria-label="添加书签"
           title="添加书签 (Alt+N)"
         >
-          <span class="material-symbols-outlined" style="font-size:var(--icon-size-lg);">add</span>
+          <i class="ri-add-line" style="font-size:var(--icon-size-lg);"></i>
         </button>
 
         <!-- 头像仅作展示，退出登录在设置面板中 -->
         <div class="app-header-avatar" :title="username">
           <img v-if="avatar" :src="avatar" alt="头像" />
-          <span v-else class="material-symbols-outlined">person</span>
+          <i v-else class="ri-user-line"></i>
         </div>
       </div>
     </div>

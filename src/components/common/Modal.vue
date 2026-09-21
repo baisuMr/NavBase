@@ -4,7 +4,7 @@
       <div class="modal-header">
         <h3>{{ title }}</h3>
         <button class="modal-close" @click="$emit('close')" aria-label="关闭">
-          <span class="material-symbols-outlined">close</span>
+          <i class="ri-close-line"></i>
         </button>
       </div>
       <div class="modal-body">

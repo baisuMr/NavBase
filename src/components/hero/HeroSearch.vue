@@ -11,7 +11,7 @@
     <form class="hero-search-bar" @submit.prevent="onSubmit">
       <div class="hero-search-input-wrap">
         <span class="search-icon">
-          <span class="material-symbols-outlined">search</span>
+          <i class="ri-search-line"></i>
         </span>
         <input
           ref="inputEl"
@@ -31,7 +31,7 @@
           @click="onClear"
           aria-label="清空"
         >
-          <span class="material-symbols-outlined">close</span>
+          <i class="ri-close-line"></i>
         </button>
         <button
           v-if="query"

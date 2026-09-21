@@ -5,7 +5,7 @@
         <!-- 品牌头 -->
         <div class="login-brand">
           <div class="login-brand-icon">
-            <span class="material-symbols-outlined">bookmarks</span>
+            <i class="ri-bookmark-3-fill"></i>
           </div>
           <h1 class="login-brand-title">欢迎登录</h1>
         </div>
@@ -16,7 +16,7 @@
             <label class="form-label" for="login-username">账号</label>
             <div class="login-input-inner">
               <span class="login-input-icon">
-                <span class="material-symbols-outlined">alternate_email</span>
+                <i class="ri-at-line"></i>
               </span>
               <input
                 id="login-username"
@@ -34,7 +34,7 @@
             <label class="form-label" for="login-password">密码</label>
             <div class="login-input-inner">
               <span class="login-input-icon">
-                <span class="material-symbols-outlined">lock</span>
+                <i class="ri-lock-line"></i>
               </span>
               <input
                 id="login-password"
@@ -51,9 +51,7 @@
                 @click="showPwd = !showPwd"
                 :aria-label="showPwd ? '隐藏密码' : '显示密码'"
               >
-                <span class="material-symbols-outlined">
-                  {{ showPwd ? 'visibility_off' : 'visibility' }}
-                </span>
+                <i :class="showPwd ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
               </button>
             </div>
           </div>
@@ -70,12 +68,12 @@
               <span>登录中…</span>
             </template>
             <template v-else-if="success">
-              <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">check_circle</span>
+              <i class="ri-checkbox-circle-line" style="font-size:var(--icon-size-md);"></i>
               <span>登录成功</span>
             </template>
             <template v-else>
               <span>登 录</span>
-              <span class="material-symbols-outlined" style="font-size:var(--icon-size-md);">arrow_forward</span>
+              <i class="ri-arrow-right-line" style="font-size:var(--icon-size-md);"></i>
             </template>
           </button>
         </form>

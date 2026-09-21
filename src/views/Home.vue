@@ -21,12 +21,12 @@
           </div>
           <div class="hero-stats">
             <div class="hero-stats-item primary">
-              <span class="material-symbols-outlined">bookmarks</span>
+              <i class="ri-bookmark-line"></i>
               <span>书签 {{ bookmarks.length }}</span>
             </div>
             <span class="hero-stats-sep">•</span>
             <div class="hero-stats-item tertiary">
-              <span class="material-symbols-outlined">folder</span>
+              <i class="ri-folder-line"></i>
               <span>分类 {{ categories.length }}</span>
             </div>
           </div>
@@ -50,7 +50,7 @@
         <!-- 滚动提示 -->
         <a class="hero-scroll-hint" href="#explorer-section">
           <span>向下滑动浏览全部书签</span>
-          <span class="material-symbols-outlined">keyboard_double_arrow_down</span>
+          <i class="ri-arrow-down-double-line"></i>
         </a>
       </section>
 
@@ -329,18 +329,18 @@ function onSelectCategory(id) {
 // ── 右键菜单 ──
 function showBookmarkMenu(event, bookmark) {
   showContextMenu(event, [
-    { icon: 'edit', label: '编辑', action: 'edit-bookmark' },
-    { icon: 'content_copy', label: '复制链接', action: 'copy-link' },
+    { icon: 'ri-edit-line', label: '编辑', action: 'edit-bookmark' },
+    { icon: 'ri-file-copy-line', label: '复制链接', action: 'copy-link' },
     { divider: true },
-    { icon: 'delete', label: '删除', action: 'delete-bookmark', danger: true }
+    { icon: 'ri-delete-bin-line', label: '删除', action: 'delete-bookmark', danger: true }
   ], bookmark)
 }
 
 function showCategoryMenu(event, category) {
   showContextMenu(event, [
-    { icon: 'edit', label: '编辑分类', action: 'edit-category' },
+    { icon: 'ri-edit-line', label: '编辑分类', action: 'edit-category' },
     { divider: true },
-    { icon: 'delete', label: '删除分类', action: 'delete-category', danger: true }
+    { icon: 'ri-delete-bin-line', label: '删除分类', action: 'delete-category', danger: true }
   ], category)
 }
 

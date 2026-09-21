@@ -4,7 +4,7 @@
     <div class="explorer-header">
       <div class="explorer-header-left">
         <div class="explorer-header-icon">
-          <span class="material-symbols-outlined">bookmarks</span>
+          <i class="ri-bookmark-line"></i>
         </div>
         <div>
           <h2 class="explorer-title">书签资料库</h2>
@@ -20,7 +20,7 @@
     <!-- 工具栏：搜索 + 添加 -->
     <div class="explorer-toolbar">
       <div class="explorer-filter">
-        <span class="material-symbols-outlined">filter_alt</span>
+        <i class="ri-filter-3-line"></i>
         <input
           :value="filterText"
           type="text"
@@ -31,7 +31,7 @@
       </div>
       <div style="display:flex;gap:var(--space-sm,8px);">
         <button class="explorer-add-btn" type="button" @click="$emit('add-bookmark')">
-          <span class="material-symbols-outlined">add</span>
+          <i class="ri-add-line"></i>
           <span>添加新书签</span>
         </button>
       </div>
@@ -67,7 +67,7 @@
         aria-label="新建分类"
         title="新建分类"
       >
-        <span class="material-symbols-outlined">add</span>
+        <i class="ri-add-line"></i>
       </button>
     </div>
 
@@ -82,7 +82,7 @@
     </div>
     <div v-else class="bookmark-grid">
       <div class="bookmark-empty">
-        <span class="material-symbols-outlined">bookmarks</span>
+        <i class="ri-bookmark-line"></i>
         <div>{{ emptyText }}</div>
       </div>
     </div>

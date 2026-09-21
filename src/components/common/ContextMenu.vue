@@ -13,7 +13,7 @@
           :class="{ danger: item.danger }"
           @click="$emit('select', item.action)"
         >
-          <span v-if="item.icon" class="material-symbols-outlined">{{ item.icon }}</span>
+          <i v-if="item.icon" :class="item.icon"></i>
           <span>{{ item.label }}</span>
         </div>
       </template>

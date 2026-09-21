@@ -15,7 +15,7 @@
       <span class="bookmark-card-domain">{{ domain }}</span>
     </span>
     <span class="bookmark-card-arrow">
-      <span class="material-symbols-outlined">arrow_outward</span>
+      <i class="ri-external-link-line"></i>
     </span>
   </a>
 </template>
