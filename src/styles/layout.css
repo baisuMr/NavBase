@@ -197,10 +197,6 @@
   color: var(--color-outline-variant);
 }
 
-.app-footer-meta-active {
-  color: var(--color-primary);
-}
-
 .app-footer-links {
   display: flex;
   align-items: center;
@@ -310,13 +306,6 @@
   letter-spacing: 6px;
 }
 
-.login-brand-sub {
-  font-family: var(--font-body);
-  font-size: var(--fs-body-sm);
-  color: var(--color-on-surface-variant);
-  margin-top: 4px;
-}
-
 .login-form {
   display: flex;
   flex-direction: column;
@@ -377,14 +366,6 @@
 .login-input-toggle [class^="ri-"] {
   font-size: var(--fs-headline-sm);
 }
-
-.login-form-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 2px;
-}
-
 
 .login-submit {
   width: 100%;

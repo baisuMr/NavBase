@@ -8,14 +8,10 @@
 
   /* Surface — 深色玻璃底色 */
   --color-surface: #121316;
-  --color-surface-dim: #121316;
-  --color-surface-bright: #38393c;
-  --color-surface-container-lowest: #0d0e11;
   --color-surface-container-low: #1b1b1f;
   --color-surface-container: #1f1f23;
   --color-surface-container-high: #292a2d;
   --color-surface-container-highest: #343538;
-  --color-surface-variant: #343538;
   /* ghost 元素（pill/标签）hover 时的中性微亮填充 */
   --color-surface-hover: rgba(232, 234, 238, 0.06);
   /* 内容卡片面（书签卡片等，独立于容器阶梯：需要玻璃质感与 hover 提亮） */
@@ -28,32 +24,23 @@
   --rgb-surface-low: 27, 27, 31;
   --rgb-surface-high: 41, 42, 45;
   --rgb-surface-highest: 52, 53, 56;
-  --rgb-surface-variant: 34, 35, 41;
   --rgb-sage: 187, 202, 191;
   --rgb-on-primary: 0, 56, 36;
 
   /* On-Surface — 文字层级（中性白系，与玻璃边框同色相） */
   --color-on-surface: #e6e6ea;
   --color-on-surface-variant: rgba(232, 234, 238, 0.66);
-  --color-inverse-surface: #e6e6ea;
-  --color-inverse-on-surface: #2f3034;
 
   /* Primary — Emerald Verdant */
   --color-primary: #4edea3;
   --color-primary-container: #10b981;
   --color-on-primary: #003824;
   --color-on-primary-container: #00422b;
-  --color-inverse-primary: #006c49;
-  --color-primary-fixed: #6ffbbe;
-  --color-primary-fixed-dim: #4edea3;
-  --color-surface-tint: #4edea3;
   /* 实心主按钮 hover 态（深色提亮、浅色加深，两主题各覆盖一档） */
   --color-primary-hover: #6ffbbe;
 
   /* Primary 透明度阶梯（边框/底色/辉光等场景统一引用） */
-  --color-primary-a05: rgba(78, 222, 163, 0.05);
   --color-primary-a10: rgba(78, 222, 163, 0.1);
-  --color-primary-a12: rgba(78, 222, 163, 0.12);
   --color-primary-a15: rgba(78, 222, 163, 0.15);
   --color-primary-a20: rgba(78, 222, 163, 0.2);
   --color-primary-a30: rgba(78, 222, 163, 0.3);
@@ -63,46 +50,27 @@
 
   /* Secondary — Indigo Iris */
   --color-secondary: #c0c1ff;
-  --color-secondary-container: #3131c0;
   --color-on-secondary: #1000a9;
-  --color-on-secondary-container: #b0b2ff;
   --color-secondary-a10: rgba(192, 193, 255, 0.1);
-  --color-secondary-a15: rgba(192, 193, 255, 0.15);
   --color-secondary-a30: rgba(192, 193, 255, 0.3);
 
   /* Tertiary — Amber Lumina */
   --color-tertiary: #ffb95f;
-  --color-tertiary-container: #e29100;
   --color-on-tertiary: #472a00;
-  --color-on-tertiary-container: #523200;
   --color-tertiary-a12: rgba(255, 185, 95, 0.12);
-  --color-tertiary-a15: rgba(255, 185, 95, 0.15);
   --color-tertiary-a30: rgba(255, 185, 95, 0.3);
 
   /* Outline（中性化：跟随玻璃边框的白色透明体系） */
-  --color-outline: rgba(232, 234, 238, 0.42);
   --color-outline-variant: rgba(232, 234, 238, 0.14);
 
   /* Error */
   --color-error: #ffb4ab;
-  --color-on-error: #690005;
-  --color-error-container: #93000a;
-  --color-on-error-container: #ffdad6;
   --color-error-a08: rgba(255, 180, 171, 0.08);
   --color-error-a12: rgba(255, 180, 171, 0.12);
   --color-error-a20: rgba(255, 180, 171, 0.2);
   --color-error-a30: rgba(255, 180, 171, 0.3);
 
-  /* 语义色 */
-  --color-success: #4edea3;
-  --color-danger: #ffb4ab;
-  --color-warning: #ffb95f;
-  --color-info: #c0c1ff;
 
-  /* 文字透明度层级（primary 最高对比；muted 仅限装饰性文字） */
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(240, 243, 246, 0.66);
-  --text-muted: rgba(240, 243, 246, 0.45);
 
   /* 玻璃面板 */
   --glass-bg: rgba(26, 28, 35, 0.55);
@@ -113,19 +81,15 @@
   --backdrop-blur-strong: blur(36px) saturate(160%);
 
   /* 边框 */
-  --border-color: rgba(255, 255, 255, 0.08);
   --border-color-strong: rgba(255, 255, 255, 0.16);
   --radius-xs: 0.25rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
   --radius-pill: 9999px;
 
-  /* 阴影 — 三级深度（--shadow-tint 为阴影基色三元组，浅色主题换成冷灰蓝） */
+  /* 阴影（--shadow-tint 为阴影基色三元组，浅色主题换成冷灰蓝） */
   --shadow-tint: 0, 0, 0;
-  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
-  --shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.5), 0 0 24px -2px var(--color-primary-a12, rgba(78, 222, 163, 0.12));
   --shadow-modal: 0 24px 64px -8px rgba(0, 0, 0, 0.75);
   --shadow-glow-emerald: 0 0 16px var(--color-primary-a30);
   --shadow-header: 0 4px 24px rgba(0, 0, 0, 0.2);
@@ -144,18 +108,15 @@
   /* select 下拉箭头（SVG data URI，颜色随主题覆盖） */
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbcabf' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
 
-  /* 间距 — 4px 网格（xs/sm/md/lg/xl/2xl/3xl） */
+  /* 间距 — 4px 网格（xs/sm/md/lg/xl/3xl） */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2.5rem;
-  --space-2xl: 3rem;
   --space-3xl: 4rem;
   --margin: var(--space-lg);
   --margin-desktop: var(--space-3xl);
-  --gutter: var(--space-lg);
-  --gutter-desktop: var(--space-lg);
 
   /* 字体（西文品牌字 + 中文回退链，保证跨平台中文渲染一致） */
   --font-display: 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
@@ -165,10 +126,6 @@
   /* 字号阶梯（最小 12px，保证可读性） */
   --fs-display-clock: 96px;
   --fs-display-clock-sm: 80px;
-  --fs-display-clock-mobile: 56px;
-  --fs-display-md: 48px;
-  --fs-display-sm: 36px;
-  --fs-headline-lg: 32px;
   --fs-headline-md: 24px;
   --fs-headline-sm: 18px;
   --fs-body-lg: 16px;
@@ -178,21 +135,18 @@
   --fs-label-sm: 12px;
 
   /* 功能性图标尺寸阶梯 */
-  --icon-size-sm: 16px;
   --icon-size-md: 18px;
   --icon-size-lg: 22px;
   --icon-size-xl: 28px;
 
   /* 字重 */
   --fw-light: 300;
-  --fw-normal: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
 
   /* 过渡 */
   --t-fast: 150ms ease;
   --t-base: 250ms ease;
-  --t-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 布局 */
   --content-max-width: 1360px;
@@ -207,14 +161,10 @@
 
   /* Surface — 浅灰纸底 + 白瓷卡片，阶梯拉开区分度（low 为凹槽玻璃底，略深于页面） */
   --color-surface: #f4f6f8;
-  --color-surface-dim: #eceff3;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #ffffff;
   --color-surface-container-low: #edf0f5;
   --color-surface-container: #eff2f7;
   --color-surface-container-high: #e8ebf2;
   --color-surface-container-highest: #dfe3ec;
-  --color-surface-variant: #e6e9f0;
   --color-surface-hover: rgba(24, 29, 38, 0.05);
   --color-card-bg: #ffffff;
   --color-card-bg-hover: #ffffff;
@@ -224,7 +174,6 @@
   --rgb-surface-low: 237, 240, 245;
   --rgb-surface-high: 232, 235, 242;
   --rgb-surface-highest: 223, 227, 236;
-  --rgb-surface-variant: 230, 233, 240;
   /* sage 在浅色下取中性冷灰：作 placeholder 与中性图标底，避免发绿 */
   --rgb-sage: 100, 108, 120;
   --rgb-on-primary: 255, 255, 255;
@@ -232,23 +181,15 @@
   /* On-Surface — 墨色文字（~12:1，避免纯黑感） */
   --color-on-surface: #2b3038;
   --color-on-surface-variant: rgba(43, 48, 56, 0.72);
-  --color-inverse-surface: #22252a;
-  --color-inverse-on-surface: #f2f3f5;
 
   /* Primary — 深翡翠（实心底 + 白字 5.1:1 达 AA；作文字 5.3:1 达 AA） */
   --color-primary: #047857;
   --color-primary-container: #d1fae5;
   --color-on-primary: #ffffff;
   --color-on-primary-container: #065f46;
-  --color-inverse-primary: #059669;
-  --color-primary-fixed: #34d399;
-  --color-primary-fixed-dim: #065f46;
-  --color-surface-tint: #047857;
   --color-primary-hover: #065f46;
 
-  --color-primary-a05: rgba(4, 120, 87, 0.05);
   --color-primary-a10: rgba(4, 120, 87, 0.1);
-  --color-primary-a12: rgba(4, 120, 87, 0.12);
   --color-primary-a15: rgba(4, 120, 87, 0.15);
   --color-primary-a20: rgba(4, 120, 87, 0.2);
   --color-primary-a30: rgba(4, 120, 87, 0.3);
@@ -258,59 +199,37 @@
 
   /* Secondary — Indigo */
   --color-secondary: #4f46e5;
-  --color-secondary-container: #3131c0;
   --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #ffffff;
   --color-secondary-a10: rgba(79, 70, 229, 0.1);
-  --color-secondary-a15: rgba(79, 70, 229, 0.15);
   --color-secondary-a30: rgba(79, 70, 229, 0.3);
 
   /* Tertiary — Amber */
   --color-tertiary: #b45309;
-  --color-tertiary-container: #e29100;
   --color-on-tertiary: #ffffff;
-  --color-on-tertiary-container: #ffffff;
   --color-tertiary-a12: rgba(180, 83, 9, 0.12);
-  --color-tertiary-a15: rgba(180, 83, 9, 0.15);
   --color-tertiary-a30: rgba(180, 83, 9, 0.3);
 
   /* Outline */
-  --color-outline: rgba(24, 29, 38, 0.4);
   --color-outline-variant: rgba(24, 29, 38, 0.12);
 
-  /* Error — M3 浅色 */
+  /* Error */
   --color-error: #b3261e;
-  --color-on-error: #ffffff;
-  --color-error-container: #fce8e6;
-  --color-on-error-container: #410e0b;
   --color-error-a08: rgba(179, 38, 30, 0.08);
   --color-error-a12: rgba(179, 38, 30, 0.12);
   --color-error-a20: rgba(179, 38, 30, 0.2);
   --color-error-a30: rgba(179, 38, 30, 0.3);
 
-  /* 语义色 */
-  --color-success: #047857;
-  --color-danger: #b3261e;
-  --color-warning: #b45309;
-  --color-info: #4f46e5;
 
-  /* 文字透明度层级（primary ~12.5:1；secondary ~6:1；muted 装饰性 ~4:1） */
-  --text-primary: rgba(38, 42, 50, 0.92);
-  --text-secondary: rgba(43, 48, 56, 0.68);
-  --text-muted: rgba(43, 48, 56, 0.5);
 
   /* 玻璃面板 — 白瓷（高不透明度磨砂，浅色下靠投影与边框立层级） */
   --glass-bg: rgba(255, 255, 255, 0.82);
   --glass-bg-hover: rgba(255, 255, 255, 0.95);
   --glass-border: rgba(23, 28, 38, 0.1);
   --glass-border-strong: rgba(23, 28, 38, 0.14);
-  --border-color: rgba(23, 28, 38, 0.1);
   --border-color-strong: rgba(23, 28, 38, 0.14);
 
   /* 阴影 — 冷灰蓝基调，双层近投影托起白瓷卡 */
   --shadow-tint: 15, 23, 42;
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.07);
-  --shadow-hover: 0 12px 32px -4px rgba(15, 23, 42, 0.16), 0 0 24px -2px var(--color-primary-a12);
   --shadow-modal: 0 24px 64px -8px rgba(15, 23, 42, 0.22);
   /* 浅色下取消绿辉光，改为细压边（辉光在白底发闷） */
   --shadow-glow-emerald: 0 1px 2px rgba(4, 120, 87, 0.18);

@@ -63,7 +63,7 @@
         @update:filter-text="filterText = $event"
         @add-bookmark="showBookmarkForm()"
         @add-category="showCategoryForm()"
-        @select-category="onSelectCategory"
+        @select-category="scrollToCategory"
         @category-menu="showCategoryMenu"
         @menu="showBookmarkMenu"
       />
@@ -276,12 +276,6 @@ useKeyboard({
 
 // ── 滚动定位 ──
 function scrollToCategory(id) {
-  activeCategory.value = id
-  const el = document.getElementById('explorer-section')
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function onSelectCategory(id) {
   activeCategory.value = id
   const el = document.getElementById('explorer-section')
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
