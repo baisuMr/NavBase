@@ -1,46 +1,38 @@
 <template>
   <header class="app-header">
     <div class="app-header-inner">
-      <!-- 左侧：品牌 + 导航 -->
-      <div style="display:flex;align-items:center;gap:var(--space-lg);">
-        <a class="app-header-brand" href="#startpage-hero">
-          <i class="ri-bookmark-3-line"></i>
-          <span class="app-header-brand-name">{{ siteName }}</span>
-        </a>
+      <a class="app-header-brand" href="#startpage-hero">
+        <span class="app-header-logo">
+          <i class="ri-flash-fill"></i>
+        </span>
+        <span class="app-header-name">{{ siteName }}</span>
+      </a>
 
-        <nav class="app-header-nav" aria-label="主导航">
-          <a class="app-header-nav-link active" href="#startpage-hero">Overview</a>
-          <a class="app-header-nav-link" href="#explorer-section">Collections</a>
-        </nav>
-      </div>
-
-      <!-- 右侧：设置 + 添加 + 头像 -->
       <div class="app-header-actions">
-       
         <button
           type="button"
-          class="btn-icon-circle"
-          @click="$emit('add-bookmark')"
-          aria-label="添加书签"
-          title="添加书签 (Alt+N)"
+          class="app-header-btn"
+          @click="$emit('open-shortcuts')"
+          aria-label="快捷键帮助"
+          title="快捷键帮助"
         >
-          <i class="ri-add-line" style="font-size:var(--icon-size-lg);"></i>
+          <i class="ri-question-line"></i>
         </button>
 
-         <button
+        <button
           type="button"
-          class="btn-icon-circle"
+          class="app-header-btn"
           @click="$emit('open-settings')"
           aria-label="设置"
           title="设置"
         >
-          <i class="ri-settings-line" style="font-size:var(--icon-size-lg);"></i>
+          <i class="ri-settings-line"></i>
         </button>
 
         <!-- 头像仅作展示，退出登录在设置面板中 -->
         <div class="app-header-avatar" :title="username">
           <img v-if="avatar" :src="avatar" alt="头像" />
-          <i v-else class="ri-user-line"></i>
+          <template v-else>{{ usernameInitial }}</template>
         </div>
       </div>
     </div>
@@ -51,16 +43,17 @@
 import { computed } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
 
-defineProps({
+const props = defineProps({
   username: {
     type: String,
     default: '管理员'
   }
 })
 
-defineEmits(['open-settings', 'add-bookmark'])
+defineEmits(['open-settings', 'open-shortcuts'])
 
 const settings = useSettingsStore()
 const siteName = computed(() => settings.displayName)
 const avatar = computed(() => settings.avatar)
+const usernameInitial = computed(() => (props.username || 'N').charAt(0).toUpperCase())
 </script>
