@@ -60,7 +60,7 @@ export async function onRequest(context) {
 
       await env.DB.prepare(
         'UPDATE categories SET name = ?, icon = ?, color = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).bind(name.trim(), icon || '📁', color || '#10b981', sort_order || 0, id).run();
+      ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981', sort_order || 0, id).run();
 
       return Response.json({ success: true }, { headers });
     }

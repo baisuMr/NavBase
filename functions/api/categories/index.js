@@ -39,7 +39,7 @@ export async function onRequest(context) {
 
       const result = await env.DB.prepare(
         'INSERT INTO categories (name, icon, color, sort_order) VALUES (?, ?, ?, ?)'
-      ).bind(name.trim(), icon || '📁', color || '#10b981', sort_order || 0).run();
+      ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981', sort_order || 0).run();
 
       return Response.json(
         { id: result.meta.last_row_id, success: true },
