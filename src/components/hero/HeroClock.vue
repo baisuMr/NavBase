@@ -8,7 +8,10 @@
 
     <!-- 公历 / 农历 / 周数 -->
     <div class="hero-meta">
-      <span class="hero-meta-date">{{ gregorianText }}</span>
+      <span class="hero-meta-date hero-meta-dategroup">
+        <span class="hero-meta-gregorian">{{ gregorianText }}</span>
+        <span class="hero-meta-weekday">{{ weekdayText }}</span>
+      </span>
       <span class="hero-meta-sep">•</span>
       <span class="hero-meta-lunar">{{ lunarText }}</span>
       <span class="hero-meta-sep">•</span>
@@ -21,7 +24,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useDateInfo } from '../../composables/useLunar'
 
-const { getLunarText, getWeekOfYear, getGregorianText } = useDateInfo()
+const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
 
 const now = ref(new Date())
 let timer = null
@@ -36,6 +39,7 @@ const hhmm = computed(() => {
 const ss = computed(() => String(now.value.getSeconds()).padStart(2, '0'))
 
 const gregorianText = computed(() => getGregorianText(now.value))
+const weekdayText = computed(() => getWeekdayText(now.value))
 // 农历依赖较大，动态加载后异步填充
 const lunarText = ref('')
 const weekOfYear = computed(() => getWeekOfYear(now.value))

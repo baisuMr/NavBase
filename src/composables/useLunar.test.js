@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { useDateInfo } from './useLunar'
 
-const { getLunarText, getWeekOfYear, getGregorianText, getGreeting } = useDateInfo()
+const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText, getGreeting } = useDateInfo()
 
 describe('getGreeting 时段问候', () => {
   const cases = [
@@ -20,9 +20,16 @@ describe('getGreeting 时段问候', () => {
 })
 
 describe('getGregorianText 公历文案', () => {
-  it('格式为 YYYY年M月D日 星期X', () => {
-    expect(getGregorianText(new Date(2026, 8, 18))).toBe('2026年9月18日 星期五')
-    expect(getGregorianText(new Date(2025, 0, 29))).toBe('2025年1月29日 星期三')
+  it('格式为 YYYY年M月D日', () => {
+    expect(getGregorianText(new Date(2026, 8, 18))).toBe('2026年9月18日')
+    expect(getGregorianText(new Date(2025, 0, 29))).toBe('2025年1月29日')
+  })
+})
+
+describe('getWeekdayText 星期文案', () => {
+  it('格式为 星期X', () => {
+    expect(getWeekdayText(new Date(2026, 8, 18))).toBe('星期五')
+    expect(getWeekdayText(new Date(2025, 0, 29))).toBe('星期三')
   })
 })
 

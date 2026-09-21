@@ -12,6 +12,8 @@ function loadLunar() {
   return lunarModulePromise
 }
 
+const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
 export function useDateInfo() {
   /**
    * 当前公历日期对应的农历干支文字
@@ -48,11 +50,17 @@ export function useDateInfo() {
   }
 
   /**
-   * 中文格式的公历日期："2025年5月18日 星期日"
+   * 中文格式的公历日期："2025年5月18日"
    */
   function getGregorianText(date = new Date()) {
-    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
+  }
+
+  /**
+   * 中文格式的星期："星期日"
+   */
+  function getWeekdayText(date = new Date()) {
+    return WEEKDAYS[date.getDay()]
   }
 
   /**
@@ -71,6 +79,7 @@ export function useDateInfo() {
     getLunarText,
     getWeekOfYear,
     getGregorianText,
+    getWeekdayText,
     getGreeting
   }
 }

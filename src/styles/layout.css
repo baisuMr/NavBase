@@ -576,6 +576,12 @@
   color: var(--color-on-surface);
 }
 
+/* 日期与星期保持一个空格的紧凑间距（不受 hero-meta flex gap 影响） */
+.hero-meta-dategroup {
+  display: inline-flex;
+  gap: 0.35em;
+}
+
 .hero-meta-lunar {
   display: inline-flex;
   align-items: center;
