@@ -4,66 +4,151 @@
     <AppHeader
       :username="username"
       @open-settings="settingsModal.visible = true"
-      @add-bookmark="showBookmarkForm()"
+      @open-shortcuts="shortcutModal.visible = true"
     />
 
-    <!-- 主区域 -->
     <main class="app-main">
-      <!-- 第一屏：Hero -->
+      <!-- 第一屏：时钟 + 搜索 + 常用站点 -->
       <section id="startpage-hero" class="hero">
-        <!-- 顶部行：问候 + 状态 -->
-        <div class="hero-top-row">
-          <div class="hero-greeting-pill">
-            <span class="dot"></span>
-            <span class="label">Focus Space</span>
-            <span class="sep">•</span>
-            <span class="text">{{ greeting }}</span>
+        <div class="hero-content">
+          <!-- 时钟 -->
+          <div class="hero-clock">
+            <span class="hero-clock-hm">{{ hhmm }}</span>
+            <span class="hero-clock-sec">:{{ ss }}</span>
           </div>
-          <div class="hero-stats">
-            <div class="hero-stats-item primary">
-              <i class="ri-bookmark-line"></i>
-              <span>书签 {{ bookmarks.length }}</span>
+
+          <!-- 日期行 -->
+          <div class="hero-meta">
+            <span class="hero-meta-date">{{ gregorianText }}</span>
+            <span class="badge badge-primary">{{ weekdayText }}</span>
+            <span class="hero-meta-dot">•</span>
+            <span>{{ lunarText }}</span>
+            <span class="hero-meta-dot">•</span>
+            <span class="badge badge-mono">第 {{ weekOfYear }} 周</span>
+          </div>
+
+          <!-- 搜索 -->
+          <form class="hero-search" @submit.prevent="onSearchSubmit">
+            <div class="hero-search-box">
+              <div class="hero-search-engine-wrap">
+                <button
+                  type="button"
+                  class="hero-search-engine"
+                  :aria-expanded="engineMenuOpen"
+                  @click="toggleEngineMenu"
+                >
+                  <span class="hero-search-engine-dot"></span>
+                  <span>{{ currentEngineLabel }}</span>
+                  <i class="ri-arrow-down-s-line"></i>
+                </button>
+                <div
+                  v-if="engineMenuOpen"
+                  class="hero-search-engine-menu"
+                  @mousedown.prevent
+                >
+                  <button
+                    v-for="engine in engines"
+                    :key="engine.id"
+                    type="button"
+                    class="hero-search-engine-item"
+                    :class="{ active: engine.id === currentEngineId }"
+                    @click="selectEngine(engine.id)"
+                  >
+                    {{ engine.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="hero-search-field">
+                <i class="ri-search-line"></i>
+                <input
+                  ref="searchInput"
+                  v-model="query"
+                  type="text"
+                  class="hero-search-input"
+                  placeholder="键入关键词或网页链接，按下 Enter 立即检索..."
+                  autocomplete="off"
+                  @input="onSearchInput"
+                  @focus="onSearchFocus"
+                  @blur="onSearchBlur"
+                />
+              </div>
+
+              <div class="hero-search-kbd">
+                <span class="kbd">Ctrl</span>
+                <span class="kbd">K</span>
+              </div>
             </div>
-            <span class="hero-stats-sep">•</span>
-            <div class="hero-stats-item tertiary">
-              <i class="ri-folder-line"></i>
-              <span>分类 {{ categories.length }}</span>
+
+            <!-- 站内结果下拉 -->
+            <div
+              v-if="showDropdown && (internalResults.length > 0 || showEngineHint)"
+              class="hero-search-results"
+              @mousedown.prevent
+            >
+              <a
+                v-for="bm in internalResults"
+                :key="bm.id"
+                :href="bm.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hero-search-result"
+                @click="onResultClick"
+              >
+                <span class="hero-search-result-favicon">
+                  <img v-if="iconSrc(bm)" :src="iconSrc(bm)" :alt="bm.title" loading="lazy" @error="onIconError(bm)" />
+                  <span v-else class="favicon-fallback">{{ iconInitial(bm) }}</span>
+                </span>
+                <span class="hero-search-result-info">
+                  <span class="hero-search-result-title">{{ bm.title }}</span>
+                  <span class="hero-search-result-url">{{ bm.url }}</span>
+                </span>
+              </a>
+
+              <div v-if="internalResults.length > 0 && showEngineHint" class="hero-search-engine-hint">
+                ↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"
+              </div>
+
+              <div v-if="internalResults.length === 0 && showEngineHint" class="hero-search-empty">
+                无站内匹配，按 ↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"
+              </div>
             </div>
+          </form>
+
+          <!-- 常用站点：排序前 5 -->
+          <div v-if="favoriteBookmarks.length" class="hero-favorites">
+            <a
+              v-for="bm in favoriteBookmarks"
+              :key="bm.id"
+              class="hero-fav-card"
+              :href="bm.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="hero-fav-icon">
+                <img v-if="iconSrc(bm)" :src="iconSrc(bm)" :alt="bm.title" loading="lazy" @error="onIconError(bm)" />
+                <span v-else class="favicon-fallback">{{ iconInitial(bm) }}</span>
+              </span>
+              <span class="hero-fav-name">{{ bm.title }}</span>
+            </a>
           </div>
         </div>
 
-        <!-- 居中：时钟 + 搜索 -->
-        <HeroClock />
-        <HeroSearch
-          ref="heroSearchRef"
-          :bookmarks="bookmarks"
-          :username="username"
-        />
-
-        <!-- 底部：分类宫格 -->
-        <HeroCategoryCards
-          :categories="heroCategories"
-          @select="scrollToCategory"
-          @category-menu="showCategoryMenu"
-        />
-
         <!-- 滚动提示 -->
         <a class="hero-scroll-hint" href="#explorer-section">
-          <span>向下滑动浏览全部书签</span>
-          <i class="ri-arrow-down-double-line"></i>
+          <span>向下滚动查看书签库</span>
+          <i class="ri-arrow-down-line"></i>
         </a>
       </section>
 
-      <!-- 第二屏：书签资源库 -->
+      <!-- 第二屏：书签库 -->
       <BookmarkExplorer
         :bookmarks="bookmarks"
         :categories="explorerCategories"
         :active-cat="activeCategory"
-        :filter-text="filterText"
-        @update:filter-text="filterText = $event"
         @add-bookmark="showBookmarkForm()"
         @add-category="showCategoryForm()"
-        @select-category="scrollToCategory"
+        @select-category="selectCategory"
         @category-menu="showCategoryMenu"
         @menu="showBookmarkMenu"
       />
@@ -79,12 +164,14 @@
     <footer class="app-footer">
       <div class="app-footer-inner">
         <div class="app-footer-meta">
-          <span>NavManager</span>
-          <span class="app-footer-meta-dot">•</span>
-          <span>{{ bookmarks.length }} 书签 · {{ categories.length }} 分类</span>
+          <span class="app-footer-site">{{ settingsStore.displayName }}</span>
+          <span>·</span>
+          <span>{{ categories.length }} 个分类 · {{ bookmarks.length }} 个书签</span>
         </div>
         <div class="app-footer-links">
-          <a href="#" @click.prevent="showCategoryForm()">分类管理</a>
+          <button type="button" @click="settingsModal.visible = true">导入与导出</button>
+          <button type="button" @click="shortcutModal.visible = true">键盘快捷键</button>
+          <span class="app-footer-version">v{{ appVersion }}</span>
         </div>
       </div>
     </footer>
@@ -136,6 +223,12 @@
       @close="settingsModal.visible = false"
     />
 
+    <!-- 快捷键帮助 -->
+    <ShortcutHelp
+      v-if="shortcutModal.visible"
+      @close="shortcutModal.visible = false"
+    />
+
     <!-- Toast -->
     <ToastMessage
       v-if="toast.visible"
@@ -150,15 +243,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 import AppHeader from '../components/layout/AppHeader.vue'
-import HeroClock from '../components/hero/HeroClock.vue'
-import HeroSearch from '../components/hero/HeroSearch.vue'
-import HeroCategoryCards from '../components/hero/HeroCategoryCards.vue'
 import BookmarkExplorer from '../components/bookmark/BookmarkExplorer.vue'
 import BookmarkForm from '../components/bookmark/BookmarkForm.vue'
 import CategoryForm from '../components/category/CategoryForm.vue'
 import ContextMenu from '../components/common/ContextMenu.vue'
 import Modal from '../components/common/Modal.vue'
 import SettingsPanel from '../components/common/SettingsPanel.vue'
+import ShortcutHelp from '../components/common/ShortcutHelp.vue'
 import ToastMessage from '../components/common/ToastMessage.vue'
 
 import { useBookmarks } from '../composables/useBookmarks'
@@ -167,11 +258,15 @@ import { useAuth } from '../composables/useAuth'
 import { useContextMenu } from '../composables/useContextMenu'
 import { useKeyboard } from '../composables/useKeyboard'
 import { useToast } from '../composables/useToast'
+import { useSearchEngines } from '../composables/useSearchEngines'
+import { useFavicon } from '../composables/useFavicon'
 import { useDateInfo } from '../composables/useLunar'
 import { useSettingsStore } from '../stores/settings'
-import { CATEGORY_ICONS, resolveCategoryIcon } from '../constants/categoryIcons'
+import { CATEGORY_ICONS } from '../constants/categoryIcons'
+import pkg from '../../package.json'
 
 const settingsStore = useSettingsStore()
+const appVersion = pkg.version
 
 // ── 预设数据 ──
 const presetColors = [
@@ -195,21 +290,124 @@ const { categories, fetchCategories, createCategory, updateCategory, deleteCateg
 const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
 const { toast, showToast, hideToast, success, error: showError } = useToast()
-const { getGreeting } = useDateInfo()
+const { engines, currentEngineId, setEngine, resolveAndOpen } = useSearchEngines()
+const { iconSrc, onIconError, iconInitial } = useFavicon()
+const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
 
 // ── 本地状态 ──
-const heroSearchRef = ref(null)
 const activeCategory = ref('all')
-const filterText = ref('')
-const greeting = ref(getGreeting())
 
 const categoryModal = ref({ visible: false, data: null, loading: false })
 const bookmarkModal = ref({ visible: false, data: null, loading: false })
 const settingsModal = ref({ visible: false })
+const shortcutModal = ref({ visible: false })
 
-// ── 计算属性 ──
+// ── 时钟（每秒刷新；农历每分钟异步刷新） ──
+const now = ref(new Date())
+let clockTimer = null
+let lunarTimer = null
 
-// 每个分类下的书签数量
+const hhmm = computed(() => {
+  const h = String(now.value.getHours()).padStart(2, '0')
+  const m = String(now.value.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+})
+
+const ss = computed(() => String(now.value.getSeconds()).padStart(2, '0'))
+const gregorianText = computed(() => getGregorianText(now.value))
+const weekdayText = computed(() => getWeekdayText(now.value))
+const weekOfYear = computed(() => getWeekOfYear(now.value))
+// 农历依赖较大，动态加载后异步填充
+const lunarText = ref('')
+
+async function refreshLunar() {
+  lunarText.value = await getLunarText(now.value)
+}
+
+// ── 搜索 ──
+const searchInput = ref(null)
+const query = ref('')
+const hasFocus = ref(false)
+const engineMenuOpen = ref(false)
+
+const currentEngineLabel = computed(() => engines.find(e => e.id === currentEngineId.value)?.label || '')
+
+// 站内匹配：标题 / URL
+const internalResults = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return []
+  return bookmarks.value
+    .filter(b =>
+      b.title.toLowerCase().includes(q) ||
+      b.url.toLowerCase().includes(q)
+    )
+    .slice(0, 6)
+})
+
+const showDropdown = computed(() => query.value.trim() && hasFocus.value)
+const showEngineHint = computed(() => query.value.trim().length > 0)
+
+function onSearchInput() {
+  hasFocus.value = true
+}
+
+function onSearchFocus() {
+  hasFocus.value = true
+}
+
+function onSearchBlur() {
+  // 延迟关闭，避免点击下拉时先失焦
+  setTimeout(() => { hasFocus.value = false }, 150)
+}
+
+function toggleEngineMenu() {
+  engineMenuOpen.value = !engineMenuOpen.value
+}
+
+function selectEngine(id) {
+  setEngine(id)
+  engineMenuOpen.value = false
+  searchInput.value?.focus()
+}
+
+function closeEngineMenu() {
+  engineMenuOpen.value = false
+}
+
+// 点击引擎菜单以外区域时关闭
+function onDocumentClick(e) {
+  if (engineMenuOpen.value && !e.target.closest('.hero-search-engine-wrap')) {
+    closeEngineMenu()
+  }
+}
+
+function onResultClick() {
+  query.value = ''
+  hasFocus.value = false
+}
+
+function onSearchSubmit() {
+  const result = resolveAndOpen(query.value)
+  if (!result) return
+  // 回车一律按当前规则跳转：域名直达或当前引擎搜索
+  window.open(result.target, '_blank', 'noopener,noreferrer')
+  query.value = ''
+  hasFocus.value = false
+}
+
+function focusSearch() {
+  searchInput.value?.focus()
+  searchInput.value?.select()
+}
+
+// ── 常用站点：按 sort_order 取前 5 ──
+const favoriteBookmarks = computed(() =>
+  [...bookmarks.value]
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .slice(0, 5)
+)
+
+// ── 分类计数 ──
 const categoryCountMap = computed(() => {
   const map = {}
   categories.value.forEach(c => { map[c.id] = 0 })
@@ -219,29 +417,6 @@ const categoryCountMap = computed(() => {
   return map
 })
 
-// Hero 分类卡片：按书签数量取前 5 个分类 + "全部"（同数量时保持 sort_order 次序）
-const heroCategories = computed(() => {
-  const all = {
-    id: 'all',
-    name: '全部',
-    icon: 'ri-apps-2-line',
-    count: bookmarks.value.length,
-    accent: 'primary'
-  }
-  const list = [...categories.value]
-    .sort((a, b) => (categoryCountMap.value[b.id] || 0) - (categoryCountMap.value[a.id] || 0))
-    .slice(0, 5)
-    .map((c, idx) => ({
-      id: c.id,
-      name: c.name,
-      icon: resolveCategoryIcon(c.icon),
-      count: categoryCountMap.value[c.id] || 0,
-      accent: accentForIndex(idx)
-    }))
-  return [all, ...list]
-})
-
-// Explorer 分类 pills
 const explorerCategories = computed(() => {
   return categories.value.map(c => ({
     id: c.id,
@@ -250,36 +425,25 @@ const explorerCategories = computed(() => {
   }))
 })
 
-function accentForIndex(idx) {
-  const accents = ['primary', 'secondary', 'primary', 'tertiary', 'neutral']
-  return accents[idx % accents.length]
-}
-
-// ── 时间问候 ──
-let timer = null
-function tick() {
-  greeting.value = getGreeting()
+// ── 分类选择（tabs 位于第二屏，无需滚动） ──
+function selectCategory(id) {
+  activeCategory.value = id
 }
 
 // ── 快捷键 ──
 useKeyboard({
-  search: () => heroSearchRef.value?.focus(),
+  search: focusSearch,
   addBookmark: () => showBookmarkForm(),
   addCategory: () => showCategoryForm(),
   close: () => {
     categoryModal.value.visible = false
     bookmarkModal.value.visible = false
     settingsModal.value.visible = false
+    shortcutModal.value.visible = false
+    closeEngineMenu()
     hideContextMenu()
   }
 })
-
-// ── 滚动定位 ──
-function scrollToCategory(id) {
-  activeCategory.value = id
-  const el = document.getElementById('explorer-section')
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
 
 // ── 右键菜单 ──
 function showBookmarkMenu(event, bookmark) {
@@ -386,12 +550,17 @@ async function handleBookmarkSubmit(formData) {
 
 // ── 生命周期 ──
 onMounted(async () => {
-  tick()
-  timer = setInterval(tick, 60000)
+  refreshLunar()
+  clockTimer = setInterval(() => { now.value = new Date() }, 1000)
+  // 农历一天才变一次，每分钟刷新足够
+  lunarTimer = setInterval(refreshLunar, 60000)
+  document.addEventListener('click', onDocumentClick)
   await Promise.all([fetchBookmarks(), fetchCategories(), settingsStore.fetchSettings()])
 })
 
 onUnmounted(() => {
-  if (timer) clearInterval(timer)
+  if (clockTimer) clearInterval(clockTimer)
+  if (lunarTimer) clearInterval(lunarTimer)
+  document.removeEventListener('click', onDocumentClick)
 })
 </script>
