@@ -47,7 +47,7 @@
 ```bash
 # 克隆项目
 git clone <repository-url>
-cd nav-manager
+cd NavBase
 
 # 安装依赖
 pnpm install
@@ -181,7 +181,7 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 ## 项目结构
 
 ```
-nav-manager/
+NavBase/
 ├── src/
 │   ├── components/        # Vue 组件
 │   │   ├── layout/       # 布局组件

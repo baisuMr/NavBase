@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 所有命令在 `E:\mzheng\网址导航工具\nav-manager` 目录下执行（pnpm）。
+- 所有命令在 `E:\mzheng\网址导航工具\NavBase` 目录下执行（pnpm）。
 - 不使用 TypeScript、不使用 CSS 框架（Tailwind 等），纯 CSS。
 - 图标一律 remixicon（`ri-*` class），不引入 Material Symbols / 内联 SVG。
 - 前端不直接 fetch，一律走 `src/api/` 封装或现有 store/composable（认证 store 的 login fetch 为现状保留）。
