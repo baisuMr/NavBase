@@ -45,18 +45,18 @@
 
     <div v-if="iconPreview && !iconPreviewFailed" class="form-group">
       <label class="form-label">图标预览</label>
-      <div class="form-hint" style="display:flex;align-items:center;gap:var(--space-sm);">
+      <div class="form-hint form-icon-preview-row">
         <img
           :src="iconPreview"
           :alt="form.title"
-          style="width:32px;height:32px;border-radius:var(--radius-sm);object-fit:contain;background:var(--color-surface-container-highest);padding:4px;"
+          class="form-icon-preview"
           @error="iconPreviewFailed = true"
         />
         <span>保存后自动加载网站图标</span>
       </div>
     </div>
 
-    <div class="modal-footer" style="padding-left:0;padding-right:0;">
+    <div class="modal-footer">
       <button type="button" class="btn btn-secondary" @click="$emit('cancel')">取消</button>
       <button type="submit" class="btn btn-primary" :disabled="loading">
         {{ loading ? '保存中…' : '保存书签' }}

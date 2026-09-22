@@ -58,30 +58,6 @@
         />
       </section>
 
-      <!-- 外观 -->
-      <section class="settings-section">
-        <span class="form-label">外观</span>
-        <div class="settings-theme-toggle" role="group" aria-label="深色浅色模式切换">
-          <button
-            type="button"
-            :class="['settings-theme-option', { active: theme === 'light' }]"
-            @click="setTheme('light')"
-          >
-            <i class="ri-sun-line"></i>
-            <span>浅色</span>
-          </button>
-          <button
-            type="button"
-            :class="['settings-theme-option', { active: theme === 'dark' }]"
-            @click="setTheme('dark')"
-          >
-            <i class="ri-moon-line"></i>
-            <span>深色</span>
-          </button>
-        </div>
-        <p class="form-hint">主题偏好保存在本设备浏览器中。</p>
-      </section>
-
       <!-- 数据管理 -->
       <section class="settings-section">
         <span class="form-label">数据管理</span>
@@ -134,7 +110,6 @@ import { useBookmarks } from '../../composables/useBookmarks'
 import { useCategories } from '../../composables/useCategories'
 import { useAuth } from '../../composables/useAuth'
 import { useToast } from '../../composables/useToast'
-import { useTheme } from '../../composables/useTheme'
 import { parseNetscapeBookmarks } from '../../utils/importBookmarks'
 
 defineEmits(['close'])
@@ -226,9 +201,6 @@ async function removeAvatar() {
     avatarSaving.value = false
   }
 }
-
-// ── 外观 ──
-const { theme, setTheme } = useTheme()
 
 // ── 导入书签 ──
 const importInputRef = ref(null)

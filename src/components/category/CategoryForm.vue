@@ -29,7 +29,7 @@
       />
     </div>
 
-    <div class="modal-footer" style="padding-left:0;padding-right:0;">
+    <div class="modal-footer">
       <button type="button" class="btn btn-secondary" @click="$emit('cancel')">取消</button>
       <button type="submit" class="btn btn-primary" :disabled="loading">
         {{ loading ? '保存中…' : '保存分类' }}
