@@ -48,8 +48,8 @@ pnpm test src/composables/useLunar.test.js       # 运行单个测试文件（pn
 node scripts/generate-fonts.mjs
 
 # D1 数据库操作
-wrangler d1 execute nav-db --file=schema.sql  # 执行 SQL 文件（幂等，可重复执行）
-wrangler d1 execute nav-db --command="SELECT * FROM bookmarks"  # 执行单条 SQL
+wrangler d1 execute navbase-db --file=schema.sql  # 执行 SQL 文件（幂等，可重复执行）
+wrangler d1 execute navbase-db --command="SELECT * FROM bookmarks"  # 执行单条 SQL
 ```
 
 ## 项目架构

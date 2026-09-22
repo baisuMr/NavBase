@@ -60,14 +60,14 @@ wrangler login
 
 1. 创建 D1 数据库：
 ```bash
-wrangler d1 create nav-db
+wrangler d1 create navbase-db
 ```
 
 2. 更新 `wrangler.toml` 中的数据库 ID
 
 3. 执行数据库 Schema（可重复执行，默认分类为幂等插入）：
 ```bash
-wrangler d1 execute nav-db --file=schema.sql
+wrangler d1 execute navbase-db --file=schema.sql
 ```
 
 4. 配置管理员密码（切勿提交到仓库）：
@@ -146,7 +146,7 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 在 Cloudflare Pages 设置中添加 D1 数据库绑定：
 
 - 变量名: `DB`
-- 数据库: `nav-db`
+- 数据库: `navbase-db`
 
 ## 使用说明
 

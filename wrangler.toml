@@ -4,8 +4,8 @@ pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "nav-db"
-database_id = "48b599e7-54c1-494a-bb51-f6962ea41f0d"
+database_name = "navbase-db"
+database_id = "be7711a1-76f4-4c81-80fc-36bd92168612"
 
 [vars]
 # 非敏感配置可放这里；ADMIN_USERNAME / ADMIN_PASSWORD 属于凭据，
