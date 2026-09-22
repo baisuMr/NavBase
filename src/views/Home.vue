@@ -229,6 +229,16 @@
       @close="shortcutModal.visible = false"
     />
 
+    <!-- 删除确认弹窗 -->
+    <ConfirmModal
+      v-if="confirmModal.visible"
+      :title="confirmModal.title"
+      :message="confirmModal.message"
+      :loading="confirmModal.loading"
+      @confirm="handleConfirmAction"
+      @cancel="confirmModal.visible = false"
+    />
+
     <!-- Toast -->
     <ToastMessage
       v-if="toast.visible"
@@ -246,6 +256,7 @@ import AppHeader from '../components/layout/AppHeader.vue'
 import BookmarkExplorer from '../components/bookmark/BookmarkExplorer.vue'
 import BookmarkForm from '../components/bookmark/BookmarkForm.vue'
 import CategoryForm from '../components/category/CategoryForm.vue'
+import ConfirmModal from '../components/common/ConfirmModal.vue'
 import ContextMenu from '../components/common/ContextMenu.vue'
 import Modal from '../components/common/Modal.vue'
 import SettingsPanel from '../components/common/SettingsPanel.vue'
@@ -301,6 +312,7 @@ const categoryModal = ref({ visible: false, data: null, loading: false })
 const bookmarkModal = ref({ visible: false, data: null, loading: false })
 const settingsModal = ref({ visible: false })
 const shortcutModal = ref({ visible: false })
+const confirmModal = ref({ visible: false, title: '', message: '', loading: false, onConfirm: null })
 
 // ── 时钟（每秒刷新；农历每分钟异步刷新） ──
 const now = ref(new Date())
@@ -479,14 +491,17 @@ async function onMenuSelect(action) {
       }
       break
     case 'delete-bookmark':
-      if (confirm(`确定要删除「${target.title}」吗？`)) {
-        try {
-          await deleteBookmark(target.id)
-          success('书签已删除')
-        } catch (err) {
-          showError('删除失败: ' + err.message)
+      askConfirm(
+        { title: '删除书签', message: `确定要删除「${target.title}」吗？` },
+        async () => {
+          try {
+            await deleteBookmark(target.id)
+            success('书签已删除')
+          } catch (err) {
+            showError('删除失败: ' + err.message)
+          }
         }
-      }
+      )
       break
     case 'edit-category': {
       // explorer 传出的对象只含 id/name/count，编辑表单需要完整的分类数据
@@ -495,16 +510,34 @@ async function onMenuSelect(action) {
       break
     }
     case 'delete-category':
-      if (confirm(`确定删除分类「${target.name}」吗？分类下的书签将变为未分类。`)) {
-        try {
-          await deleteCategory(target.id)
-          if (activeCategory.value === target.id) activeCategory.value = 'all'
-          success('分类已删除')
-        } catch (err) {
-          showError('删除失败: ' + err.message)
+      askConfirm(
+        { title: '删除分类', message: `确定删除分类「${target.name}」吗？分类下的书签将变为未分类。` },
+        async () => {
+          try {
+            await deleteCategory(target.id)
+            if (activeCategory.value === target.id) activeCategory.value = 'all'
+            success('分类已删除')
+          } catch (err) {
+            showError('删除失败: ' + err.message)
+          }
         }
-      }
+      )
       break
+  }
+}
+
+// ── 删除确认弹窗 ──
+function askConfirm({ title, message }, onConfirm) {
+  confirmModal.value = { visible: true, title, message, loading: false, onConfirm }
+}
+
+async function handleConfirmAction() {
+  const { onConfirm } = confirmModal.value
+  confirmModal.value.loading = true
+  try {
+    if (onConfirm) await onConfirm()
+  } finally {
+    confirmModal.value = { visible: false, title: '', message: '', loading: false, onConfirm: null }
   }
 }
 

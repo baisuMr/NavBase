@@ -195,6 +195,10 @@
   padding: var(--space-xl);
 }
 
+.confirm-message {
+  color: var(--color-text-secondary);
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;
