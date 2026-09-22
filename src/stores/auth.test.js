@@ -87,6 +87,9 @@ describe('auth store', () => {
     }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
 
+    // 预置另一存储的残留，锁定登录后的交叉清理
+    sessionStorage.setItem('auth_token', 'stale')
+
     const store = useAuthStore()
     const r = await store.login('admin', 'pw', true)
     expect(r.success).toBe(true)
@@ -105,6 +108,9 @@ describe('auth store', () => {
     }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
 
+    // 预置另一存储的残留，锁定登录后的交叉清理
+    localStorage.setItem('auth_token', 'stale')
+
     const store = useAuthStore()
     const r = await store.login('admin', 'pw')
     expect(r.success).toBe(true)
@@ -115,12 +121,28 @@ describe('auth store', () => {
     vi.unstubAllGlobals()
   })
 
+  it('localStorage 过期 + sessionStorage 有效时，init 取 session 并清除过期残留', () => {
+    localStorage.setItem('auth_token', 'expired')
+    localStorage.setItem('auth_expires_at', String(Date.now() - 1000))
+    sessionStorage.setItem('auth_token', 'tok-session')
+    sessionStorage.setItem('auth_expires_at', String(Date.now() + 86400_000))
+    sessionStorage.setItem('auth_username', 'admin')
+    const store = useAuthStore()
+    store.init()
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.token).toBe('tok-session')
+    expect(store.username).toBe('admin')
+    expect(localStorage.getItem('auth_token')).toBeNull()
+  })
+
   it('登录失败抛出服务端错误信息', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
       JSON.stringify({ error: '用户名或密码错误' }), { status: 401 }
     )))
     const store = useAuthStore()
     await expect(store.login('admin', 'bad')).rejects.toThrow('用户名或密码错误')
     vi.unstubAllGlobals()
+    consoleSpy.mockRestore()
   })
 })

@@ -489,6 +489,7 @@
   max-width: var(--content-max-width);
   margin: 0 auto;
   padding: var(--space-2xl) var(--space-lg);
+  scroll-margin-top: var(--header-height);
 }
 
 .explorer-toolbar {
@@ -900,6 +901,7 @@
 
 /* 记住设备（隐藏原生 input，用相邻兄弟自定义勾选框） */
 .login-remember {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-sm);

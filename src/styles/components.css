@@ -365,6 +365,15 @@
   gap: var(--space-sm);
 }
 
+.settings-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row .btn {
+  flex-shrink: 0;
+}
+
 .settings-data-actions {
   display: flex;
   align-items: center;

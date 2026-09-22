@@ -1,5 +1,5 @@
 <template>
-  <div class="app">
+  <div>
     <!-- 顶栏 -->
     <AppHeader
       :username="username"
@@ -7,7 +7,7 @@
       @open-shortcuts="shortcutModal.visible = true"
     />
 
-    <main class="app-main">
+    <main>
       <!-- 第一屏：时钟 + 搜索 + 常用站点 -->
       <section id="startpage-hero" class="hero">
         <div class="hero-content">

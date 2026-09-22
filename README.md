@@ -169,7 +169,7 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 
 ### 分类管理
 
-- 点击分类卡片/分类 pills 筛选书签
+- 点击分类 pill 筛选书签
 - 右键分类 pill 可以编辑或删除（删除后书签变为未分类，不会丢失）
 
 ### 书签管理

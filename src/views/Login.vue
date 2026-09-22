@@ -54,9 +54,9 @@
           <span class="login-remember-text">记住此设备（30天内免登录）</span>
         </label>
 
-        <div v-if="error" class="login-error">{{ error }}</div>
+        <div v-if="error" class="login-error" role="alert">{{ error }}</div>
 
-        <button type="submit" class="login-submit" :disabled="loading">
+        <button type="submit" class="login-submit" :disabled="loading || success">
           <template v-if="loading">
             <span class="login-spinner"></span>
             <span>正在登录...</span>

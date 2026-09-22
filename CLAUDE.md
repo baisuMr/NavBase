@@ -125,6 +125,7 @@ scripts/
 - `ADMIN_PASSWORD`: 管理员密码（**必填**；本地放 `.dev.vars`，线上用 `wrangler pages secret put` 配置，切勿写入 wrangler.toml）
 - `ADMIN_USERNAME`: 管理员用户名（可选，默认 `admin`）
 - `LOGIN_DURATION_DAYS`: 登录保持天数（wrangler.toml [vars]，默认 `7`）
+- `REMEMBER_DURATION_DAYS`: 勾选「记住此设备」时的登录保持天数（wrangler.toml [vars]，默认 `30`）
 
 ## 快捷键
 
