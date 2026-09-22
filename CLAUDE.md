@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-NavManager（默认站点名「NavBase」）是一个自用的网址导航管理平台，用于替代浏览器书签功能。前端 SPA 与 API 同部署于 Cloudflare Pages，数据存 D1，Basic Auth 单用户认证。
+NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签功能。前端 SPA 与 API 同部署于 Cloudflare Pages，数据存 D1，Basic Auth 单用户认证。
 
 ## 技术栈与约束
 

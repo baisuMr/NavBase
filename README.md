@@ -1,4 +1,4 @@
-# NavManager
+# NavBase
 
 自用的网址导航管理平台，替代浏览器书签功能。
 
