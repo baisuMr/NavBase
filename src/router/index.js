@@ -20,7 +20,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore()
 
   // 初始化登录状态
@@ -31,18 +31,16 @@ router.beforeEach((to, from, next) => {
     // 需要认证的页面
     if (!authStore.isAuthenticated) {
       // 未登录，跳转到登录页
-      next({ name: 'login' })
-      return
+      return { name: 'login' }
     }
   }
 
   // 已登录时访问登录页，跳转到首页
   if (to.name === 'login' && authStore.isAuthenticated) {
-    next({ name: 'home' })
-    return
+    return { name: 'home' }
   }
 
-  next()
+  return true
 })
 
 export default router

@@ -86,7 +86,7 @@
       </section>
 
       <!-- 账号 -->
-      <section class="settings-section settings-section-last">
+      <section class="settings-section">
         <span class="form-label">账号</span>
         <div class="settings-row">
           <span class="settings-username">{{ username }}</span>

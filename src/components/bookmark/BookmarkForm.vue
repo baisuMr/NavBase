@@ -38,7 +38,7 @@
       <select v-model="form.category_id" class="select">
         <option :value="null">未分类</option>
         <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-          {{ cat.icon }} {{ cat.name }}
+          {{ cat.name }}
         </option>
       </select>
     </div>
