@@ -1,4 +1,4 @@
-# NavManager 前端页面重设计（Tabular Minimalist）
+# NavBase 前端页面重设计（Tabular Minimalist）
 
 - 日期：2026-09-21
 - 状态：已确认
@@ -6,7 +6,7 @@
 
 ## 1. 背景与目标
 
-将 NavManager 前端从现有「深色玻璃拟态 + 翡翠绿」视觉体系，整体重设计为参考稿定义的
+将 NavBase 前端从现有「深色玻璃拟态 + 翡翠绿」视觉体系，整体重设计为参考稿定义的
 「Tabular Minimalist」体系：**纯浅色、扁平无阴影、Slate 中性色 + 皇家蓝 #2563EB**。
 登录页与主页完全参考 stitch_1 的布局与样式；数据层（stores / composables / api）与后端
 基本不动；组件结构适度简化。

@@ -7,7 +7,7 @@ BASE_URL="http://localhost:8788"
 AUTH="admin:your-admin-password"
 
 echo "=========================================="
-echo "NavManager API 测试"
+echo "NavBase API 测试"
 echo "=========================================="
 
 # 测试 1: 获取分类列表

@@ -1,8 +1,8 @@
-# NavManager 前端重设计实施计划
+# NavBase 前端重设计实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 将 NavManager 前端整体重设计为 stitch_1 参考稿的 Tabular Minimalist 风格（纯浅色、扁平、Slate + 皇家蓝）。
+**Goal:** 将 NavBase 前端整体重设计为 stitch_1 参考稿的 Tabular Minimalist 风格（纯浅色、扁平、Slate + 皇家蓝）。
 
 **Architecture:** 先一次性重写四个 CSS 文件（token + 全局 + 组件 + 布局），再逐组件重写模板引用新类名；数据层（stores/composables/api）仅认证逻辑改动；首屏时钟/搜索/快捷卡片内联进 Home.vue，删除 hero 组件目录与 useTheme。
 

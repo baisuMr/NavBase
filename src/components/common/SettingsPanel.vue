@@ -258,7 +258,7 @@ function exportBookmarks() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `navmanager-bookmarks-${Date.now()}.json`
+  a.download = `navbase-bookmarks-${Date.now()}.json`
   a.click()
   URL.revokeObjectURL(url)
   success('已导出书签')
