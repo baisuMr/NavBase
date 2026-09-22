@@ -269,6 +269,7 @@
   flex: 1;
   display: flex;
   align-items: center;
+  align-self: stretch;
   gap: var(--space-sm);
   min-width: 0;
 }
@@ -282,11 +283,17 @@
 .hero-search-input {
   flex: 1;
   min-width: 0;
+  align-self: stretch;
   border: none;
   outline: none;
   background: transparent;
   font-size: var(--fs-body-md);
   color: var(--color-text);
+}
+
+/* 聚焦反馈由外层 .hero-search-box:focus-within 提供，豁免全局 :focus-visible 轮廓 */
+.hero-search-input:focus-visible {
+  outline: none;
 }
 
 .hero-search-input::placeholder {
