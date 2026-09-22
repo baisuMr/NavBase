@@ -120,11 +120,6 @@
   color: var(--color-text-muted);
 }
 
-.form-error {
-  font-size: var(--fs-card);
-  color: var(--color-error);
-}
-
 .form-icon-preview-row {
   display: flex;
   align-items: center;

@@ -79,8 +79,7 @@ functions/              # Cloudflare Functions（API 后端）
 └── _middleware.js       # 中间件（Basic Auth 认证，未配置密码时拒绝一切访问）
 
 scripts/
-├── generate-fonts.mjs         # 正文字体子集本地化生成脚本
-└── migrate-category-icons.sql # 存量分类图标 emoji → Remix Icon 迁移 SQL
+└── generate-fonts.mjs         # 正文字体子集本地化生成脚本
 ```
 
 （首屏的时钟/搜索/常用站点已内联进 views/Home.vue）
