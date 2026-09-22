@@ -92,6 +92,8 @@
 
   /* 布局 */
   --header-height: 56px;
+  /* 页脚高度 = 边框 1px + 内边距 space-lg×2 + fs-body-sm 字号行高 1.5 */
+  --footer-height: calc(1px + var(--space-lg) * 2 + var(--fs-body-sm) * 1.5);
   --content-width: 100%;
   --content-max-width: 1440px;
   --hero-max-width: 896px;
