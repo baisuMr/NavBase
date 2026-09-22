@@ -5,6 +5,11 @@ const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件
 const CACHE_TTL = 604800; // 成功结果缓存 7 天（Cloudflare Cache API + 浏览器）
 const MISS_TTL = 600; // 失败结果缓存 10 分钟，避免对不可达站点反复探测
+const SOURCE_TIMEOUT = 3000; // 单源超时（毫秒）
+const MAX_REDIRECTS = 3; // 手动跟随重定向上限
+const MAX_HTML_CANDIDATES = 3; // HTML 图标声明最多尝试的候选数
+
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 // 图片魔数白名单：不信任上游 content-type，按字节头确认是图片
 const IMAGE_MAGIC = [
@@ -23,6 +28,135 @@ function looksLikeImage(buffer, contentType) {
   // SVG 可能带 XML 声明头，魔数覆盖不到，按文本探测
   const text = new TextDecoder().decode(new Uint8Array(buffer, 0, Math.min(256, buffer.byteLength))).toLowerCase();
   return text.includes('<svg');
+}
+
+/**
+ * 手动跟随重定向的 fetch：
+ *  - redirect: 'manual' 防上游把探测请求带到不可控目标（安全）
+ *  - 仅允许 http/https 且最多 MAX_REDIRECTS 跳，兼容 http→https 升级等常见跳转
+ *  - 支持外部 signal（竞速取消）与内部超时
+ */
+async function fetchWithRedirects(url, { signal, timeout, headers }) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeout);
+  const onOuterAbort = () => ctl.abort();
+  if (signal) signal.addEventListener('abort', onOuterAbort, { once: true });
+  try {
+    let current = url;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      const res = await fetch(current, { redirect: 'manual', signal: ctl.signal, headers });
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (!location) return res;
+        const next = new URL(location, current);
+        if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+          throw new Error('重定向到非 http(s) 协议');
+        }
+        current = next.href;
+        continue;
+      }
+      return res;
+    }
+    throw new Error('重定向次数过多');
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', onOuterAbort);
+  }
+}
+
+// 从首页 HTML 提取 <link> 图标声明（rel 含 icon / apple-touch-icon）
+function parseIconLinks(html) {
+  const links = [];
+  const tagRe = /<link\b[^>]*>/gi;
+  let m;
+  while ((m = tagRe.exec(html))) {
+    const tag = m[0];
+    const rel = (tag.match(/\brel\s*=\s*["']?([^"'\s>]+)/i) || [])[1] || '';
+    if (!/(^|\s)(shortcut\s+)?icon(\s|$)|apple-touch-icon/i.test(rel)) continue;
+    const href = (tag.match(/\bhref\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
+    if (!href) continue;
+    const sizes = (tag.match(/\bsizes\s*=\s*["']?([^"'\s>]+)/i) || [])[1] || '';
+    links.push({ href: href.replace(/&amp;/g, '&'), sizes, isApple: /apple/i.test(rel) });
+  }
+  return links;
+}
+
+// 候选排序：apple-touch-icon 优先（通常尺寸最大），同类按 sizes 最大边长降序，无声明按 32px 兜底
+function candidateCompare(a, b) {
+  if (a.isApple !== b.isApple) return a.isApple ? -1 : 1;
+  const sizeOf = sizes => {
+    const m = (sizes || '').match(/(\d+)\s*[x×]\s*(\d+)/i);
+    return m ? Math.max(parseInt(m[1], 10), parseInt(m[2], 10)) : 32;
+  };
+  return sizeOf(b.sizes) - sizeOf(a.sizes);
+}
+
+// 源 1：解析目标站首页 HTML 的图标声明（现代站点图标大多不在 /favicon.ico，此源显著提升成功率与清晰度）
+async function probeHtmlIcon(domain, signal) {
+  const pageUrl = `https://${domain}/`;
+  const page = await fetchWithRedirects(pageUrl, { signal, timeout: SOURCE_TIMEOUT, headers: { 'User-Agent': BROWSER_UA } });
+  if (!page.ok) throw new Error(`首页 HTTP ${page.status}`);
+  const contentType = (page.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  if (contentType && !contentType.includes('html')) throw new Error('首页不是 HTML');
+  const html = await page.text();
+
+  const candidates = parseIconLinks(html).sort(candidateCompare).slice(0, MAX_HTML_CANDIDATES);
+  for (const link of candidates) {
+    let iconUrl;
+    try {
+      iconUrl = new URL(link.href, pageUrl).href;
+    } catch {
+      continue;
+    }
+    try {
+      const res = await fetchWithRedirects(iconUrl, { signal, timeout: SOURCE_TIMEOUT, headers: { 'User-Agent': BROWSER_UA } });
+      if (!res.ok) continue;
+      const buffer = await res.arrayBuffer();
+      if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) continue;
+      const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
+      if (!looksLikeImage(buffer, ct)) continue;
+      return { buffer, contentType: ct || 'image/x-icon', source: iconUrl };
+    } catch {
+      continue;
+    }
+  }
+  throw new Error('HTML 图标声明全部失败');
+}
+
+// 直链源：请求 URL 并做响应校验
+async function probeUrl(url, signal) {
+  const res = await fetchWithRedirects(url, { signal, timeout: SOURCE_TIMEOUT, headers: { 'User-Agent': BROWSER_UA } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) throw new Error('图片大小越界');
+  const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
+  if (!looksLikeImage(buffer, ct)) throw new Error('响应不是图片');
+  return { buffer, contentType: ct || 'image/x-icon', source: url };
+}
+
+// 并发竞速：所有源同时启动，第一个成功即 abort 其余在途请求（省出站请求与配额）
+function raceProbes(factories) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let remaining = factories.length;
+    const aborts = [];
+    for (const factory of factories) {
+      const ctl = new AbortController();
+      aborts.push(() => ctl.abort());
+      factory(ctl.signal).then(
+        result => {
+          if (settled) return;
+          settled = true;
+          for (const abort of aborts) abort();
+          resolve(result);
+        },
+        () => {
+          remaining -= 1;
+          if (remaining === 0 && !settled) reject(new Error('全部源失败'));
+        }
+      );
+    }
+  });
 }
 
 export async function onRequest(context) {
@@ -53,42 +187,28 @@ export async function onRequest(context) {
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
-  // 并发探测各源，取最先返回有效图片的一个（单源 3 秒超时，总耗时上限 3 秒）
-  // 目标站直连在本地/国内网络可达性最好；favicon.im / DuckDuckGo / Google s2
-  // 在 Cloudflare 边缘（线上）可达性最好，四源互补
-  const sources = [
-    `https://${domain}/favicon.ico`,
-    `https://favicon.im/${domain}`,
-    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-    `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+  // 并发探测各源，取最先返回有效图片的一个（单源 3 秒超时，总耗时上限 3 秒）：
+  // 1. 目标站首页 HTML 图标声明（清晰度与覆盖率最优）
+  // 2. 目标站 /favicon.ico 直连
+  // 3-5. favicon.im / DuckDuckGo / Google s2（Cloudflare 边缘可达性好，兜底互补）
+  const factories = [
+    signal => probeHtmlIcon(domain, signal),
+    signal => probeUrl(`https://${domain}/favicon.ico`, signal),
+    signal => probeUrl(`https://favicon.im/${domain}`, signal),
+    signal => probeUrl(`https://icons.duckduckgo.com/ip3/${domain}.ico`, signal),
+    signal => probeUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`, signal)
   ];
 
-  const attempts = sources.map(async url => {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(3000),
+  try {
+    const result = await raceProbes(factories);
+    const response = new Response(result.buffer, {
       headers: {
-        // 部分站点（如 zhihu）对空 UA 返回 403，用浏览器 UA 提高命中率
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
-      }
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) throw new Error('图片大小越界');
-    if (!looksLikeImage(buffer, (response.headers.get('content-type') || '').split(';')[0].trim())) {
-      throw new Error('响应不是图片');
-    }
-    return new Response(buffer, {
-      headers: {
-        'Content-Type': (response.headers.get('content-type') || 'image/x-icon').split(';')[0].trim(),
+        'Content-Type': result.contentType,
         'Cache-Control': `public, max-age=${CACHE_TTL}`,
-        'X-Favicon-Source': url,
+        'X-Favicon-Source': result.source,
         'Access-Control-Allow-Origin': '*'
       }
     });
-  });
-
-  try {
-    const response = await Promise.any(attempts);
     context.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch {

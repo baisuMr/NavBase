@@ -3,12 +3,14 @@ import { onRequest } from './[domain].js'
 
 // 模拟 Cloudflare Cache API（node 环境没有 caches 全局，函数在调用期才访问它）
 const cacheStore = new Map()
-vi.stubGlobal('caches', {
-  default: {
-    match: async req => cacheStore.get(req.url) || null,
-    put: async (req, res) => { cacheStore.set(req.url, res) }
-  }
-})
+function stubCaches() {
+  vi.stubGlobal('caches', {
+    default: {
+      match: async req => cacheStore.get(req.url) || null,
+      put: async (req, res) => { cacheStore.set(req.url, res) }
+    }
+  })
+}
 
 // 图片魔数样本（PNG / ICO 文件头）
 const PNG_HEAD = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
@@ -24,13 +26,8 @@ function makeContext(domain, method = 'GET') {
   }
 }
 
-// 按 URL 前缀匹配返回预设响应，未命中的源视为连接失败
-function stubFetch(byUrl) {
-  vi.stubGlobal('fetch', vi.fn(async url => {
-    const hit = Object.entries(byUrl).find(([prefix]) => url.startsWith(prefix))
-    if (!hit) throw new Error('ECONNREFUSED')
-    return hit[1]
-  }))
+function htmlResponse(html) {
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
 }
 
 function imageResponse(bytes, contentType = 'image/png') {
@@ -40,16 +37,29 @@ function imageResponse(bytes, contentType = 'image/png') {
   })
 }
 
+function redirectResponse(location, status = 301) {
+  return new Response(null, { status, headers: { Location: location } })
+}
+
+// 按 URL 前缀匹配返回预设响应（最长前缀优先，避免 / 前缀吞掉 /favicon.ico），
+// 未命中的源视为连接失败；记录每次调用的 url 与 options
+function stubFetch(byUrl) {
+  const calls = []
+  const entries = Object.entries(byUrl).sort((a, b) => b[0].length - a[0].length)
+  vi.stubGlobal('fetch', vi.fn(async (url, options = {}) => {
+    calls.push({ url, options })
+    const hit = entries.find(([prefix]) => url.startsWith(prefix))
+    if (!hit) throw new Error('ECONNREFUSED')
+    const value = typeof hit[1] === 'function' ? await hit[1]() : hit[1]
+    return value
+  }))
+  return calls
+}
+
 beforeEach(() => {
   cacheStore.clear()
   vi.unstubAllGlobals()
-  // 重新装上 caches 桩（unstubAllGlobals 会把它一并清掉）
-  vi.stubGlobal('caches', {
-    default: {
-      match: async req => cacheStore.get(req.url) || null,
-      put: async (req, res) => { cacheStore.set(req.url, res) }
-    }
-  })
+  stubCaches()
 })
 
 describe('GET /api/favicon/:domain', () => {
@@ -78,8 +88,9 @@ describe('GET /api/favicon/:domain', () => {
     expect(cacheStore.get(keys[0]).status).toBe(404)
   })
 
-  it('首个成功源返回图片字节并带缓存头', async () => {
+  it('HTML 无图标声明时降级 favicon.ico 成功并带缓存头', async () => {
     stubFetch({
+      'https://example.com/': htmlResponse('<html><head></head><body></body></html>'),
       'https://example.com/favicon.ico': imageResponse(ICO_HEAD, 'image/x-icon')
     })
     const ctx = makeContext('example.com')
@@ -93,8 +104,36 @@ describe('GET /api/favicon/:domain', () => {
     expect(cacheStore.size).toBe(1)
   })
 
+  it('从首页 HTML 解析 <link rel="icon"> 并请求声明的图标', async () => {
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse('<html><head><link rel="icon" href="/icon.png" sizes="32x32"></head></html>'),
+      'https://example.com/icon.png': imageResponse(PNG_HEAD)
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/icon.png')
+    expect(calls.some(c => c.url === 'https://example.com/icon.png')).toBe(true)
+  })
+
+  it('apple-touch-icon 优先于普通 icon（尺寸更大）', async () => {
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse(
+        '<html><head>' +
+        '<link rel="icon" href="/icon-32.png" sizes="32x32">' +
+        '<link rel="apple-touch-icon" href="/apple-180.png" sizes="180x180">' +
+        '</head></html>'
+      ),
+      'https://example.com/apple-180.png': imageResponse(PNG_HEAD)
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/apple-180.png')
+    expect(calls.some(c => c.url === 'https://example.com/icon-32.png')).toBe(false)
+  })
+
   it('上游返回错误页（非图片）时跳过该源取下一源', async () => {
     stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
       'https://example.com/favicon.ico': new Response('<html>404 page</html>', {
         status: 200,
         headers: { 'Content-Type': 'text/html' }
@@ -108,6 +147,7 @@ describe('GET /api/favicon/:domain', () => {
 
   it('content-type 缺失但魔数为图片时仍接受', async () => {
     stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
       'https://example.com/favicon.ico': imageResponse(PNG_HEAD, '')
     })
     const res = await onRequest(makeContext('example.com'))
@@ -117,10 +157,49 @@ describe('GET /api/favicon/:domain', () => {
 
   it('超过大小上限的响应被拒绝', async () => {
     stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
       'https://example.com/favicon.ico': imageResponse(new Array(600 * 1024).fill(0x41))
     })
     const res = await onRequest(makeContext('example.com'))
     expect(res.status).toBe(404)
+  })
+
+  it('301 重定向被手动跟随（如 http→https 或路径迁移）', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': redirectResponse('/assets/favicon.ico'),
+      'https://example.com/assets/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/favicon.ico')
+  })
+
+  it('重定向到非 http(s) 协议时该源失败', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': redirectResponse('javascript:alert(1)'),
+      'https://favicon.im/example.com': imageResponse(PNG_HEAD)
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://favicon.im/example.com')
+  })
+
+  it('首个成功源会取消其余在途探测请求', async () => {
+    // favicon.im 返回挂起的 promise（模拟慢源），HTML 源成功后其余源应被 abort
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse('<html><head><link rel="icon" href="/icon.png"></head></html>'),
+      'https://example.com/icon.png': imageResponse(PNG_HEAD),
+      'https://favicon.im/example.com': () => new Promise(() => {})
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    // 等 abort 信号传播
+    await new Promise(r => setTimeout(r, 0))
+    const imCall = calls.find(c => c.url.startsWith('https://favicon.im/'))
+    expect(imCall).toBeTruthy()
+    expect(imCall.options.signal.aborted).toBe(true)
   })
 
   it('缓存命中时不发起上游请求', async () => {
