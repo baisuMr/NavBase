@@ -507,8 +507,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
+  position: sticky;
+  top: var(--header-height);
+  z-index: 40;
+  background-color: var(--color-surface);
   padding-bottom: var(--space-lg);
-  margin-bottom: var(--space-xl);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -611,6 +614,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+  margin-top: var(--space-xl);
 }
 
 @media (max-width: 1023px) {
