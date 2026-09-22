@@ -11,6 +11,7 @@
 }
 
 .app-header-inner {
+  width: var(--content-width);
   max-width: var(--content-max-width);
   height: 100%;
   margin: 0 auto;
@@ -486,6 +487,7 @@
 /* ── 第二屏：书签库 ── */
 .explorer {
   min-height: 100vh;
+  width: var(--content-width);
   max-width: var(--content-max-width);
   margin: 0 auto;
   padding: var(--space-2xl) var(--space-lg);
@@ -722,6 +724,7 @@
 }
 
 .app-footer-inner {
+  width: var(--content-width);
   max-width: var(--content-max-width);
   margin: 0 auto;
   padding: var(--space-lg);
