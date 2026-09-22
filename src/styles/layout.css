@@ -209,6 +209,7 @@
   border-radius: var(--radius-md);
   font-size: var(--fs-body-sm);
   font-weight: var(--fw-medium);
+  line-height: 1;
   color: var(--color-text-secondary);
   transition: background-color var(--t-fast);
 }
@@ -217,16 +218,16 @@
   background-color: var(--color-border);
 }
 
-.hero-search-engine i {
-  font-size: var(--icon-size-sm);
-  color: var(--color-text-disabled);
+/* 引擎品牌 logo（remixicon 字形单色，继承文字色；18px 为视觉特调，非图标阶梯值） */
+.hero-search-engine-logo {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.hero-search-engine-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--color-primary);
+.hero-search-engine .ri-arrow-down-s-line {
+  font-size: var(--icon-size-sm);
+  color: var(--color-text-disabled);
 }
 
 .hero-search-engine-menu {
@@ -244,11 +245,14 @@
 }
 
 .hero-search-engine-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   width: 100%;
   padding: 6px var(--space-md);
   border-radius: var(--radius-xs);
   font-size: var(--fs-body-sm);
+  line-height: 1;
   color: var(--color-text-secondary);
   text-align: left;
   transition: background-color var(--t-fast);
@@ -270,14 +274,7 @@
   display: flex;
   align-items: center;
   align-self: stretch;
-  gap: var(--space-sm);
   min-width: 0;
-}
-
-.hero-search-field > i {
-  font-size: var(--icon-size-lg);
-  color: var(--color-text-disabled);
-  flex-shrink: 0;
 }
 
 .hero-search-input {

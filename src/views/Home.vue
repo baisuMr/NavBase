@@ -37,7 +37,7 @@
                   :aria-expanded="engineMenuOpen"
                   @click="toggleEngineMenu"
                 >
-                  <span class="hero-search-engine-dot"></span>
+                  <i class="hero-search-engine-logo" :class="currentEngineIcon"></i>
                   <span>{{ currentEngineLabel }}</span>
                   <i class="ri-arrow-down-s-line"></i>
                 </button>
@@ -54,13 +54,13 @@
                     :class="{ active: engine.id === currentEngineId }"
                     @click="selectEngine(engine.id)"
                   >
-                    {{ engine.label }}
+                    <i class="hero-search-engine-logo" :class="engine.icon"></i>
+                    <span>{{ engine.label }}</span>
                   </button>
                 </div>
               </div>
 
               <div class="hero-search-field">
-                <i class="ri-search-line"></i>
                 <input
                   ref="searchInput"
                   v-model="query"
@@ -343,6 +343,7 @@ const hasFocus = ref(false)
 const engineMenuOpen = ref(false)
 
 const currentEngineLabel = computed(() => engines.find(e => e.id === currentEngineId.value)?.label || '')
+const currentEngineIcon = computed(() => engines.find(e => e.id === currentEngineId.value)?.icon || '')
 
 // 站内匹配：标题 / URL
 const internalResults = computed(() => {
