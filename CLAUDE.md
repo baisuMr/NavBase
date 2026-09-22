@@ -47,9 +47,9 @@ pnpm test src/composables/useLunar.test.js       # 运行单个测试文件（pn
 # 正文字体子集再生成（需可访问 fonts.googleapis.com）
 node scripts/generate-fonts.mjs
 
-# D1 数据库操作
-wrangler d1 execute navbase-db --file=schema.sql  # 执行 SQL 文件（幂等，可重复执行）
-wrangler d1 execute navbase-db --command="SELECT * FROM bookmarks"  # 执行单条 SQL
+# D1 数据库操作（默认操作本地库；操作线上库追加 --remote）
+pnpm exec wrangler d1 execute navbase-db --file=schema.sql  # 执行 SQL 文件（幂等，可重复执行）
+pnpm exec wrangler d1 execute navbase-db --command="SELECT * FROM bookmarks"  # 执行单条 SQL
 ```
 
 ## 项目架构
@@ -76,7 +76,7 @@ functions/              # Cloudflare Functions（API 后端）
 │   ├── favicon/        # 获取网站图标 API
 │   └── auth/           # 认证 API
 ├── utils/              # 共享校验工具（validate.js，前后端共同的 URL/字段约束）
-└── _middleware.js       # 中间件（Basic Auth 认证，未配置密码时拒绝一切访问）
+└── _middleware.js       # 中间件（Basic Auth 认证，未配置密码时拒绝所有 API 请求返回 500）
 
 scripts/
 └── generate-fonts.mjs         # 正文字体子集本地化生成脚本
@@ -84,7 +84,7 @@ scripts/
 
 （首屏的时钟/搜索/常用站点已内联进 views/Home.vue）
 
-调用链分层：视图 → composables → Pinia stores → `src/api/` 封装 → Pages Functions。前端不直接 fetch，一律走 `src/api/` 封装（自动附带 Basic 认证头）。
+调用链分层：视图 → composables → Pinia stores → `src/api/` 封装 → Pages Functions。前端不直接 fetch，一律走 `src/api/` 封装（自动附带 Basic 认证头）；例外：登录接口由 auth store 直连 fetch（需避开 401 跳转逻辑）、settings store 无 composable 封装由视图直接引用。
 
 ## 核心设计
 
@@ -97,7 +97,7 @@ scripts/
 - **导入导出**: 在设置面板中进行，支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条、批内与库内双重去重）与 JSON 导出
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（前后端共同校验，后端逻辑在 `functions/utils/validate.js`）
 - **预设数据**: 分类支持预设的 Remix Icon 图标（`src/constants/categoryIcons.js`）和 10 种常用颜色
-- **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Pages Secret（线上），未配置时服务端拒绝一切访问；token 为 Basic 凭据 Base64 存储（含过期时间）——登录页勾选「记住此设备」存 localStorage（30 天，`REMEMBER_DURATION_DAYS`），不勾选存 sessionStorage（关浏览器失效，后端按 `LOGIN_DURATION_DAYS` 默认 7 天兜底）
+- **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Pages Secret（线上），未配置时所有 API 请求被拒绝（返回 500）；token 为 Basic 凭据 Base64 存储——登录页勾选「记住此设备」存 localStorage（30 天，`REMEMBER_DURATION_DAYS`），不勾选存 sessionStorage（关浏览器失效，后端按 `LOGIN_DURATION_DAYS` 默认 7 天兜底）；过期时间仅由前端存储控制，服务端不校验 token 过期（凭据在修改密码前始终有效）
 - **字体/图标本地化**: 正文字体（Inter + JetBrains Mono）子集本地化于 `src/assets/fonts/`（`scripts/generate-fonts.mjs` 生成）；图标使用 remixicon npm 包（Apache 2.0），全量字体经 Vite 本地打包，无外部 CDN。新增图标直接写 `ri-xxx-line` class（对照 https://remixicon.com/），无需重跑脚本
 - **快捷键支持**: Ctrl+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭
 

@@ -38,9 +38,9 @@
 
 ### 前置要求
 
-- Node.js 18+
+- Node.js 22+（Vite 8 与 Wrangler 4 的最低要求）
 - pnpm
-- Wrangler CLI
+- Wrangler CLI（无需全局安装：已随项目 devDependencies 安装，用 `pnpm exec wrangler` 调用）
 
 ### 安装
 
@@ -52,23 +52,27 @@ cd NavBase
 # 安装依赖
 pnpm install
 
-# 登录 Cloudflare
-wrangler login
+# 登录 Cloudflare（wrangler 已随项目依赖安装，无需全局安装）
+pnpm exec wrangler login
 ```
 
 ### 配置
 
 1. 创建 D1 数据库：
-```bash
-wrangler d1 create navbase-db
-```
+   ```bash
+   pnpm exec wrangler d1 create navbase-db
+   ```
 
 2. 更新 `wrangler.toml` 中的数据库 ID
 
-3. 执行数据库 Schema（可重复执行，默认分类为幂等插入）：
-```bash
-wrangler d1 execute navbase-db --file=schema.sql
-```
+3. 执行数据库 Schema（可重复执行，默认分类为幂等插入）。**本地库与线上库是两个独立的库，需分别执行**，否则会报 `no such table`：
+   ```bash
+   # 本地开发库（不带 --remote）
+   pnpm exec wrangler d1 execute navbase-db --file=schema.sql
+
+   # 线上库（部署前执行一次）
+   pnpm exec wrangler d1 execute navbase-db --file=schema.sql --remote
+   ```
 
 4. 配置管理员密码（切勿提交到仓库）：
    - 本地开发：在 `.dev.vars` 中设置（已被 gitignore）：
@@ -76,7 +80,7 @@ wrangler d1 execute navbase-db --file=schema.sql
      ADMIN_USERNAME=admin
      ADMIN_PASSWORD=你的密码
      ```
-   - **未配置密码时，服务端会拒绝所有访问**
+   - **未配置密码时，所有 API 请求会被拒绝（返回 500）**
 
 ### 开发
 
@@ -113,12 +117,15 @@ pnpm test src/composables/useLunar.test.js   # 运行单个测试文件
 # 构建项目
 pnpm build
 
+# 首次部署前初始化线上数据库
+pnpm exec wrangler d1 execute navbase-db --file=schema.sql --remote
+
 # 部署到 Cloudflare Pages
 pnpm deploy
 
 # 配置线上密码（secret，不会出现在代码与日志中）
-wrangler pages secret put ADMIN_PASSWORD
-wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
+pnpm exec wrangler pages secret put ADMIN_PASSWORD
+pnpm exec wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 ```
 
 ### 方式二：GitHub 集成
@@ -129,7 +136,11 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
    - 构建命令: `pnpm build`
    - 输出目录: `dist`
 4. 添加 D1 数据库绑定
-5. 在环境变量中配置密码（使用 **Secret** 类型，不要用明文变量）
+5. 初始化线上数据库 Schema：
+   ```bash
+   pnpm exec wrangler d1 execute navbase-db --file=schema.sql --remote
+   ```
+6. 在环境变量中配置密码（使用 **Secret** 类型，不要用明文变量）
 
 ### 环境变量
 
@@ -138,6 +149,7 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 | `ADMIN_USERNAME` | 管理员用户名 | Secret 或 `.dev.vars`（默认 `admin`） |
 | `ADMIN_PASSWORD` | 管理员密码 | Secret 或 `.dev.vars`（**必填，无默认值**） |
 | `LOGIN_DURATION_DAYS` | 登录保持天数 | `wrangler.toml` [vars]（默认 `7`） |
+| `REMEMBER_DURATION_DAYS` | 勾选「记住此设备」时的登录保持天数 | `wrangler.toml` [vars]（默认 `30`） |
 
 > ⚠️ 密码属于凭据，不要写入 `wrangler.toml`（该文件会被 git 跟踪并随部署生效）。
 
@@ -153,13 +165,13 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 ### 访问与登录
 
 - 打开部署的 URL，未登录时自动跳转登录页
-- 所有数据（含浏览）均需登录后访问
+- 书签与设置数据均需登录后访问（站点图标代理 `/api/favicon/*` 为公开图片接口，免认证）
 - 勾选「记住此设备」登录状态保持 30 天，不勾选则关闭浏览器后失效
 
 ### 导入浏览器书签
 
 1. 在浏览器中导出书签为 HTML 文件
-2. 进入书签资料库，点击「导入书签」选择该文件
+2. 打开设置面板（顶栏齿轮），点击「导入书签」选择该文件
 3. 文件夹自动转为分类（同名合并），书签批量导入
 
 ### 站点设置
@@ -197,7 +209,8 @@ NavBase/
 ├── functions/            # Cloudflare Functions
 │   ├── api/              # API 端点
 │   └── utils/            # 共享校验工具（URL 协议白名单等）
-├── scripts/              # 正文字体子集脚本与数据迁移 SQL
+├── scripts/              # 构建与辅助脚本（正文字体子集生成、API 冒烟测试）
+├── migrations/           # 数据库迁移 SQL
 ├── schema.sql            # 数据库 Schema
 └── wrangler.toml         # Cloudflare 配置
 ```

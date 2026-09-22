@@ -6,7 +6,7 @@
 - 用户名：由 `ADMIN_USERNAME` 配置，默认 `admin`
 - 密码：由 `ADMIN_PASSWORD` 配置（本地开发放 `.dev.vars`，线上用 `wrangler pages secret put ADMIN_PASSWORD` 配置，切勿写入仓库）
 
-**注意**：除 `POST /api/auth/login` 外，所有请求（含 GET）都需要认证；未配置 `ADMIN_PASSWORD` 时服务端拒绝一切登录与访问。
+**注意**：除 `POST /api/auth/login` 与 `GET /api/favicon/*` 外，所有请求（含 GET）都需要认证；未配置 `ADMIN_PASSWORD` 时服务端拒绝所有 API 请求（登录接口返回 500，favicon 代理不受影响）。
 
 ## API 端点
 
@@ -24,7 +24,7 @@ GET /api/categories
     "id": 1,
     "name": "常用",
     "icon": "ri-star-line",
-    "color": "#3B82F6",
+    "color": "#2563EB",
     "sort_order": 1,
     "created_at": "2026-09-08 02:36:25",
     "updated_at": "2026-09-08 02:36:25"
@@ -48,10 +48,11 @@ Content-Type: application/json
 {
   "name": "分类名称",
   "icon": "ri-folder-line",
-  "color": "#3B82F6",
-  "sort_order": 0
+  "color": "#10b981"
 }
 ```
+
+**说明**：`icon`/`color` 可缺省，默认分别为 `ri-folder-line` / `#10b981`；`sort_order` 由服务端管理（新建固定排最后），客户端传值无效。
 
 #### 更新分类
 ```
@@ -98,7 +99,7 @@ GET /api/bookmarks
     "updated_at": "2026-09-08 02:36:25",
     "category_name": "常用",
     "category_icon": "ri-star-line",
-    "category_color": "#3B82F6"
+    "category_color": "#2563EB"
   }
 ]
 ```
@@ -119,10 +120,11 @@ Content-Type: application/json
   "url": "https://example.com",
   "description": "描述",
   "category_id": 1,
-  "icon_url": "https://favicon.im/example.com",
-  "sort_order": 0
+  "icon_url": "https://favicon.im/example.com"
 }
 ```
+
+**说明**：`sort_order` 由服务端管理（新建固定排最后），客户端传值无效；`category_id` 可缺省或为 `null`（未分类）。
 
 #### 更新书签
 ```
@@ -233,7 +235,8 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "your-password"
+  "password": "your-password",
+  "remember": false
 }
 ```
 
@@ -250,8 +253,9 @@ Content-Type: application/json
 
 **说明**：
 - `username` 与 `password` 均必填，缺失返回 400
+- `remember` 可选：为 `true` 时保持天数取 `REMEMBER_DURATION_DAYS`（默认 30 天），否则取 `LOGIN_DURATION_DAYS`（默认 7 天）
 - token 是 Base64 编码的 `username:password`，可用于后续请求的 Basic Auth 认证
-- `expiresAt` 为过期时间戳（毫秒），前端存 localStorage 据此控制登录保持；保持天数由 `LOGIN_DURATION_DAYS` 配置（默认 7 天）
+- `expiresAt` 为过期时间戳（毫秒），由前端存储控制登录保持（勾选「记住此设备」存 localStorage，否则存 sessionStorage）；服务端不校验 token 过期，凭据在修改密码前始终有效
 - 登录失败统一延迟约 800ms 后返回，作为简易防爆破措施
 
 ---
