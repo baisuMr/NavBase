@@ -154,7 +154,7 @@ wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 
 - 打开部署的 URL，未登录时自动跳转登录页
 - 所有数据（含浏览）均需登录后访问
-- 登录状态默认保持 7 天
+- 勾选「记住此设备」登录状态保持 30 天，不勾选则关闭浏览器后失效
 
 ### 导入浏览器书签
 
@@ -204,7 +204,7 @@ nav-manager/
 
 ## 安全说明
 
-- token 为 Basic Auth 凭据的 Base64 编码，存储于 localStorage；请勿在不受信任的设备上登录
+- token 为 Basic Auth 凭据的 Base64 编码，存储于 localStorage（勾选记住此设备）或 sessionStorage；请勿在不受信任的设备上登录
 - 登录接口对失败尝试做了简易延迟防护；公网部署建议在 Cloudflare 侧再配置 WAF 速率限制
 - 页面已设置 `robots noindex`，避免个人书签站被搜索引擎收录
 
