@@ -38,17 +38,17 @@ export async function onRequest(context) {
       if (err) {
         return Response.json({ error: err }, { status: 400, headers });
       }
-      const { title, url, description, category_id, icon_url, sort_order } = data;
+      const { title, url, description, category_id, icon_url } = data;
 
+      // sort_order 取 MAX+1：新书签固定排最后，忽略传入值
       const result = await env.DB.prepare(
-        'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM bookmarks))'
       ).bind(
         title.trim(),
         url,
         description || '',
         category_id || null,
-        icon_url || '',
-        sort_order || 0
+        icon_url || ''
       ).run();
 
       return Response.json(

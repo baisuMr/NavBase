@@ -44,7 +44,7 @@ export async function onRequest(context) {
       if (err) {
         return Response.json({ error: err }, { status: 400, headers });
       }
-      const { name, icon, color, sort_order } = data;
+      const { name, icon, color } = data;
 
       // 检查分类是否存在
       const existing = await env.DB.prepare(
@@ -58,9 +58,10 @@ export async function onRequest(context) {
         );
       }
 
+      // 不更新 sort_order：编辑保留原排序
       await env.DB.prepare(
-        'UPDATE categories SET name = ?, icon = ?, color = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981', sort_order || 0, id).run();
+        'UPDATE categories SET name = ?, icon = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981', id).run();
 
       return Response.json({ success: true }, { headers });
     }

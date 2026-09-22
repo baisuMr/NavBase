@@ -35,11 +35,12 @@ export async function onRequest(context) {
       if (err) {
         return Response.json({ error: err }, { status: 400, headers });
       }
-      const { name, icon, color, sort_order } = data;
+      const { name, icon, color } = data;
 
+      // sort_order 取 MAX+1：新分类固定排最后，忽略传入值
       const result = await env.DB.prepare(
-        'INSERT INTO categories (name, icon, color, sort_order) VALUES (?, ?, ?, ?)'
-      ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981', sort_order || 0).run();
+        'INSERT INTO categories (name, icon, color, sort_order) VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM categories))'
+      ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981').run();
 
       return Response.json(
         { id: result.meta.last_row_id, success: true },

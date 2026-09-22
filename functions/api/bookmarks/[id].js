@@ -47,7 +47,7 @@ export async function onRequest(context) {
       if (err) {
         return Response.json({ error: err }, { status: 400, headers });
       }
-      const { title, url, description, category_id, icon_url, sort_order } = data;
+      const { title, url, description, category_id, icon_url } = data;
 
       // 检查书签是否存在
       const existing = await env.DB.prepare(
@@ -61,15 +61,15 @@ export async function onRequest(context) {
         );
       }
 
+      // 不更新 sort_order：编辑保留原排序
       await env.DB.prepare(
-        'UPDATE bookmarks SET title = ?, url = ?, description = ?, category_id = ?, icon_url = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        'UPDATE bookmarks SET title = ?, url = ?, description = ?, category_id = ?, icon_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
       ).bind(
         title.trim(),
         url,
         description || '',
         category_id || null,
         icon_url || '',
-        sort_order || 0,
         id
       ).run();
 

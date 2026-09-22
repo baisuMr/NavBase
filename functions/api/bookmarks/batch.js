@@ -78,11 +78,20 @@ export async function onRequest(context) {
     // 批内 + 库内双重去重，避免重复导入产生冗余书签
     const { toInsert, skipped } = await dedupe(env, items);
 
+    // 新导入书签排最后：从库内 MAX(sort_order)+1 起按导入顺序递增
+    let nextSort = 1;
+    if (toInsert.length > 0) {
+      const { max } = (await env.DB.prepare(
+        'SELECT COALESCE(MAX(sort_order), 0) AS max FROM bookmarks'
+      ).first()) ?? { max: 0 };
+      nextSort = max + 1;
+    }
+
     // D1 单次 batch 有语句数限制，分块提交
     let count = 0;
     for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
       const chunk = toInsert.slice(i, i + CHUNK_SIZE);
-      const stmts = chunk.map(item =>
+      const stmts = chunk.map((item, j) =>
         env.DB.prepare(
           'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
         ).bind(
@@ -91,7 +100,7 @@ export async function onRequest(context) {
           item.description || '',
           item.category_id || null,
           item.icon_url || '',
-          0
+          nextSort + i + j
         )
       );
       await env.DB.batch(stmts);
