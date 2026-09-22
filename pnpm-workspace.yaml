@@ -3,3 +3,7 @@ allowBuilds:
   sharp: true
   vue-demi: true
   workerd: true
+
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
