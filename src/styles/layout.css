@@ -338,6 +338,11 @@
   color: inherit;
 }
 
+.hero-search-result.highlighted {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
 .hero-search-result-favicon {
   display: flex;
   align-items: center;
@@ -380,16 +385,17 @@
   white-space: nowrap;
 }
 
-.hero-search-engine-hint,
-.hero-search-empty {
+.hero-search-engine-hint {
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid var(--color-border);
   font-size: var(--fs-card);
   color: var(--color-text-muted);
+  margin-top: var(--space-xs);
 }
 
-.hero-search-engine-hint {
-  margin-top: var(--space-xs);
+.hero-search-engine-hint.highlighted {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 /* 常用站点（排序前 5） */
@@ -534,7 +540,7 @@
   background-color: var(--color-surface-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  font-size: var(--fs-card);
+  font-size: var(--fs-body-md);
   font-weight: var(--fw-medium);
   color: var(--color-text-secondary);
   white-space: nowrap;
@@ -547,6 +553,7 @@
 }
 
 .category-tab.active {
+  /* 「全部」tab 激活态：深色实底；分类 tab 的背景/边框由内联样式按分类色覆盖 */
   background-color: var(--color-text);
   border-color: var(--color-text);
   color: var(--color-on-primary);
@@ -562,8 +569,9 @@
 }
 
 .category-tab.active .category-tab-count {
-  background-color: var(--color-text-secondary);
-  color: var(--color-border);
+  /* 白色半透明底 + 白字，保证在深色/彩色实底上均协调 */
+  background-color: rgba(255, 255, 255, 0.18);
+  color: var(--color-on-primary);
 }
 
 .category-tab-add {

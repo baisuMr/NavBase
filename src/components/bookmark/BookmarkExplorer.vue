@@ -18,9 +18,16 @@
           type="button"
           class="category-tab"
           :class="{ active: activeCat === cat.id }"
+          :style="activeCat === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : null"
           @click="$emit('select-category', cat.id)"
           @contextmenu.prevent="$emit('category-menu', $event, cat)"
         >
+          <!-- 分类图标：未激活用分类色，激活继承白色文字色 -->
+          <i
+            v-if="cat.icon"
+            :class="cat.icon"
+            :style="activeCat !== cat.id ? { color: cat.color } : null"
+          ></i>
           <span>{{ cat.name }}</span>
           <span class="category-tab-count">{{ cat.count }}</span>
         </button>

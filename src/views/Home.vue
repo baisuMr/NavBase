@@ -71,6 +71,7 @@
                   @input="onSearchInput"
                   @focus="onSearchFocus"
                   @blur="onSearchBlur"
+                  @keydown="onSearchKeydown"
                 />
               </div>
 
@@ -80,20 +81,22 @@
               </div>
             </div>
 
-            <!-- 站内结果下拉 -->
+            <!-- 站内结果下拉（无站内匹配时仅显示搜索项） -->
             <div
-              v-if="showDropdown && (internalResults.length > 0 || showEngineHint)"
+              v-if="showDropdown"
               class="hero-search-results"
               @mousedown.prevent
             >
               <a
-                v-for="bm in internalResults"
+                v-for="(bm, i) in internalResults"
                 :key="bm.id"
                 :href="bm.url"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="hero-search-result"
+                :class="{ highlighted: i === highlightedIndex }"
                 @click="onResultClick"
+                @mouseenter="highlightedIndex = i"
               >
                 <span class="hero-search-result-favicon">
                   <img v-if="iconSrc(bm)" :src="iconSrc(bm)" :alt="bm.title" loading="lazy" @error="onIconError(bm)" />
@@ -105,12 +108,15 @@
                 </span>
               </a>
 
-              <div v-if="internalResults.length > 0 && showEngineHint" class="hero-search-engine-hint">
-                ↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"
-              </div>
-
-              <div v-if="internalResults.length === 0 && showEngineHint" class="hero-search-empty">
-                无站内匹配，按 ↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"
+              <!-- 搜索项：下拉最后一个可选项（无站内匹配时唯一选项），↑/↓ 可选、回车或点击执行搜索 -->
+              <div
+                class="hero-search-engine-hint"
+                :class="{ highlighted: highlightedIndex === internalResults.length }"
+                @click="onEngineSearchClick"
+                @mouseenter="highlightedIndex = internalResults.length"
+              >
+                <template v-if="internalResults.length > 0">↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"</template>
+                <template v-else>无站内匹配，↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"</template>
               </div>
             </div>
           </form>
@@ -341,9 +347,12 @@ const searchInput = ref(null)
 const query = ref('')
 const hasFocus = ref(false)
 const engineMenuOpen = ref(false)
+// 下拉高亮索引：-1 表示未激活（仅按过 ↑/↓ 后才高亮，回车跳转选中项）
+const highlightedIndex = ref(-1)
 
 const currentEngineLabel = computed(() => engines.find(e => e.id === currentEngineId.value)?.label || '')
 const currentEngineIcon = computed(() => engines.find(e => e.id === currentEngineId.value)?.icon || '')
+const currentEngineHome = computed(() => engines.find(e => e.id === currentEngineId.value)?.home || '')
 
 // 站内匹配：标题 / URL
 const internalResults = computed(() => {
@@ -358,10 +367,11 @@ const internalResults = computed(() => {
 })
 
 const showDropdown = computed(() => query.value.trim() && hasFocus.value)
-const showEngineHint = computed(() => query.value.trim().length > 0)
 
 function onSearchInput() {
   hasFocus.value = true
+  // 输入变化后结果集更新，旧高亮索引失效
+  highlightedIndex.value = -1
 }
 
 function onSearchFocus() {
@@ -399,13 +409,85 @@ function onResultClick() {
   hasFocus.value = false
 }
 
-function onSearchSubmit() {
+/** 执行搜索跳转：域名直达或当前引擎搜索；空输入跳转引擎主页 */
+function submitSearch() {
   const result = resolveAndOpen(query.value)
-  if (!result) return
-  // 回车一律按当前规则跳转：域名直达或当前引擎搜索
+  if (!result) {
+    // 空输入回车：跳转当前搜索引擎主页
+    window.open(currentEngineHome.value, '_blank', 'noopener,noreferrer')
+    hasFocus.value = false
+    return
+  }
   window.open(result.target, '_blank', 'noopener,noreferrer')
   query.value = ''
   hasFocus.value = false
+}
+
+function onSearchSubmit() {
+  submitSearch()
+}
+
+// 点击下拉中的搜索项：等价于回车搜索
+function onEngineSearchClick() {
+  submitSearch()
+}
+
+/**
+ * 搜索框键盘操作：
+ *  - Tab（不带 Shift）循环切换搜索引擎，Shift+Tab 保留浏览器原生焦点后退
+ *  - ↑/↓ 在下拉可见时循环移动高亮，循环范围包含末尾的「用引擎搜索」项
+ *  - 回车：有高亮时跳转选中项（书签或搜索项）；无高亮走表单 submit 正常搜索
+ *  - Esc 且已有高亮：仅清除高亮（全局 Esc 关弹层逻辑不受影响）
+ *  - IME 组合态（中文输入法选词）一律不处理
+ */
+function onSearchKeydown(e) {
+  if (e.isComposing) return
+
+  // Tab 切换引擎
+  if (e.key === 'Tab' && !e.shiftKey) {
+    e.preventDefault()
+    const idx = engines.findIndex(en => en.id === currentEngineId.value)
+    const next = engines[(idx + 1) % engines.length]
+    setEngine(next.id)
+    return
+  }
+
+  const dropdownActive = showDropdown.value
+
+  // ↑/↓ 移动高亮（循环；范围 = 站内结果 + 末尾搜索项）
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && dropdownActive) {
+    e.preventDefault()
+    const n = internalResults.value.length + 1
+    if (e.key === 'ArrowDown') {
+      highlightedIndex.value = highlightedIndex.value < 0 ? 0 : (highlightedIndex.value + 1) % n
+    } else {
+      highlightedIndex.value = highlightedIndex.value < 0 ? n - 1 : (highlightedIndex.value - 1 + n) % n
+    }
+    return
+  }
+
+  // 回车且有高亮：跳转选中项（书签或搜索项）
+  if (e.key === 'Enter' && dropdownActive && highlightedIndex.value >= 0) {
+    e.preventDefault()
+    if (highlightedIndex.value < internalResults.value.length) {
+      // 站内书签
+      const bm = internalResults.value[highlightedIndex.value]
+      window.open(bm.url, '_blank', 'noopener,noreferrer')
+      query.value = ''
+      hasFocus.value = false
+      highlightedIndex.value = -1
+    } else {
+      // 末尾搜索项：等价于回车搜索
+      submitSearch()
+      highlightedIndex.value = -1
+    }
+    return
+  }
+
+  // Esc 且有高亮：仅清除高亮
+  if (e.key === 'Escape' && highlightedIndex.value >= 0) {
+    highlightedIndex.value = -1
+  }
 }
 
 function focusSearch() {
@@ -434,7 +516,9 @@ const explorerCategories = computed(() => {
   return categories.value.map(c => ({
     id: c.id,
     name: c.name,
-    count: categoryCountMap.value[c.id] || 0
+    count: categoryCountMap.value[c.id] || 0,
+    icon: c.icon,
+    color: c.color
   }))
 })
 

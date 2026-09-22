@@ -5,9 +5,9 @@ import { ref } from 'vue'
  * 默认百度，可切换 Google / GitHub
  */
 export const SEARCH_ENGINES = [
-  { id: 'baidu',  label: '百度',   icon: 'ri-baidu-fill',  url: 'https://www.baidu.com/s?wd='      },
-  { id: 'google', label: 'Google', icon: 'ri-google-fill', url: 'https://www.google.com/search?q=' },
-  { id: 'github', label: 'GitHub', icon: 'ri-github-fill', url: 'https://github.com/search?q='     }
+  { id: 'baidu',  label: '百度',   icon: 'ri-baidu-fill',  url: 'https://www.baidu.com/s?wd=',      home: 'https://www.baidu.com'  },
+  { id: 'google', label: 'Google', icon: 'ri-google-fill', url: 'https://www.google.com/search?q=', home: 'https://www.google.com' },
+  { id: 'github', label: 'GitHub', icon: 'ri-github-fill', url: 'https://github.com/search?q=',     home: 'https://github.com'     }
 ]
 
 export function useSearchEngines() {
