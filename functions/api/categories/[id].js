@@ -80,15 +80,11 @@ export async function onRequest(context) {
         );
       }
 
-      // 将该分类下的书签的 category_id 设为 null
-      await env.DB.prepare(
-        'UPDATE bookmarks SET category_id = NULL WHERE category_id = ?'
-      ).bind(id).run();
-
-      // 删除分类
-      await env.DB.prepare(
-        'DELETE FROM categories WHERE id = ?'
-      ).bind(id).run();
+      // 置空书签 + 删除分类经 batch 原子执行，避免中途失败留下半删状态
+      await env.DB.batch([
+        env.DB.prepare('UPDATE bookmarks SET category_id = NULL WHERE category_id = ?').bind(id),
+        env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id)
+      ]);
 
       return Response.json({ success: true }, { headers });
     }
