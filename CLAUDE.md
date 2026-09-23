@@ -33,7 +33,7 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 - **设置面板**: 顶栏齿轮打开，集中网站名称、头像（前端压缩 128×128）、导入导出、退出登录
 - **站点设置持久化**: 存于 D1 `settings` 表（KV），经 `GET/PUT /api/settings` 读写；字段空字符串表示恢复默认，缺省表示不修改；服务端按键白名单（site_name / avatar）校验
 - **主题**: 仅浅色主题（Tabular Minimalist：Slate 中性色 + 皇家蓝 `#2563EB`，扁平无阴影、紧凑圆角），无深色模式；设计参考 stitch_1。组件样式禁止硬编码颜色，一律引用 `src/styles/variables.css` 的 token
-- **站点图标代理**: `/api/favicon/:domain` 为免认证的图片代理（中间件放行；并发探测目标站 favicon.ico、favicon.im、DuckDuckGo、Google s2，魔数校验 + Cache API 缓存 7 天，全失败负面缓存 10 分钟）。书签 `icon_url` 为空时前端经 `useFavicon` 组合式函数自动拼该代理地址渲染，加载失败回退「标题首字头像」
+- **站点图标代理**: `/api/favicon/:domain` 为免认证的图片代理（中间件放行；并发探测目标站首页 HTML 图标声明（只读前 256KB）、favicon.ico、favicon.im、DuckDuckGo、Google s2，魔数校验 + Cache API 缓存 7 天，全失败负面缓存 10 分钟）。书签 `icon_url` 为空时前端经 `useFavicon` 组合式函数自动拼该代理地址渲染，加载失败回退「标题首字头像」
 - **导入导出**: 在设置面板中进行，支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条、批内与库内双重去重）与 JSON 导出
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（前后端共同校验，后端逻辑在 `functions/utils/validate.js`）
 - **预设数据**: 分类支持预设的 Remix Icon 图标（`src/constants/categoryIcons.js`）和 10 种常用颜色

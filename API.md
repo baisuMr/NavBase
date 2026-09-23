@@ -193,13 +193,14 @@ GET /api/favicon/:domain
 
 **说明**：
 - 并发探测以下图标源（单源 3 秒超时），取最先返回有效图片者：
-  1. 目标站根路径 `https://{domain}/favicon.ico`（本地/国内网络可达性最好）
-  2. favicon.im
-  3. DuckDuckGo
-  4. Google Favicon（Cloudflare 边缘可达性最好）
+  1. 解析目标站首页 HTML 的 `<link rel="icon">` / `apple-touch-icon` 声明（清晰度与覆盖率最优；首页只读前 256KB）
+  2. 目标站根路径 `https://{domain}/favicon.ico`（本地/国内网络可达性最好）
+  3. favicon.im
+  4. DuckDuckGo
+  5. Google Favicon（Cloudflare 边缘可达性最好）
 - 响应经图片魔数校验（PNG/GIF/JPEG/BMP/ICO/WebP/SVG），错误页等非图片内容视为失败；单图上限 512KB
 - 结果经 Cache API 缓存：成功 7 天，失败 10 分钟
-- 域名格式校验：仅接受合法 hostname，防止拼接路径/内网地址（SSRF）
+- 域名格式校验：仅接受合法 hostname，防止拼接路径/内网地址（SSRF）；重定向最多跟随 3 跳，且每跳目标同样必须是合法域名（杜绝跳转到内网 IP/localhost）
 
 **前端约定**：书签 `icon_url` 为空时由 `useFavicon` 组合式函数自动拼 `/api/favicon/{域名}` 渲染，加载失败回退「标题首字头像」，调用方无需单独处理。
 
