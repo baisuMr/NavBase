@@ -553,7 +553,7 @@
 }
 
 .category-tab.active {
-  /* 「全部」tab 激活态：深色实底；分类 tab 的背景/边框由内联样式按分类色覆盖 */
+  /* 「全部」tab 激活态：深色实底；分类 tab 边框恒为分类色，激活背景亦由内联样式按分类色覆盖 */
   background-color: var(--color-text);
   border-color: var(--color-text);
   color: var(--color-on-primary);
@@ -645,9 +645,9 @@
   gap: var(--space-md);
   min-width: 0;
   padding: var(--space-md);
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-icon);
   color: inherit;
   transition: all var(--t-fast);
 }

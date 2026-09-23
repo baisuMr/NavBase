@@ -18,7 +18,7 @@
           type="button"
           class="category-tab"
           :class="{ active: activeCat === cat.id }"
-          :style="activeCat === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : null"
+          :style="activeCat === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : { borderColor: cat.color }"
           @click="$emit('select-category', cat.id)"
           @contextmenu.prevent="$emit('category-menu', $event, cat)"
         >
