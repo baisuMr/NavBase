@@ -18,7 +18,7 @@
 ## 技术栈
 
 - **前端**: Vue 3 + Vue Router + Pinia
-- **后端**: Cloudflare Pages Functions
+- **后端**: Cloudflare Workers（Static Assets + Worker 脚本）
 - **数据库**: Cloudflare D1 (SQLite)
 - **CSS**: 纯 CSS（无框架依赖）
 - **测试**: Vitest
@@ -95,6 +95,8 @@ pnpm dev:api  # 仅 API（绑定与配置读取自 wrangler.toml / .dev.vars）
 
 访问 http://localhost:5173
 
+> 注：`pnpm dev:api` 需要 `dist/` 目录存在（wrangler dev 同时托管静态资源），首次使用前先跑一次 `pnpm build`。
+
 ### 构建
 
 ```bash
@@ -109,38 +111,27 @@ pnpm test:watch                              # 监听模式
 pnpm test src/composables/useLunar.test.js   # 运行单个测试文件
 ```
 
-## 部署到 Cloudflare Pages
+## 部署到 Cloudflare Workers
 
 ### 方式一：命令行部署
 
 ```bash
-# 构建项目
-pnpm build
-
 # 首次部署前初始化线上数据库
 pnpm exec wrangler d1 execute navbase-db --file=schema.sql --remote
 
-# 部署到 Cloudflare Pages
+# 构建并部署到 Cloudflare Workers（deploy 脚本 = vite build + wrangler deploy）
 pnpm deploy
 
 # 配置线上密码（secret，不会出现在代码与日志中）
-pnpm exec wrangler pages secret put ADMIN_PASSWORD
-pnpm exec wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
+pnpm exec wrangler secret put ADMIN_PASSWORD
+pnpm exec wrangler secret put ADMIN_USERNAME   # 可选，默认 admin
 ```
 
-### 方式二：GitHub 集成
+### 方式二：Workers Builds（Git 集成自动部署）
 
-1. 在 Cloudflare Dashboard 中创建 Pages 项目
-2. 连接 GitHub 仓库
-3. 配置构建设置：
-   - 构建命令: `pnpm build`
-   - 输出目录: `dist`
-4. 添加 D1 数据库绑定
-5. 初始化线上数据库 Schema：
-   ```bash
-   pnpm exec wrangler d1 execute navbase-db --file=schema.sql --remote
-   ```
-6. 在环境变量中配置密码（使用 **Secret** 类型，不要用明文变量）
+1. 在 Cloudflare Dashboard 的 Workers Builds 中连接 GitHub 仓库
+2. 构建命令填 `pnpm build`（Wrangler 配置沿用仓库根目录 `wrangler.toml`，含 D1 绑定与静态资源目录）
+3. 配置 Secret 类型的密码变量，首次部署后初始化线上数据库 Schema（同方式一）
 
 ### 环境变量
 
@@ -155,9 +146,9 @@ pnpm exec wrangler pages secret put ADMIN_USERNAME   # 可选，默认 admin
 
 ### 数据库绑定
 
-在 Cloudflare Pages 设置中添加 D1 数据库绑定：
+D1 绑定已在 `wrangler.toml` 中声明，部署时自动生效：
 
-- 变量名: `DB`
+- 绑定名: `DB`
 - 数据库: `navbase-db`
 
 ## 使用说明
@@ -206,8 +197,10 @@ NavBase/
 │   ├── utils/            # 工具函数（书签导入解析等）
 │   ├── styles/           # CSS 样式
 │   └── views/            # 页面视图
-├── functions/            # Cloudflare Functions
-│   ├── api/              # API 端点
+├── worker/               # Cloudflare Worker
+│   ├── index.js          # 入口：认证门 + 路由表 + ASSETS 兜底
+│   ├── auth.js           # Basic Auth 认证门
+│   ├── routes/           # API 端点处理函数
 │   └── utils/            # 共享校验工具（URL 协议白名单等）
 ├── scripts/              # 构建与辅助脚本（正文字体子集生成、API 冒烟测试）
 ├── migrations/           # 数据库迁移 SQL

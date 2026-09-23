@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { onRequest } from './[domain].js'
+import { handle } from './favicon.js'
 
 // 模拟 Cloudflare Cache API（node 环境没有 caches 全局，函数在调用期才访问它）
 const cacheStore = new Map()
@@ -16,15 +16,17 @@ function stubCaches() {
 const PNG_HEAD = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
 const ICO_HEAD = [0x00, 0x00, 0x01, 0x00, 0x01, 0x00]
 
-function makeContext(domain, method = 'GET') {
+function makeFixture(domain, method = 'GET') {
   const waitUntil = []
   return {
-    params: { domain },
     request: new Request(`https://site.example/api/favicon/${domain}`, { method }),
-    waitUntil: promise => waitUntil.push(promise),
+    params: { domain },
+    ctx: { waitUntil: promise => waitUntil.push(promise) },
     waitUntilQueue: waitUntil
   }
 }
+
+const invoke = (f) => handle(f.request, {}, f.params, f.ctx)
 
 function htmlResponse(html) {
   return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
@@ -66,23 +68,23 @@ describe('GET /api/favicon/:domain', () => {
   it('域名格式不合法返回 400', async () => {
     stubFetch({})
     for (const bad of ['ev il.com', 'localhost', '192.168.1.1', 'evil.com/path', '..']) {
-      const res = await onRequest(makeContext(bad))
+      const res = await invoke(makeFixture(bad))
       expect(res.status, bad).toBe(400)
     }
   })
 
   it('非 GET 请求返回 405，OPTIONS 直接放行', async () => {
     stubFetch({})
-    expect((await onRequest(makeContext('example.com', 'POST'))).status).toBe(405)
-    expect((await onRequest(makeContext('example.com', 'OPTIONS'))).status).toBe(200)
+    expect((await invoke(makeFixture('example.com', 'POST'))).status).toBe(405)
+    expect((await invoke(makeFixture('example.com', 'OPTIONS'))).status).toBe(200)
   })
 
   it('全部源失败返回 404，并写入负面缓存', async () => {
     stubFetch({})
-    const ctx = makeContext('example.com')
-    const res = await onRequest(ctx)
+    const fixture = makeFixture('example.com')
+    const res = await invoke(fixture)
     expect(res.status).toBe(404)
-    await Promise.all(ctx.waitUntilQueue)
+    await Promise.all(fixture.waitUntilQueue)
     const keys = [...cacheStore.keys()]
     expect(keys).toHaveLength(1)
     expect(cacheStore.get(keys[0]).status).toBe(404)
@@ -93,14 +95,14 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/': htmlResponse('<html><head></head><body></body></html>'),
       'https://example.com/favicon.ico': imageResponse(ICO_HEAD, 'image/x-icon')
     })
-    const ctx = makeContext('example.com')
-    const res = await onRequest(ctx)
+    const fixture = makeFixture('example.com')
+    const res = await invoke(fixture)
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('image/x-icon')
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=604800')
     const buf = new Uint8Array(await res.arrayBuffer())
     expect([...buf.slice(0, 4)]).toEqual(ICO_HEAD.slice(0, 4))
-    await Promise.all(ctx.waitUntilQueue)
+    await Promise.all(fixture.waitUntilQueue)
     expect(cacheStore.size).toBe(1)
   })
 
@@ -109,7 +111,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/': htmlResponse('<html><head><link rel="icon" href="/icon.png" sizes="32x32"></head></html>'),
       'https://example.com/icon.png': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/icon.png')
     expect(calls.some(c => c.url === 'https://example.com/icon.png')).toBe(true)
@@ -125,7 +127,7 @@ describe('GET /api/favicon/:domain', () => {
       ),
       'https://example.com/apple-180.png': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/apple-180.png')
     expect(calls.some(c => c.url === 'https://example.com/icon-32.png')).toBe(false)
@@ -140,7 +142,7 @@ describe('GET /api/favicon/:domain', () => {
       }),
       'https://favicon.im/example.com': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://favicon.im/example.com')
   })
@@ -150,7 +152,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/': htmlResponse('<html></html>'),
       'https://example.com/favicon.ico': imageResponse(PNG_HEAD, '')
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('image/x-icon')
   })
@@ -160,7 +162,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/': htmlResponse('<html></html>'),
       'https://example.com/favicon.ico': imageResponse(new Array(600 * 1024).fill(0x41))
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(404)
   })
 
@@ -185,7 +187,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/': () => new Response(stream, { status: 200, headers: { 'Content-Type': 'text/html' } }),
       'https://example.com/icon.png': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/icon.png')
     // 截断读取：实际读出的字节数 ≤ 256KB + 预取余量（至多 2 个 64KB chunk），远小于整页 600KB+
@@ -198,7 +200,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/favicon.ico': redirectResponse('/assets/favicon.ico'),
       'https://example.com/assets/favicon.ico': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/favicon.ico')
   })
@@ -209,7 +211,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/favicon.ico': redirectResponse('javascript:alert(1)'),
       'https://favicon.im/example.com': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://favicon.im/example.com')
   })
@@ -222,7 +224,7 @@ describe('GET /api/favicon/:domain', () => {
       'http://127.0.0.1/icon.png': imageResponse(PNG_HEAD),
       'https://favicon.im/example.com': imageResponse(PNG_HEAD)
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://favicon.im/example.com')
     // 核心断言：绝不向非法跳转目标发起请求
@@ -236,7 +238,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/icon.png': imageResponse(PNG_HEAD),
       'https://favicon.im/example.com': () => new Promise(() => {})
     })
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     // 等 abort 信号传播
     await new Promise(r => setTimeout(r, 0))
@@ -251,7 +253,7 @@ describe('GET /api/favicon/:domain', () => {
     cacheStore.set(key.url, cached)
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
-    const res = await onRequest(makeContext('example.com'))
+    const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(fetchSpy).not.toHaveBeenCalled()
   })

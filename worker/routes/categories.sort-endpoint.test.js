@@ -1,8 +1,8 @@
 // PUT /api/categories/sort 分类重排：按传入 id 顺序重编 sort_order（1..n）
-// 与新建/编辑的排序行为（sort.test.js）互不干扰：编辑仍不改 sort_order
+// 与新建/编辑的排序行为（categories.sort.test.js）互不干扰：编辑仍不改 sort_order
 import { describe, it, expect, vi } from 'vitest'
-import { onRequest } from './sort.js'
-import { createMockDB } from '../../utils/mock-d1.js'
+import { sort } from './categories.js'
+import { createMockDB } from '../utils/mock-d1.js'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
@@ -26,7 +26,7 @@ function mockDBWithIds(ids = [1, 2, 3]) {
 describe('分类重排 PUT /api/categories/sort', () => {
   it('按 ids 顺序批量重编 sort_order（1..n）', async () => {
     const db = mockDBWithIds()
-    const res = await onRequest({ request: sortRequest({ ids: [3, 1, 2] }), env: { DB: db } })
+    const res = await sort(sortRequest({ ids: [3, 1, 2] }), { DB: db })
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ success: true })
     const updates = db.calls.filter((c) => c.method === 'run' && c.sql.includes('UPDATE categories'))
@@ -42,7 +42,7 @@ describe('分类重排 PUT /api/categories/sort', () => {
   it('重排经由 D1 batch 事务执行', async () => {
     const db = mockDBWithIds()
     const spy = vi.spyOn(db, 'batch')
-    await onRequest({ request: sortRequest({ ids: [3, 1, 2] }), env: { DB: db } })
+    await sort(sortRequest({ ids: [3, 1, 2] }), { DB: db })
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy.mock.calls[0][0].length).toBe(3)
   })
@@ -50,14 +50,14 @@ describe('分类重排 PUT /api/categories/sort', () => {
   it('ids 与库内集合不一致返回 400', async () => {
     for (const ids of [[1, 2], [1, 2, 3, 4], [1, 2, 4]]) {
       const db = mockDBWithIds()
-      const res = await onRequest({ request: sortRequest({ ids }), env: { DB: db } })
+      const res = await sort(sortRequest({ ids }), { DB: db })
       expect(res.status, `ids=${JSON.stringify(ids)}`).toBe(400)
     }
   })
 
   it('重复 id 返回 400', async () => {
     const db = mockDBWithIds()
-    const res = await onRequest({ request: sortRequest({ ids: [1, 2, 2] }), env: { DB: db } })
+    const res = await sort(sortRequest({ ids: [1, 2, 2] }), { DB: db })
     expect(res.status).toBe(400)
   })
 
@@ -65,7 +65,7 @@ describe('分类重排 PUT /api/categories/sort', () => {
     const bodies = [{}, { ids: null }, { ids: 'x' }, { ids: [] }, { ids: [0] }, { ids: [1.5] }, { ids: ['1'] }, { ids: [1, null] }]
     for (const body of bodies) {
       const db = mockDBWithIds()
-      const res = await onRequest({ request: sortRequest(body), env: { DB: db } })
+      const res = await sort(sortRequest(body), { DB: db })
       expect(res.status, `body=${JSON.stringify(body)}`).toBe(400)
     }
   })

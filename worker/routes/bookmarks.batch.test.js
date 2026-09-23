@@ -1,6 +1,6 @@
 // 批量导入校验逻辑单测：协议白名单与字段类型
 import { describe, it, expect } from 'vitest'
-import { validateBookmark } from './batch.js'
+import { validateBookmark } from './bookmarks.js'
 
 describe('validateBookmark 协议白名单', () => {
   const blocked = [

@@ -4,7 +4,7 @@
 
 使用 HTTP Basic Auth 认证：
 - 用户名：由 `ADMIN_USERNAME` 配置，默认 `admin`
-- 密码：由 `ADMIN_PASSWORD` 配置（本地开发放 `.dev.vars`，线上用 `wrangler pages secret put ADMIN_PASSWORD` 配置，切勿写入仓库）
+- 密码：由 `ADMIN_PASSWORD` 配置（本地开发放 `.dev.vars`，线上用 `wrangler secret put ADMIN_PASSWORD` 配置，切勿写入仓库）
 
 **注意**：除 `POST /api/auth/login` 与 `GET /api/favicon/*` 外，所有请求（含 GET）都需要认证；未配置 `ADMIN_PASSWORD` 时服务端拒绝所有 API 请求（登录接口返回 500，favicon 代理不受影响）。
 

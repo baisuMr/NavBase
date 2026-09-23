@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "wrangler pages dev",
+    "dev:api": "wrangler dev --port 8788",
     "dev:full": "concurrently \"pnpm dev\" \"pnpm dev:api\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "wrangler pages deploy dist"
+    "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
     "lunar-javascript": "^1.6.12",

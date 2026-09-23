@@ -1,5 +1,5 @@
 // GET /api/favicon/:domain - 代理并缓存网站图标
-// <img> 标签无法携带 Basic Auth 头，此端点在中间件中免认证放行；
+// <img> 标签无法携带 Basic Auth 头，此端点在认证门中免认证放行；
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
 const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件
@@ -185,8 +185,7 @@ function raceProbes(factories) {
   });
 }
 
-export async function onRequest(context) {
-  const { params, request } = context;
+export async function handle(request, env, params, ctx) {
   const domain = String(params.domain || '').toLowerCase();
 
   const headers = {
@@ -235,7 +234,7 @@ export async function onRequest(context) {
         'Access-Control-Allow-Origin': '*'
       }
     });
-    context.waitUntil(cache.put(cacheKey, response.clone()));
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch {
     // 全部源失败：负面缓存 10 分钟，浏览器端也缓存，避免反复探测拖慢页面
@@ -243,7 +242,7 @@ export async function onRequest(context) {
       status: 404,
       headers: { 'Cache-Control': `public, max-age=${MISS_TTL}`, 'Access-Control-Allow-Origin': '*' }
     });
-    context.waitUntil(cache.put(cacheKey, miss.clone()));
+    ctx.waitUntil(cache.put(cacheKey, miss.clone()));
     return miss;
   }
 }

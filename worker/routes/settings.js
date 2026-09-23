@@ -1,6 +1,6 @@
 // GET /api/settings 读取站点设置、PUT /api/settings 部分更新
-// KV 存储于 D1 settings 表；认证由 _middleware.js 统一保护
-import { validateSettingsPayload } from '../../utils/validate.js';
+// KV 存储于 D1 settings 表；认证由 auth.js 认证门统一保护
+import { validateSettingsPayload } from '../utils/validate.js';
 
 // 允许写入的键白名单，防止任意 KV 写入
 const ALLOWED_KEYS = ['site_name', 'avatar'];
@@ -21,9 +21,7 @@ async function readSettings(env) {
   };
 }
 
-export async function onRequest(context) {
-  const { request, env } = context;
-
+export async function handle(request, env) {
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: HEADERS });
   }

@@ -1,4 +1,5 @@
-// Basic Auth 认证中间件
+// Basic Auth 认证门（原 Pages _middleware.js 平移）
+// 契约：返回 null 表示放行，返回 Response 表示拒绝
 function jsonResponse(body, status) {
   return new Response(JSON.stringify(body), {
     status,
@@ -12,18 +13,32 @@ function bruteDelay() {
   return new Promise(resolve => setTimeout(resolve, 800));
 }
 
-export async function onRequest(context) {
-  const { request, env } = context;
+// 常数时间字符串比较（Workers 最佳实践：避免密钥直接比较的时序差异）
+// 先哈希定长再逐字节异或；登录端点复用
+export async function secureCompare(a, b) {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(String(a))),
+    crypto.subtle.digest('SHA-256', enc.encode(String(b)))
+  ]);
+  const va = new Uint8Array(ha);
+  const vb = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < va.length; i++) diff |= va[i] ^ vb[i];
+  return diff === 0;
+}
+
+export async function authGate(request, env) {
   const url = new URL(request.url);
 
   // CORS preflight 请求直接放行
   if (request.method === 'OPTIONS') {
-    return context.next();
+    return null;
   }
 
-  // Pages 中间件对静态资源同样生效；前端页面与 SPA 路由不携带敏感数据，
+  // 前端页面与 SPA 路由不携带敏感数据，
   // 直接放行（否则未登录时连登录页都无法加载），仅保护 /api/*
-  // 注意：函数路由对路径大小写不敏感（实测 /API/ 变体可绕过小写前缀判断），
+  // 注意：路由对路径大小写不敏感（实测 /API/ 变体可绕过小写前缀判断），
   // 因此先归一化再判断——解码百分号编码、合并连续斜杠、小写化，fail-closed
   let path = url.pathname;
   try {
@@ -33,18 +48,18 @@ export async function onRequest(context) {
   }
   const normalized = path.replace(/\/{2,}/g, '/').toLowerCase();
   if (!normalized.startsWith('/api/')) {
-    return context.next();
+    return null;
   }
 
   // 登录接口不需要认证（精确匹配，避免其它路径因包含该子串而绕过认证）
   if (url.pathname === '/api/auth/login') {
-    return context.next();
+    return null;
   }
 
   // favicon 图片代理免认证：<img> 标签无法携带 Basic Auth 头，
   // 且该端点仅返回公开网站图标（域名由调用方提供），不含任何用户数据
   if (request.method === 'GET' && normalized.startsWith('/api/favicon/')) {
-    return context.next();
+    return null;
   }
 
   // 未配置密码时直接拒绝，避免出现无密码的公开实例
@@ -68,13 +83,15 @@ export async function onRequest(context) {
     const username = sep === -1 ? decoded : decoded.slice(0, sep);
     const password = sep === -1 ? '' : decoded.slice(sep + 1);
 
-    if (username !== adminUsername || password !== env.ADMIN_PASSWORD) {
+    const userOk = await secureCompare(username, adminUsername);
+    const passOk = await secureCompare(password, env.ADMIN_PASSWORD);
+    if (!userOk || !passOk) {
       await bruteDelay();
       return jsonResponse({ error: '用户名或密码错误', code: 'INVALID_CREDENTIALS' }, 401);
     }
 
-    // 认证通过，继续处理请求
-    return context.next();
+    // 认证通过
+    return null;
   } catch (error) {
     console.error('Auth error:', error);
     await bruteDelay();

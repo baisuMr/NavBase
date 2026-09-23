@@ -1,7 +1,7 @@
 // POST /api/auth/login - 用户登录
-export async function onRequest(context) {
-  const { request, env } = context;
+import { secureCompare } from '../auth.js';
 
+export async function handle(request, env) {
   // CORS headers
   const headers = {
     'Content-Type': 'application/json',
@@ -43,8 +43,10 @@ export async function onRequest(context) {
 
     const adminUsername = env.ADMIN_USERNAME || 'admin';
 
-    // 验证用户名和密码
-    if (username === adminUsername && password === env.ADMIN_PASSWORD) {
+    // 验证用户名和密码（常数时间比较，防时序侧信道）
+    const userOk = await secureCompare(username, adminUsername);
+    const passOk = await secureCompare(password, env.ADMIN_PASSWORD);
+    if (userOk && passOk) {
       // 生成 Basic Auth token
       const token = btoa(`${username}:${password}`);
 

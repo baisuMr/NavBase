@@ -1,10 +1,10 @@
 // 站点设置 API 单测：mock D1 验证 GET/PUT 行为、键白名单与载荷校验
 import { describe, it, expect } from 'vitest'
-import { onRequest } from './index.js'
-import { validateSettingsPayload } from '../../utils/validate.js'
+import { handle } from './settings.js'
+import { validateSettingsPayload } from '../utils/validate.js'
 
-// 构造带内存 KV 表的 mock context（模拟 settings 表的 upsert 语义）
-function makeContext(body, method = 'PUT') {
+// 构造带内存 KV 表的 mock env（模拟 settings 表的 upsert 语义）
+function makeFixture(body, method = 'PUT') {
   const rows = []
   const hasBody = body !== undefined
   const env = {
@@ -30,7 +30,7 @@ function makeContext(body, method = 'PUT') {
       ? { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }
       : {})
   })
-  return { context: { request, env }, rows }
+  return { request, env, rows }
 }
 
 async function readJson(res) {
@@ -71,8 +71,8 @@ describe('validateSettingsPayload', () => {
 
 describe('GET /api/settings', () => {
   it('空库返回默认空值', async () => {
-    const { context } = makeContext(undefined, 'GET')
-    const { status, data } = await readJson(await onRequest(context))
+    const { request, env } = makeFixture(undefined, 'GET')
+    const { status, data } = await readJson(await handle(request, env))
     expect(status).toBe(200)
     expect(data).toEqual({ site_name: '', avatar: '' })
   })
@@ -80,49 +80,49 @@ describe('GET /api/settings', () => {
 
 describe('PUT /api/settings', () => {
   it('写入 site_name 并返回最新值', async () => {
-    const { context } = makeContext({ site_name: '栞记' })
-    const { status, data } = await readJson(await onRequest(context))
+    const { request, env } = makeFixture({ site_name: '栞记' })
+    const { status, data } = await readJson(await handle(request, env))
     expect(status).toBe(200)
     expect(data.site_name).toBe('栞记')
   })
 
   it('部分更新不覆盖未提供的键', async () => {
-    const first = makeContext({ site_name: '栞记' })
-    await onRequest(first.context)
-    const second = makeContext({ avatar: 'data:image/png;base64,iVBORw0KGgo=' })
+    const first = makeFixture({ site_name: '栞记' })
+    await handle(first.request, first.env)
+    const second = makeFixture({ avatar: 'data:image/png;base64,iVBORw0KGgo=' })
     second.rows.push(...first.rows) // 复用同一份数据
-    const { data } = await readJson(await onRequest(second.context))
+    const { data } = await readJson(await handle(second.request, second.env))
     expect(data.site_name).toBe('栞记')
     expect(data.avatar).toContain('data:image/png')
   })
 
   it('非法载荷返回 400 且不落库', async () => {
-    const { context, rows } = makeContext({ site_name: '   ' })
-    const { status } = await readJson(await onRequest(context))
+    const { request, env, rows } = makeFixture({ site_name: '   ' })
+    const { status } = await readJson(await handle(request, env))
     expect(status).toBe(400)
     expect(rows).toHaveLength(0)
   })
 
   it('白名单外的键被忽略', async () => {
-    const { context, rows } = makeContext({ admin: true, site_name: '栞记' })
-    const { status } = await readJson(await onRequest(context))
+    const { request, env, rows } = makeFixture({ admin: true, site_name: '栞记' })
+    const { status } = await readJson(await handle(request, env))
     expect(status).toBe(200)
     expect(rows).toHaveLength(1)
     expect(rows[0][0]).toBe('site_name')
   })
 
   it('空字符串表示清除为默认', async () => {
-    const first = makeContext({ site_name: '临时名' })
-    await onRequest(first.context)
-    const second = makeContext({ site_name: '' })
+    const first = makeFixture({ site_name: '临时名' })
+    await handle(first.request, first.env)
+    const second = makeFixture({ site_name: '' })
     second.rows.push(...first.rows)
-    const { data } = await readJson(await onRequest(second.context))
+    const { data } = await readJson(await handle(second.request, second.env))
     expect(data.site_name).toBe('')
   })
 
   it('不支持的方法返回 405', async () => {
-    const { context } = makeContext(undefined, 'DELETE')
-    const { status } = await readJson(await onRequest(context))
+    const { request, env } = makeFixture(undefined, 'DELETE')
+    const { status } = await readJson(await handle(request, env))
     expect(status).toBe(405)
   })
 })

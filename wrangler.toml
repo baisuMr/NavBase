@@ -1,6 +1,20 @@
 name = "navbase"
+main = "./worker/index.js"
 compatibility_date = "2024-01-01"
-pages_build_output_dir = "./dist"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+# 必须全量 true：glob 大小写敏感，数组形态（如 ["/api/*"]）会把 /API/ 等变体
+# 导去 SPA 回退而绕过认证门的 401 契约；true 与原 Pages 中间件全量生效精确等价
+run_worker_first = true
+
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"
@@ -9,6 +23,6 @@ database_id = "be7711a1-76f4-4c81-80fc-36bd92168612"
 
 [vars]
 # 非敏感配置可放这里；ADMIN_USERNAME / ADMIN_PASSWORD 属于凭据，
-# 本地开发放 .dev.vars（已 gitignore），线上用 `wrangler pages secret put` 配置
+# 本地开发放 .dev.vars（已 gitignore），线上用 `wrangler secret put` 配置
 LOGIN_DURATION_DAYS = "7"
 REMEMBER_DURATION_DAYS = "30"
