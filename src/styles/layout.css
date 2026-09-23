@@ -574,32 +574,15 @@
   color: var(--color-on-primary);
 }
 
-.category-tab-add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-disabled);
-  background-color: var(--color-surface-card);
-  transition: all var(--t-fast);
-}
-
-.category-tab-add:hover {
-  color: var(--color-text-secondary);
-  border-color: var(--color-border-strong);
-}
-
 .explorer-add-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px var(--space-md);
   background-color: var(--color-primary);
-  border-radius: var(--radius-icon);
-  font-size: var(--fs-card);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body-md);
   font-weight: var(--fw-medium);
   color: var(--color-on-primary);
   transition: all var(--t-fast);
@@ -607,12 +590,14 @@
 
 .explorer-add-btn:hover {
   background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
   color: var(--color-on-primary);
 }
 
 .explorer-add-btn:active {
   transform: scale(0.98);
   background-color: var(--color-primary-active);
+  border-color: var(--color-primary-active);
 }
 
 .explorer-add-btn i {

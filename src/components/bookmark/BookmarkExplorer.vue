@@ -31,21 +31,20 @@
           <span>{{ cat.name }}</span>
           <span class="category-tab-count">{{ cat.count }}</span>
         </button>
+        <!-- 操作按钮：添加分类（分类 tab 同款白底描边）+ 添加网址（主色实底），与 tab 等高连排 -->
         <button
           type="button"
-          class="category-tab-add"
+          class="category-tab category-tab-add"
           @click="$emit('add-category')"
-          aria-label="新建分类"
-          title="新建分类"
         >
           <i class="ri-add-line"></i>
+          <span>添加分类</span>
+        </button>
+        <button class="explorer-add-btn" type="button" @click="$emit('add-bookmark')">
+          <i class="ri-add-line"></i>
+          <span>添加网址</span>
         </button>
       </div>
-
-      <button class="explorer-add-btn" type="button" @click="$emit('add-bookmark')">
-        <i class="ri-add-line"></i>
-        <span>添加网址</span>
-      </button>
     </div>
 
     <!-- 网格 -->
