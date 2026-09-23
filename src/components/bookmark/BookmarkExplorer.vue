@@ -2,10 +2,10 @@
   <section id="explorer-section" class="explorer">
     <!-- 工具栏：分类 tabs + 添加 -->
     <div class="explorer-toolbar">
-      <div class="category-tabs">
+      <div ref="tabsRef" class="category-tabs">
         <button
           type="button"
-          class="category-tab"
+          class="category-tab category-tab-all"
           :class="{ active: activeCat === 'all' }"
           @click="$emit('select-category', 'all')"
         >
@@ -16,7 +16,7 @@
           v-for="cat in categories"
           :key="cat.id"
           type="button"
-          class="category-tab"
+          class="category-tab category-tab-cat"
           :class="{ active: activeCat === cat.id }"
           :style="activeCat === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : { borderColor: cat.color }"
           @click="$emit('select-category', cat.id)"
@@ -66,8 +66,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import Sortable from 'sortablejs'
 import BookmarkCard from './BookmarkCard.vue'
+import { moveInArray } from '../../utils/reorder'
 
 const props = defineProps({
   bookmarks: {
@@ -84,7 +86,47 @@ const props = defineProps({
   }
 })
 
-defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu'])
+const emit = defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu', 'reorder'])
+
+// ── 分类 tab 拖动排序（仅分类 tab 可拖；「全部」钉首位、操作按钮钉末尾） ──
+const tabsRef = ref(null)
+let sortable = null
+let dragStartNext = null
+
+onMounted(() => {
+  sortable = Sortable.create(tabsRef.value, {
+    animation: 150,
+    draggable: '.category-tab-cat',
+    ghostClass: 'category-tab-ghost',
+    onMove(evt) {
+      const related = evt.related
+      if (!related) return
+      // 「全部」只允许落到其后
+      if (related.classList.contains('category-tab-all')) return evt.willInsertAfter ? true : false
+      // 添加分类之前 = 分类区末尾（允许）；其后 = 两按钮之间（禁止）
+      if (related.classList.contains('category-tab-add')) return evt.willInsertAfter ? false : true
+      // 添加网址前后均为按钮区（禁止）
+      if (related.classList.contains('explorer-add-btn')) return false
+    },
+    onStart(evt) {
+      dragStartNext = evt.item.nextSibling
+    },
+    onEnd(evt) {
+      // 先还原 DOM：SortableJS 直接搬动了节点，交回 Vue 按数据渲染，避免虚拟 DOM 对不齐
+      evt.from.insertBefore(evt.item, dragStartNext)
+      dragStartNext = null
+      const { oldDraggableIndex, newDraggableIndex } = evt
+      if (oldDraggableIndex === newDraggableIndex) return
+      const ids = props.categories.map(c => c.id)
+      emit('reorder', moveInArray(ids, oldDraggableIndex, newDraggableIndex))
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  sortable?.destroy()
+  sortable = null
+})
 
 const totalCount = computed(() => props.bookmarks.length)
 

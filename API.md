@@ -54,6 +54,19 @@ Content-Type: application/json
 
 **说明**：`icon`/`color` 可缺省，默认分别为 `ri-folder-line` / `#10b981`；`sort_order` 由服务端管理（新建固定排最后），客户端传值无效。
 
+#### 重排分类
+```
+PUT /api/categories/sort
+Authorization: Basic base64(admin:password)
+Content-Type: application/json
+
+{
+  "ids": [3, 1, 2]
+}
+```
+
+**说明**：按 `ids` 顺序重编 `sort_order`（1..n）。`ids` 须与库内现有分类 id 集合完全一致（非空、无重复），否则返回 400。与 `PUT /api/categories/:id` 分工：编辑分类不改排序。
+
 #### 更新分类
 ```
 PUT /api/categories/:id

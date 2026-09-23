@@ -36,6 +36,23 @@ export const useCategoriesStore = defineStore('categories', {
       await this.fetchCategories()
     },
 
+    // 重排分类：乐观本地重排，失败回滚并重新拉取
+    async reorderCategories(ids) {
+      const prev = this.categories
+      this.categories = ids
+        .map((id, i) => {
+          const cat = prev.find((c) => c.id === id)
+          return cat ? { ...cat, sort_order: i + 1 } : null
+        })
+        .filter(Boolean)
+      try {
+        await categoriesApi.sort(ids)
+      } catch (error) {
+        console.error('Failed to reorder categories:', error)
+        await this.fetchCategories()
+      }
+    },
+
     // 删除分类
     async deleteCategory(id) {
       await categoriesApi.delete(id)

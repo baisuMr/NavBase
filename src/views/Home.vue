@@ -157,6 +157,7 @@
         @select-category="selectCategory"
         @category-menu="showCategoryMenu"
         @menu="showBookmarkMenu"
+        @reorder="onCategoryReorder"
       />
 
       <!-- 加载状态 -->
@@ -303,7 +304,7 @@ const presetIcons = CATEGORY_ICONS
 
 // ── 组合式函数 ──
 const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, deleteBookmark } = useBookmarks()
-const { categories, fetchCategories, createCategory, updateCategory, deleteCategory } = useCategories()
+const { categories, fetchCategories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
 const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
 const { toast, showToast, hideToast, success, error: showError } = useToast()
@@ -525,6 +526,11 @@ const explorerCategories = computed(() => {
 // ── 分类选择（tabs 位于第二屏，无需滚动） ──
 function selectCategory(id) {
   activeCategory.value = id
+}
+
+// ── 分类拖动排序 ──
+function onCategoryReorder(ids) {
+  reorderCategories(ids)
 }
 
 // ── 快捷键 ──

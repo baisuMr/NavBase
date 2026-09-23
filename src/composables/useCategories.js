@@ -12,6 +12,7 @@ export function useCategories() {
   const createCategory = (data) => store.createCategory(data)
   const updateCategory = (id, data) => store.updateCategory(id, data)
   const deleteCategory = (id) => store.deleteCategory(id)
+  const reorderCategories = (ids) => store.reorderCategories(ids)
 
   return {
     categories,
@@ -20,6 +21,7 @@ export function useCategories() {
     fetchCategories,
     createCategory,
     updateCategory,
-    deleteCategory
+    deleteCategory,
+    reorderCategories
   }
 }

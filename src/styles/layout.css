@@ -574,6 +574,11 @@
   color: var(--color-on-primary);
 }
 
+/* SortableJS 拖动占位：半透明弱化，不与激活态彩色实底抢视觉 */
+.category-tab-ghost {
+  opacity: 0.4;
+}
+
 .explorer-add-btn {
   display: inline-flex;
   align-items: center;

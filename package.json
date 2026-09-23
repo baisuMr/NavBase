@@ -17,6 +17,7 @@
     "lunar-javascript": "^1.6.12",
     "pinia": "^4.0.3",
     "remixicon": "^4.9.1",
+    "sortablejs": "^1.15.7",
     "vue": "^3.4.0",
     "vue-router": "^5.3.1"
   },
