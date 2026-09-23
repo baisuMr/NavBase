@@ -67,7 +67,6 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import Sortable from 'sortablejs'
 import BookmarkCard from './BookmarkCard.vue'
 import { moveInArray } from '../../utils/reorder'
 
@@ -93,7 +92,11 @@ const tabsRef = ref(null)
 let sortable = null
 let dragStartNext = null
 
-onMounted(() => {
+onMounted(async () => {
+  // sortablejs 体积较大且登录后才可能用到，动态加载移出首屏主包
+  const { default: Sortable } = await import('sortablejs')
+  // 动态加载期间组件可能已卸载（模板引用会被置空）
+  if (!tabsRef.value) return
   sortable = Sortable.create(tabsRef.value, {
     animation: 150,
     draggable: '.category-tab-cat',
