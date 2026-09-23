@@ -31,6 +31,17 @@
           <span>{{ cat.name }}</span>
           <span class="category-tab-count">{{ cat.count }}</span>
         </button>
+        <!-- 未分类 tab：钉在分类区末尾（非真实分类：无右键菜单、不可拖），样式同「全部」 -->
+        <button
+          type="button"
+          class="category-tab category-tab-uncat"
+          :class="{ active: activeCat === 'uncategorized' }"
+          @click="$emit('select-category', 'uncategorized')"
+        >
+          <i class="ri-inbox-line"></i>
+          <span>未分类</span>
+          <span class="category-tab-count">{{ uncategorizedCount }}</span>
+        </button>
         <!-- 操作按钮：添加分类（分类 tab 同款白底描边）+ 添加网址（主色实底），与 tab 等高连排 -->
         <button
           type="button"
@@ -69,6 +80,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import BookmarkCard from './BookmarkCard.vue'
 import { moveInArray } from '../../utils/reorder'
+import { filterBookmarks } from '../../utils/filterBookmarks'
 
 const props = defineProps({
   bookmarks: {
@@ -106,6 +118,8 @@ onMounted(async () => {
       if (!related) return
       // 「全部」只允许落到其后
       if (related.classList.contains('category-tab-all')) return evt.willInsertAfter ? true : false
+      // 未分类钉在分类区末尾：只允许落到其前，其后 = 操作按钮区（禁止）
+      if (related.classList.contains('category-tab-uncat')) return evt.willInsertAfter ? false : true
       // 添加分类之前 = 分类区末尾（允许）；其后 = 两按钮之间（禁止）
       if (related.classList.contains('category-tab-add')) return evt.willInsertAfter ? false : true
       // 添加网址前后均为按钮区（禁止）
@@ -133,12 +147,12 @@ onBeforeUnmount(() => {
 
 const totalCount = computed(() => props.bookmarks.length)
 
-const visibleBookmarks = computed(() => {
-  if (props.activeCat === 'all') return props.bookmarks
-  return props.bookmarks.filter(b => b.category_id === props.activeCat)
-})
+const uncategorizedCount = computed(() => props.bookmarks.filter(b => !b.category_id).length)
+
+const visibleBookmarks = computed(() => filterBookmarks(props.bookmarks, props.activeCat))
 
 const emptyText = computed(() => {
+  if (props.activeCat === 'uncategorized') return '暂无未分类书签'
   if (props.activeCat !== 'all') return '该分类下暂无书签'
   return '暂无书签，点击右上角「添加网址」添加'
 })
