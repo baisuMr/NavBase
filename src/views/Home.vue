@@ -529,8 +529,9 @@ function selectCategory(id) {
 }
 
 // ── 分类拖动排序 ──
-function onCategoryReorder(ids) {
-  reorderCategories(ids)
+async function onCategoryReorder(ids) {
+  const ok = await reorderCategories(ids)
+  if (!ok) showError('排序保存失败，已恢复原顺序')
 }
 
 // ── 快捷键 ──

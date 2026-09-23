@@ -36,7 +36,7 @@ export const useCategoriesStore = defineStore('categories', {
       await this.fetchCategories()
     },
 
-    // 重排分类：乐观本地重排，失败回滚并重新拉取
+    // 重排分类：乐观本地重排，失败回滚并重新拉取。返回 true/false 供视图层提示用户
     async reorderCategories(ids) {
       const prev = this.categories
       this.categories = ids
@@ -47,9 +47,11 @@ export const useCategoriesStore = defineStore('categories', {
         .filter(Boolean)
       try {
         await categoriesApi.sort(ids)
+        return true
       } catch (error) {
         console.error('Failed to reorder categories:', error)
         await this.fetchCategories()
+        return false
       }
     },
 
