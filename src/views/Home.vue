@@ -66,7 +66,7 @@
                   v-model="query"
                   type="text"
                   class="hero-search-input"
-                  placeholder="键入关键词或网页链接，按下 Enter 立即检索..."
+                  placeholder="输入关键词或网页链接， Enter 立即检索，Tab 切换搜索引擎"
                   autocomplete="off"
                   @input="onSearchInput"
                   @focus="onSearchFocus"
