@@ -519,9 +519,10 @@
   /* 吸顶时与顶栏之间留出呼吸间距（避免两栏边框零距离贴合） */
   top: calc(var(--header-height) + var(--space-md));
   z-index: 40;
-  background-color: var(--color-surface);
-  padding-bottom: var(--space-lg);
-  border-bottom: 1px solid var(--color-border);
+  /* 白色卡片化：白底 + 12px 内间距 + 8px 圆角，与灰底书签网格自然分隔（不再需要下边框线） */
+  background-color: var(--color-surface-card);
+  padding: var(--space-md);
+  border-radius: var(--radius-icon);
 }
 
 .category-tabs {
@@ -617,7 +618,7 @@
 /* 书签网格 */
 .bookmark-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-top: var(--space-xl);
 }
