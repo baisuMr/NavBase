@@ -566,6 +566,10 @@
   font-size: var(--fs-count);
   background-color: var(--color-surface-muted);
   color: var(--color-text-muted);
+  /* 补偿 JetBrains Mono 字形偏上的字体指标（相对 Inter 文字视觉中心高约 1px），
+     下移 1px 让数字与分类名视觉对齐（实测 diff 1px → 0） */
+  position: relative;
+  top: 1px;
 }
 
 .category-tab.active .category-tab-count {
