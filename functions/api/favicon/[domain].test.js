@@ -164,6 +164,34 @@ describe('GET /api/favicon/:domain', () => {
     expect(res.status).toBe(404)
   })
 
+  it('首页 HTML 只读取前 256KB，超大页面不整页读入', async () => {
+    // 流式 body 统计实际读出的字节数；图标声明在 head 区（前 256KB 内）
+    const full = new TextEncoder().encode(
+      '<html><head><link rel="icon" href="/icon.png" sizes="32x32"></head>' + 'x'.repeat(600 * 1024)
+    )
+    let sent = 0
+    const stream = new ReadableStream({
+      pull(controller) {
+        if (sent >= full.length) {
+          controller.close()
+          return
+        }
+        const end = Math.min(sent + 64 * 1024, full.length)
+        controller.enqueue(full.slice(sent, end))
+        sent = end
+      }
+    })
+    stubFetch({
+      'https://example.com/': () => new Response(stream, { status: 200, headers: { 'Content-Type': 'text/html' } }),
+      'https://example.com/icon.png': imageResponse(PNG_HEAD)
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/icon.png')
+    // 截断读取：实际读出的字节数 ≤ 256KB + 预取余量（至多 2 个 64KB chunk），远小于整页 600KB+
+    expect(sent).toBeLessThan(400 * 1024)
+  })
+
   it('301 重定向被手动跟随（如 http→https 或路径迁移）', async () => {
     stubFetch({
       'https://example.com/': htmlResponse('<html></html>'),
@@ -184,6 +212,21 @@ describe('GET /api/favicon/:domain', () => {
     const res = await onRequest(makeContext('example.com'))
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Favicon-Source')).toBe('https://favicon.im/example.com')
+  })
+
+  it('重定向到非法域名（IP 直连）时该源失败，不跟随跳转', async () => {
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': redirectResponse('http://127.0.0.1/icon.png'),
+      // 恶意目标若被跟随会返回合法图片（当前缺陷行为会接受它）
+      'http://127.0.0.1/icon.png': imageResponse(PNG_HEAD),
+      'https://favicon.im/example.com': imageResponse(PNG_HEAD)
+    })
+    const res = await onRequest(makeContext('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://favicon.im/example.com')
+    // 核心断言：绝不向非法跳转目标发起请求
+    expect(calls.some(c => c.url === 'http://127.0.0.1/icon.png')).toBe(false)
   })
 
   it('首个成功源会取消其余在途探测请求', async () => {

@@ -8,6 +8,7 @@ const MISS_TTL = 600; // 失败结果缓存 10 分钟，避免对不可达站点
 const SOURCE_TIMEOUT = 3000; // 单源超时（毫秒）
 const MAX_REDIRECTS = 3; // 手动跟随重定向上限
 const MAX_HTML_CANDIDATES = 3; // HTML 图标声明最多尝试的候选数
+const MAX_HTML_BYTES = 256 * 1024; // 首页 HTML 只读前 256KB（图标声明集中在 head 区）
 
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
@@ -52,6 +53,10 @@ async function fetchWithRedirects(url, { signal, timeout, headers }) {
         if (next.protocol !== 'http:' && next.protocol !== 'https:') {
           throw new Error('重定向到非 http(s) 协议');
         }
+        // 跳转目标同样必须是合法域名格式：杜绝跳到内网 IP / localhost 等地址
+        if (!ALLOWED_DOMAIN.test(next.hostname.toLowerCase())) {
+          throw new Error('重定向到非法域名');
+        }
         current = next.href;
         continue;
       }
@@ -62,6 +67,27 @@ async function fetchWithRedirects(url, { signal, timeout, headers }) {
     clearTimeout(timer);
     if (signal) signal.removeEventListener('abort', onOuterAbort);
   }
+}
+
+// 流式读取响应体的前 maxBytes 字节并解码为文本（提前取消剩余流，避免超大页面整页读入）
+async function readHtmlPrefix(res, maxBytes) {
+  const reader = res.body.getReader();
+  const chunks = [];
+  let received = 0;
+  while (received < maxBytes) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+  }
+  await reader.cancel().catch(() => {});
+  const all = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    all.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(all);
 }
 
 // 从首页 HTML 提取 <link> 图标声明（rel 含 icon / apple-touch-icon）
@@ -98,7 +124,7 @@ async function probeHtmlIcon(domain, signal) {
   if (!page.ok) throw new Error(`首页 HTTP ${page.status}`);
   const contentType = (page.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   if (contentType && !contentType.includes('html')) throw new Error('首页不是 HTML');
-  const html = await page.text();
+  const html = await readHtmlPrefix(page, MAX_HTML_BYTES);
 
   const candidates = parseIconLinks(html).sort(candidateCompare).slice(0, MAX_HTML_CANDIDATES);
   for (const link of candidates) {
