@@ -516,13 +516,13 @@
   justify-content: space-between;
   gap: var(--space-md);
   position: sticky;
-  /* 吸顶时与顶栏之间留出呼吸间距（避免两栏边框零距离贴合） */
-  top: calc(var(--header-height) + var(--space-md));
+  /* 吸顶贴住顶栏底边；白色卡片以下方阴影与滚动内容分层 */
+  top: var(--header-height);
   z-index: 40;
-  /* 白色卡片化：白底 + 12px 内间距 + 8px 圆角，与灰底书签网格自然分隔（不再需要下边框线） */
   background-color: var(--color-surface-card);
   padding: var(--space-md);
   border-radius: var(--radius-icon);
+  box-shadow: var(--shadow-card);
 }
 
 .category-tabs {
