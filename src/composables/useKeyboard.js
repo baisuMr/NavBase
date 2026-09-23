@@ -2,8 +2,8 @@ import { onMounted, onUnmounted } from 'vue'
 
 export function useKeyboard(handlers) {
   function handleKeydown(e) {
-    // Ctrl/⌘ + K: 聚焦搜索框
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === 'KeyK') {
+    // Alt + K: 聚焦搜索框（原 Ctrl+K 与输入法/浏览器扩展冲突，改 Alt 系与 Alt+N 一致）
+    if (e.altKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyK') {
       e.preventDefault()
       handlers.search?.()
     }

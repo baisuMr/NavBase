@@ -4,7 +4,7 @@
       <div class="shortcut-row">
         <span>聚焦搜索框</span>
         <span class="shortcut-row-keys">
-          <span class="kbd">Ctrl</span>
+          <span class="kbd">Alt</span>
           <span class="kbd">K</span>
         </span>
       </div>

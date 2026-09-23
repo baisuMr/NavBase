@@ -76,7 +76,7 @@
               </div>
 
               <div class="hero-search-kbd">
-                <span class="kbd">Ctrl</span>
+                <span class="kbd">Alt</span>
                 <span class="kbd">K</span>
               </div>
             </div>

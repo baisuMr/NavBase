@@ -28,7 +28,7 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 
 ## 核心设计
 
-- **单页面应用**: 主页面 Home.vue 同时具备浏览和管理功能，第一屏（大字时钟 + 日期/农历/周数、搜索框含引擎下拉与 Ctrl+K 键帽、排序前 5 书签的常用站点快捷卡片、滚动提示）占满视口高度、第二屏书签库最小视口高度
+- **单页面应用**: 主页面 Home.vue 同时具备浏览和管理功能，第一屏（大字时钟 + 日期/农历/周数、搜索框含引擎下拉与 Alt+K 键帽、排序前 5 书签的常用站点快捷卡片、滚动提示）占满视口高度、第二屏书签库最小视口高度
 - **右键菜单操作**: 分类（分类 pill）和书签（书签卡片）的编辑、删除等操作通过右键菜单触发
 - **设置面板**: 顶栏齿轮打开，集中网站名称、头像（前端压缩 128×128）、导入导出、退出登录
 - **站点设置持久化**: 存于 D1 `settings` 表（KV），经 `GET/PUT /api/settings` 读写；字段空字符串表示恢复默认，缺省表示不修改；服务端按键白名单（site_name / avatar）校验
@@ -39,7 +39,7 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 - **预设数据**: 分类支持预设的 Remix Icon 图标（`src/constants/categoryIcons.js`）和 10 种常用颜色
 - **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Pages Secret（线上），未配置时所有 API 请求被拒绝（返回 500）；token 为 Basic 凭据 Base64 存储——登录页勾选「记住此设备」存 localStorage（30 天，`REMEMBER_DURATION_DAYS`），不勾选存 sessionStorage（关浏览器失效，后端按 `LOGIN_DURATION_DAYS` 默认 7 天兜底）；过期时间仅由前端存储控制，服务端不校验 token 过期（凭据在修改密码前始终有效）
 - **字体/图标本地化**: 正文字体（Inter + JetBrains Mono）子集本地化于 `src/assets/fonts/`（`scripts/generate-fonts.mjs` 生成）；图标使用 remixicon npm 包（Apache 2.0），全量字体经 Vite 本地打包，无外部 CDN。新增图标直接写 `ri-xxx-line` class（对照 https://remixicon.com/），无需重跑脚本
-- **快捷键支持**: Ctrl+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭（Ctrl+N / Ctrl+Shift+N 是浏览器保留快捷键，网页无法拦截，故用 Alt 组合键）
+- **快捷键支持**: Alt+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭（Ctrl+N / Ctrl+Shift+N 是浏览器保留快捷键，网页无法拦截，故用 Alt 组合键；Alt+K 曾为 Ctrl+K，因与输入法/扩展冲突改为 Alt 系）
 
 ## 测试约定
 
