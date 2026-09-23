@@ -9,78 +9,18 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 ## 技术栈与约束
 
 - **前端**: Vue 3 + JavaScript（不使用 TypeScript）
-- **路由**: Vue Router；**状态管理**: Pinia；**构建**: Vite
 - **CSS**: 纯 CSS（不使用 Tailwind 等 CSS 框架）
-- **后端**: Cloudflare Pages Functions；**数据库**: Cloudflare D1 (SQLite)
-- **测试**: Vitest
 - **农历**: lunar-javascript 体积大，经 `src/composables/useLunar.js` 动态 import 拆为独立 chunk，勿改回静态引入
 
 ## 常用命令
 
-```bash
-# 安装依赖
-pnpm install
+常规命令见 `package.json` scripts；部署与 D1 运维步骤见 `README.md`。
 
-# 完整开发环境（前端 5173 + API 8788；vite 已配置 /api 代理到 8788）
-pnpm dev:full
-
-# 仅启动前端开发服务器
-pnpm dev
-
-# 仅启动 API 开发服务器
-pnpm dev:api
-
-# 构建生产版本
-pnpm build
-
-# 预览构建结果
-pnpm preview
-
-# 部署到 Cloudflare Pages
-pnpm deploy
-
-# 测试（vitest）
-pnpm test                                        # 全量运行
-pnpm test:watch                                  # 监听模式
-pnpm test src/composables/useLunar.test.js       # 运行单个测试文件（pnpm 直接透传参数，无需 --）
-
-# 正文字体子集再生成（需可访问 fonts.googleapis.com）
-node scripts/generate-fonts.mjs
-
-# D1 数据库操作（默认操作本地库；操作线上库追加 --remote）
-pnpm exec wrangler d1 execute navbase-db --file=schema.sql  # 执行 SQL 文件（幂等，可重复执行）
-pnpm exec wrangler d1 execute navbase-db --command="SELECT * FROM bookmarks"  # 执行单条 SQL
-```
+- `pnpm test <file>` 可直接透传参数运行单个测试文件，无需 `--`
+- `node scripts/generate-fonts.mjs` 正文字体子集再生成（需可访问 fonts.googleapis.com）
+- wrangler d1 默认操作本地库，**操作线上库必须追加 `--remote`**
 
 ## 项目架构
-
-```
-src/
-├── components/          # Vue 组件
-│   ├── layout/         # 布局组件（AppHeader）
-│   ├── bookmark/       # 书签相关组件（BookmarkExplorer, BookmarkCard, BookmarkForm）
-│   ├── category/       # 分类相关组件（CategoryForm）
-│   └── common/         # 通用组件（ContextMenu, Modal, SettingsPanel, ShortcutHelp, ColorPicker, IconPicker…）
-├── composables/        # 组合式函数：stores 的薄封装 + UI 逻辑（快捷键/右键菜单/搜索/农历）
-├── stores/             # Pinia 状态管理（auth / bookmarks / categories / settings）
-├── api/                # API 调用封装（统一带认证头，401 时清状态并跳登录页）
-├── styles/             # CSS 样式文件
-├── utils/              # 工具函数（浏览器书签 HTML 解析等）
-└── views/              # 页面视图（Home 双屏主视图、Login）
-
-functions/              # Cloudflare Functions（API 后端）
-├── api/
-│   ├── bookmarks/      # 书签 CRUD + 批量导入 API
-│   ├── categories/     # 分类 CRUD API
-│   ├── settings/       # 站点设置 GET/PUT（网站名称、头像）
-│   ├── favicon/        # 获取网站图标 API
-│   └── auth/           # 认证 API
-├── utils/              # 共享校验工具（validate.js，前后端共同的 URL/字段约束）
-└── _middleware.js       # 中间件（Basic Auth 认证，未配置密码时拒绝所有 API 请求返回 500）
-
-scripts/
-└── generate-fonts.mjs         # 正文字体子集本地化生成脚本
-```
 
 （首屏的时钟/搜索/常用站点已内联进 views/Home.vue）
 
@@ -99,40 +39,14 @@ scripts/
 - **预设数据**: 分类支持预设的 Remix Icon 图标（`src/constants/categoryIcons.js`）和 10 种常用颜色
 - **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Pages Secret（线上），未配置时所有 API 请求被拒绝（返回 500）；token 为 Basic 凭据 Base64 存储——登录页勾选「记住此设备」存 localStorage（30 天，`REMEMBER_DURATION_DAYS`），不勾选存 sessionStorage（关浏览器失效，后端按 `LOGIN_DURATION_DAYS` 默认 7 天兜底）；过期时间仅由前端存储控制，服务端不校验 token 过期（凭据在修改密码前始终有效）
 - **字体/图标本地化**: 正文字体（Inter + JetBrains Mono）子集本地化于 `src/assets/fonts/`（`scripts/generate-fonts.mjs` 生成）；图标使用 remixicon npm 包（Apache 2.0），全量字体经 Vite 本地打包，无外部 CDN。新增图标直接写 `ri-xxx-line` class（对照 https://remixicon.com/），无需重跑脚本
-- **快捷键支持**: Ctrl+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭
+- **快捷键支持**: Ctrl+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭（Ctrl+N / Ctrl+Shift+N 是浏览器保留快捷键，网页无法拦截，故用 Alt 组合键）
 
 ## 测试约定
 
 - vitest 默认 node 环境；需要 DOM 的测试文件在顶部加注释 `// @vitest-environment happy-dom`
 - 测试文件与被测代码同目录（`functions/**/*.test.js`、`src/**/*.test.js`）
 
-## 数据库表结构
-
-- `categories`: id, name, icon (ri-* 图标名), color, sort_order, created_at, updated_at
-- `bookmarks`: id, title, url, description, category_id, icon_url, sort_order, created_at, updated_at
-- `settings`: key (site_name / avatar), value, updated_at
-
-## 配置文件
-
-- `wrangler.toml`: Cloudflare 配置（D1 绑定、环境变量）
-- `vite.config.js`: Vite 构建配置（含 `@` 别名与 /api 代理）
-- `vitest.config.js`: 测试配置
-- `schema.sql`: 数据库初始化脚本
-
 ## 环境变量
 
 - `ADMIN_PASSWORD`: 管理员密码（**必填**；本地放 `.dev.vars`，线上用 `wrangler pages secret put` 配置，切勿写入 wrangler.toml）
-- `ADMIN_USERNAME`: 管理员用户名（可选，默认 `admin`）
-- `LOGIN_DURATION_DAYS`: 登录保持天数（wrangler.toml [vars]，默认 `7`）
-- `REMEMBER_DURATION_DAYS`: 勾选「记住此设备」时的登录保持天数（wrangler.toml [vars]，默认 `30`）
-
-## 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl + K` | 聚焦搜索框 |
-| `Alt + N` | 添加书签 |
-| `Alt + Shift + N` | 添加分类 |
-| `Escape` | 关闭模态框/菜单 |
-
-> Ctrl+N / Ctrl+Shift+N 是浏览器保留快捷键（新建窗口），网页无法拦截，故使用 Alt 组合键。
+- 其余可选变量（`ADMIN_USERNAME`、`LOGIN_DURATION_DAYS`、`REMEMBER_DURATION_DAYS` 等）见 `wrangler.toml` [vars]
