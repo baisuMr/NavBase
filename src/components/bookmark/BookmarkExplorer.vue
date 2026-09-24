@@ -155,6 +155,6 @@ const visibleBookmarks = computed(() => filterBookmarks(props.bookmarks, props.a
 const emptyText = computed(() => {
   if (props.activeCat === 'uncategorized') return '暂无未分类书签'
   if (props.activeCat !== 'all') return '该分类下暂无书签'
-  return '暂无书签，点击右上角「添加网址」添加'
+  return '暂无书签，点击「添加网址」添加'
 })
 </script>
