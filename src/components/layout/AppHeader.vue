@@ -1,7 +1,7 @@
 <template>
   <header class="app-header">
     <div class="app-header-inner">
-      <a class="app-header-brand" href="#startpage-hero">
+      <a class="app-header-brand" href="/">
         <span class="app-header-logo">
           <!-- 与 public/logo.svg 同源图形，内联以便 currentColor 渲染白色 -->
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
