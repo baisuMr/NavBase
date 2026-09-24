@@ -35,10 +35,30 @@
 
 1. 准备一个 [Cloudflare 账号](https://dash.cloudflare.com/)（免费计划即可）并点击上方 **Deploy to Cloudflare** 按钮
 2. 授权 Cloudflare 访问你的 GitHub 账号
-3. 在部署设置页：
-   - 可自定义仓库名与 Worker 名称
-   - 填写管理员用户名与密码（对应 Secret `ADMIN_USERNAME` / `ADMIN_PASSWORD`）
-4. 等待构建部署完成，访问 `https://<worker 名>.workers.dev`，用刚才的账号密码登录即可使用
+3. 在「设置您的应用程序」页按下表填写：
+
+   | 页面字段 | 怎么填 |
+   |--------|--------|
+   | Git 帐户 | 选择你的 GitHub 账号。向导会在其下创建本仓库的 Git 存储库并连接应用，对生产分支的每次推送都会自动部署 |
+   | 创建专用 Git 存储库 | 可按需勾选 |
+   | 项目名称 | 默认 `navbase`，可自定义；这是 Worker 名，决定访问地址 |
+   | Select D1 数据库 | 保持默认 `navbase-db`（向导自动创建并绑定） |
+   | ADMIN_USERNAME / ADMIN_PASSWORD | **可以不填**：⚠️ 这里填的值只会成为**构建环境变量**，**不会**成为 Worker 运行时 Secret，登录凭据以第 5 步手动补配的为准 |
+   | LOGIN_DURATION_DAYS / REMEMBER_DURATION_DAYS | 保持默认 `7` / `30`；部署后可在仓库 `wrangler.toml` [vars] 中修改登录时效，推送后自动生效 |
+   | 构建命令 | `pnpm run build` |
+   | 部署命令 | 默认 `pnpm run deploy`；也可填 `npx wrangler deploy`（构建命令已构建过，可省一次重复构建） |
+   | 预览命令 | 默认即可 |
+   | 启用预览构建 | 建议开启（Pull Request 自动生成预览） |
+   | Protect with Cloudflare Access | 默认关闭，本项目不需要 |
+   | 高级设置 → 路径 | `/` |
+   | 高级设置 → API 令牌 | 保持默认；若出现黄条提示缺少 `ssl_and_certificates_write`、`email_routing_*` 等权限可忽略——它们对应本项目用不到的产品，不影响部署 |
+   | 变量名称 / 变量值 | 添加更多**构建**变量的入口（「加密」表示存为构建 Secret），本项目用不到；这里添加的变量同样**不会**进入线上运行时 |
+
+4. 点击右下角**部署**，等待构建完成
+5. **补配 Worker Secret（必做，否则无法登录）**：打开 Worker **Settings → Variables and Secrets**，添加 **Secret** 类型条目（类型务必选 Secret）：
+   - `ADMIN_PASSWORD`：管理员密码（**必填**）
+   - `ADMIN_USERNAME`：管理员用户名（可选，缺省为 `admin`）
+6. 访问 `https://<项目名>.<账号子域>.workers.dev`，用第 5 步配置的账号密码登录即可使用
 
 ### 一键部署自动完成了什么
 
@@ -46,6 +66,7 @@
 - 创建 D1 数据库并绑定到 Worker（`database_id` 自动回写进你仓库的 `wrangler.toml`）
 - **首次请求自动建表**（worker 检测到空库时幂等执行 `schema.sql`，无需手动初始化）
 - 配置 Workers Builds：之后 `git push` 到 main 分支即自动构建重新部署，Pull Request 自动生成预览 URL
+- ⚠️ **不包括** `ADMIN_USERNAME` / `ADMIN_PASSWORD`：向导里填写的值只作为构建环境变量，需按上文第 5 步手动补配为 Worker Secret
 
 ### 日常更新
 
@@ -65,18 +86,19 @@ Workers Builds 检测到推送后自动重新部署，无需任何本地命令�
 
 | 变量名 | 说明 | 配置方式 |
 |--------|------|----------|
-| `ADMIN_USERNAME` | 管理员用户名 | Secret（一键部署时填写，默认 `admin`） |
-| `ADMIN_PASSWORD` | 管理员密码 | Secret（一键部署时填写，**必填**） |
+| `ADMIN_USERNAME` | 管理员用户名 | Secret（部署后在 Settings → Variables and Secrets 手动添加，默认 `admin`） |
+| `ADMIN_PASSWORD` | 管理员密码 | Secret（同上，**必填**） |
 | `LOGIN_DURATION_DAYS` | 登录保持天数 | `wrangler.toml` [vars]（默认 `7`） |
 | `REMEMBER_DURATION_DAYS` | 勾选「记住此设备」时的登录保持天数 | `wrangler.toml` [vars]（默认 `30`） |
 
-> ⚠️ 密码属于凭据，不要写入 `wrangler.toml`（该文件会被 git 跟踪并随部署生效）。
+> ⚠️ 密码属于凭据，不要写入 `wrangler.toml`（该文件会被 git 跟踪并随部署生效）。部署向导里填写的 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 只会保存为构建环境变量，不会成为 Worker Secret，必须在控制台手动添加。
 
 ### 常见问题
 
 | 现象 | 原因与解决 |
 |------|-----------|
-| 所有 API 返回 500 `NOT_CONFIGURED` | 未配置 `ADMIN_PASSWORD`：一键部署时漏填，前往 Worker **Settings → Variables & Secrets** 补配后重试 |
+| 所有 API 返回 500 `NOT_CONFIGURED` | 未配置 `ADMIN_PASSWORD` Secret：部署向导里填的值不会自动生效，前往 Worker **Settings → Variables and Secrets** 添加 `ADMIN_PASSWORD`（类型选 Secret）后重试 |
+| 部署设置页黄条提示 API 令牌缺少权限 | 缺少的是 `ssl_and_certificates_write`、`email_routing_*` 等本项目用不到的权限，直接点「部署」即可 |
 | 所有 API 返回 500 `DB_INIT_FAILED` | D1 初始化失败：检查 Worker 的 **Settings → Bindings** 中 D1 绑定是否存在，修复后重试（worker 会自动重试建表） |
 | 登录提示「用户名或密码错误」 | 核对 Secret 中的凭据；修改后需重新部署或等待缓存刷新 |
 | 线上 favicon 每次都重新探测 | `*.workers.dev` 域名下 Cache API 不生效；绑定自定义域名后恢复 7 天缓存 |

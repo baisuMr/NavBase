@@ -1,4 +1,5 @@
 # 复制为 .dev.vars 用于本地开发（已 gitignore）。
-# Deploy to Cloudflare 一键部署流程也会读取本文件，在部署设置页引导填写同名 Secret。
+# Deploy to Cloudflare 一键部署流程也会读取本文件在部署设置页引导填写，但填入的值只会成为构建环境变量，
+# 不会自动成为 Worker Secret——部署完成后需在控制台 Settings → Variables and Secrets 手动添加同名 Secret（见 README）。
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-password-here
+ADMIN_PASSWORD=1234567
