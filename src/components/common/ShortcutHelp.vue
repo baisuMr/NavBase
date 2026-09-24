@@ -45,7 +45,7 @@
           @click.prevent
         >
           <i class="ri-bookmark-add-line"></i>
-          <span>快捷添加书签</span>
+          <span>快捷添加</span>
         </a>
         <p class="shortcut-bookmarklet-hint">仅桌面浏览器可用（手机浏览器无书签栏）。</p>
       </div>
