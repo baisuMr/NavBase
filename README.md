@@ -105,7 +105,7 @@ pnpm dev:full   # 同时启动前端 (5173) 与本地 API (8788)
 pnpm test                                    # 全量运行
 pnpm test:watch                              # 监听模式
 pnpm test src/composables/useLunar.test.js   # 运行单个测试文件
-bash scripts/test-api.sh                     # 本地 API 冒烟（需 dev:api 在跑）
+bash scripts/test-api.sh                     # 本地 API 冒烟（需本地 API 在跑）
 ```
 
 ---
