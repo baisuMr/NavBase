@@ -1,3 +1,5 @@
+-- 注意：本文件被 worker/schema-init.js 按行剥离注释并按分号拆分后逐条执行，
+-- 请保持约束：注释独立成行（勿加在语句行尾）、字符串值不得含分号
 -- 分类表
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -64,4 +64,15 @@ describe('ensureSchema', () => {
     expect(executed).not.toMatch(/(^|\n)\s*--/)
     expect(executed).toContain('CREATE TABLE IF NOT EXISTS bookmarks')
   })
+
+  it('拆分前提守护：每条执行语句的首词为已知 SQL 关键字', async () => {
+    const ensureSchema = await load()
+    const db = createMockDB()
+    await ensureSchema({ DB: db })
+    const runs = db.calls.filter(c => c.method === 'run')
+    expect(runs.length).toBeGreaterThan(0)
+    for (const c of runs) {
+      expect(c.sql).toMatch(/^(CREATE|INSERT|SELECT|PRAGMA|ALTER|DROP|UPDATE|DELETE)\b/i)
+    }
+  })
 })

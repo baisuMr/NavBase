@@ -32,11 +32,6 @@ export function createMockDB(handler = () => undefined) {
       const out = []
       for (const s of stmts) out.push(await s.run())
       return out
-    },
-    // 幂等执行多语句 SQL（schema 初始化用）
-    async exec(sql) {
-      calls.push({ sql, args: [], method: 'exec' })
-      return handler({ sql, args: [], method: 'exec' }) ?? { meta: {} }
     }
   }
 }
