@@ -84,6 +84,8 @@ Workers Builds 检测到推送后自动重新部署，无需任何本地命令�
 
 ## 本地开发
 
+需要 Node.js 22.12+（或 24 / 26）与 pnpm 12。
+
 ```bash
 git clone https://github.com/baisuMr/NavBase.git
 cd NavBase

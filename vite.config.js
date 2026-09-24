@@ -22,6 +22,14 @@ function remixiconWoff2Only() {
   }
 }
 
+// dev 与 preview 共用的 API 代理（vite preview 读 preview.proxy 而非 server.proxy）
+const apiProxy = {
+  '/api': {
+    target: 'http://localhost:8788',
+    changeOrigin: true
+  }
+}
+
 export default defineConfig({
   plugins: [vue(), remixiconWoff2Only()],
   resolve: {
@@ -29,12 +37,6 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8788',
-        changeOrigin: true
-      }
-    }
-  }
+  server: { proxy: apiProxy },
+  preview: { proxy: apiProxy }
 })
