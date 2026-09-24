@@ -1,3 +1,12 @@
+/* 品牌文字 logo（public/ 直出资源，绝对路径引用；缺字自动回退正文字体链） */
+@font-face {
+  font-family: 'NavBase Logo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/logo.woff2) format('woff2');
+}
+
 /* 正文字体（latin/latin-ext 子集，中文回退系统字体） */
 /* latin-ext */
 @font-face {

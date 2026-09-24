@@ -32,26 +32,12 @@
   color: var(--color-text);
 }
 
-.app-header-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background-color: var(--color-primary);
-  border-radius: var(--radius-sm);
-  color: var(--color-on-primary);
-}
-
-.app-header-logo svg {
-  width: 18px;
-  height: 18px;
-}
-
 .app-header-name {
-  font-size: var(--fs-body-lg);
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
+  font-family: 'NavBase Logo', var(--font-sans);
+  /* 定制字形自带造型，不加合成粗体、不紧缩字距 */
+  font-size: var(--fs-logo);
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 .app-header-actions {
