@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { safeRedirectPath } from '../utils/redirect'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -9,6 +10,12 @@ const router = createRouter({
       name: 'login',
       component: () => import('../views/Login.vue'),
       meta: { requiresAuth: false }
+    },
+    {
+      path: '/quick-add',
+      name: 'quick-add',
+      component: () => import('../views/QuickAdd.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/',
@@ -30,14 +37,14 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth !== false) {
     // 需要认证的页面
     if (!authStore.isAuthenticated) {
-      // 未登录，跳转到登录页
-      return { name: 'login' }
+      // 未登录，跳转到登录页并记住来源（如书签栏快捷添加弹窗），登录后回跳
+      return { name: 'login', query: { redirect: to.fullPath } }
     }
   }
 
-  // 已登录时访问登录页，跳转到首页
+  // 已登录时访问登录页，跳转到来源页（校验仅允许站内路径，防开放重定向）
   if (to.name === 'login' && authStore.isAuthenticated) {
-    return { name: 'home' }
+    return safeRedirectPath(to.query.redirect)
   }
 
   return true

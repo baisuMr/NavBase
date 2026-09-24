@@ -77,11 +77,13 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { useSettingsStore } from '../stores/settings'
+import { safeRedirectPath } from '../utils/redirect'
 
 const router = useRouter()
+const route = useRoute()
 const { login } = useAuth()
 const settings = useSettingsStore()
 
@@ -102,7 +104,8 @@ async function handleLogin() {
   try {
     await login(form.username, form.password, remember.value)
     success.value = true
-    setTimeout(() => router.push('/'), 500)
+    // 回跳来源页（如书签栏快捷添加），无来源则回首页
+    setTimeout(() => router.push(safeRedirectPath(route.query.redirect)), 500)
   } catch (err) {
     error.value = err.message || '登录失败'
   } finally {

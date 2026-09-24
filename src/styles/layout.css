@@ -42,7 +42,8 @@
 
 /* 蓝紫渐变文字（经字形轮廓透出）；不支持 background-clip:text 时回退纯墨色 */
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .app-header-name {
+  .app-header-name,
+  .quick-add-logo {
     background: var(--logo-gradient);
     -webkit-background-clip: text;
     background-clip: text;
@@ -1006,6 +1007,67 @@
   border-top-color: var(--color-on-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+/* ── 快捷添加页（书签栏弹窗，约 420×460 小窗） ── */
+.quick-add-page {
+  min-height: 100vh;
+  padding: var(--space-lg);
+  background-color: var(--color-surface);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.quick-add-card {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-xl);
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.quick-add-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.quick-add-logo {
+  font-family: 'NavBase Logo', var(--font-sans);
+  font-size: var(--fs-body-lg);
+}
+
+.quick-add-header h1 {
+  margin: 0;
+  font-size: var(--fs-title);
+}
+
+.quick-add-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xl) 0;
+  text-align: center;
+}
+
+.quick-add-done i {
+  font-size: 40px;
+  color: var(--color-success);
+}
+
+.quick-add-done h1 {
+  margin: 0;
+  font-size: var(--fs-title);
+}
+
+.quick-add-done p {
+  margin: 0;
+  font-size: var(--fs-body-sm);
+  color: var(--color-text-muted);
 }
 
 /* ── 加载状态 ── */
