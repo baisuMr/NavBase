@@ -13,7 +13,10 @@ async function init(env) {
   ).first();
   if (row && row.cnt === REQUIRED_TABLE_COUNT) return;
   // schema.sql 全部为 IF NOT EXISTS / 条件插入，并发 isolate 重复执行安全
-  await env.DB.exec(schemaSql);
+  // D1 exec 逐语句 prepare，不接受纯注释段（"-- 分类表" 会报 did not contain a statement）；
+  // schema.sql 的注释均为独立行，执行前剥离即可（文件本身不动，保持唯一数据源）
+  const sql = schemaSql.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
+  await env.DB.exec(sql);
 }
 
 export async function ensureSchema(env) {

@@ -56,4 +56,13 @@ describe('ensureSchema', () => {
     expect(db.calls.filter(c => c.method === 'first')).toHaveLength(1)
     expect(db.calls.filter(c => c.method === 'exec')).toHaveLength(1)
   })
+
+  it('传给 exec 的 SQL 已剥离整行注释（D1 exec 不接受纯注释段）', async () => {
+    const ensureSchema = await load()
+    const db = createMockDB()
+    await ensureSchema({ DB: db })
+    const execSql = db.calls.find(c => c.method === 'exec').sql
+    expect(execSql).not.toMatch(/(^|\n)\s*--/)
+    expect(execSql).toContain('CREATE TABLE IF NOT EXISTS bookmarks')
+  })
 })
