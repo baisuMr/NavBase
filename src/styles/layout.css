@@ -833,8 +833,13 @@
   height: 48px;
   background-color: var(--color-primary);
   border-radius: var(--radius-md);
-  color: var(--color-on-primary);
-  font-size: var(--icon-size-xl);
+}
+
+/* logo.svg 使用 currentColor 单色，img 引用时反相为白以匹配主色底 */
+.login-brand-icon-img {
+  width: var(--icon-size-xl);
+  height: var(--icon-size-xl);
+  filter: brightness(0) invert(1);
 }
 
 .login-brand-title {

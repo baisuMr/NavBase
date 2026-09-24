@@ -4,7 +4,7 @@
       <!-- 品牌头 -->
       <div class="login-brand">
         <div class="login-brand-icon">
-          <i class="ri-flash-fill"></i>
+          <img class="login-brand-icon-img" src="/logo.svg" alt="" />
         </div>
         <h1 class="login-brand-title">欢迎登录 {{ siteName }}</h1>
         <p class="login-brand-subtitle">同步你的书签资料库，打造极致纯净的起始页</p>
