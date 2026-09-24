@@ -22,10 +22,10 @@
           @click="$emit('select-category', cat.id)"
           @contextmenu.prevent="$emit('category-menu', $event, cat)"
         >
-          <!-- 分类图标：未激活用分类色，激活继承白色文字色 -->
+          <!-- 分类图标：未激活用分类色，激活继承白色文字色；非 ri- 前缀（旧数据 emoji 等）回退默认图标 -->
           <i
             v-if="cat.icon"
-            :class="cat.icon"
+            :class="resolveCategoryIcon(cat.icon)"
             :style="activeCat !== cat.id ? { color: cat.color } : null"
           ></i>
           <span>{{ cat.name }}</span>
@@ -81,6 +81,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import BookmarkCard from './BookmarkCard.vue'
 import { moveInArray } from '../../utils/reorder'
 import { filterBookmarks } from '../../utils/filterBookmarks'
+import { resolveCategoryIcon } from '../../constants/categoryIcons'
 
 const props = defineProps({
   bookmarks: {

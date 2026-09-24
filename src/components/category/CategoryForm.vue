@@ -42,6 +42,7 @@
 import { reactive, watch } from 'vue'
 import IconPicker from '../common/IconPicker.vue'
 import ColorPicker from '../common/ColorPicker.vue'
+import { CATEGORY_ICON_DEFAULT, resolveCategoryIcon } from '../../constants/categoryIcons'
 
 const props = defineProps({
   category: { type: Object, default: null },
@@ -54,7 +55,7 @@ const emit = defineEmits(['submit', 'cancel'])
 
 const form = reactive({
   name: '',
-  icon: 'ri-folder-line',
+  icon: CATEGORY_ICON_DEFAULT,
   color: '#10b981'
 })
 
@@ -62,7 +63,8 @@ watch(() => props.category, (val) => {
   if (val) {
     Object.assign(form, {
       name: val.name || '',
-      icon: val.icon || 'ri-folder-line',
+      // 旧数据（emoji 等非 ri- 前缀）回退默认图标，保存时即修复
+      icon: resolveCategoryIcon(val.icon),
       color: val.color || '#10b981'
     })
   }

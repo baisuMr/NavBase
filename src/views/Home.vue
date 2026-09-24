@@ -307,7 +307,7 @@ const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, up
 const { categories, fetchCategories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
 const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
-const { toast, showToast, hideToast, success, error: showError } = useToast()
+const { toast, hideToast, success, error: showError } = useToast()
 const { engines, currentEngineId, setEngine, resolveAndOpen } = useSearchEngines()
 const { iconSrc, onIconError, iconInitial } = useFavicon()
 const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
@@ -544,6 +544,7 @@ useKeyboard({
     bookmarkModal.value.visible = false
     settingsModal.value.visible = false
     shortcutModal.value.visible = false
+    confirmModal.value.visible = false
     closeEngineMenu()
     hideContextMenu()
   }
