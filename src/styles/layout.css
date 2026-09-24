@@ -40,6 +40,16 @@
   letter-spacing: 0;
 }
 
+/* 蓝紫渐变文字（经字形轮廓透出）；不支持 background-clip:text 时回退纯墨色 */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .app-header-name {
+    background: var(--logo-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
 .app-header-actions {
   display: flex;
   align-items: center;
