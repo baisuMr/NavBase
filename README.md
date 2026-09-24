@@ -85,7 +85,8 @@ git merge dev
 git push
 ```
 
-- 未完成功能想在线验收：开 `dev` → `main` 的 Pull Request，自动生成预览 URL，满意后再合并
+- 未完成功能想在线验收：推送到非生产分支会自动构建 Preview，稳定 URL 为 `https://<分支名>-<Worker 名>.<账号子域>.workers.dev`，开 PR 还会把 URL 评论到 PR，满意后再合并
+- 预览构建使用 `wrangler.toml` 的 `[previews]` 独立配置（变量与绑定不复用生产设置）：自己部署时请把 `previews.d1_databases.database_id` 换成你自己的预览库（`wrangler d1 create <名称>` 获取），并用 `wrangler preview secret put ADMIN_PASSWORD` 配置预览登录密码
 - 紧急修复线上问题：可在 `main` 直接修复并推送上线，之后执行 `git checkout dev && git merge main` 把修复同步回 `dev`
 
 ### 绑定自定义域名（可选）

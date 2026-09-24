@@ -34,3 +34,15 @@ database_id = "be7711a1-76f4-4c81-80fc-36bd92168612"
 # 本地开发放 .dev.vars（已 gitignore），线上用 `wrangler secret put` 配置
 LOGIN_DURATION_DAYS = "7"
 REMEMBER_DURATION_DAYS = "30"
+
+# Worker Previews（分支预览构建）专用配置：预览环境不复用生产设置，
+# 变量/绑定须在此单独声明；DB 指向独立预览库，避免未完成代码写坏生产数据。
+# 预览登录凭据用 `wrangler preview secret put` 单独配置，勿放此处
+[previews.vars]
+LOGIN_DURATION_DAYS = "7"
+REMEMBER_DURATION_DAYS = "30"
+
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "navbase-db-preview"
+database_id = "30944c4c-3e8a-4c6d-8c9a-a90b769091c4"

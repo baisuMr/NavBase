@@ -23,6 +23,7 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 ## 开发流程
 
 - **分支约定**：`main` 即线上（Cloudflare Workers Builds 仅监听 `main`，推送即自动构建部署）；日常开发在 `dev` 分支提交、推送（不触发部署），功能完成后再合并 `dev` → `main` 上线；紧急修复可直推 `main`，之后把 `main` 合回 `dev` 保持同步
+- **分支预览**：推送非生产分支会自动构建 Preview（稳定 URL `https://<分支名>-navbase.<账号子域>.workers.dev`），配置在 `wrangler.toml` [previews] 块（独立预览 D1 库 + `wrangler preview secret put` 配置的预览凭据，不复用生产设置）
 
 ## 项目架构
 
