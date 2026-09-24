@@ -26,6 +26,9 @@
   /* Primary — Royal Blue */
   --color-primary: #2563EB;
   --color-on-primary: #FFFFFF;
+  /* 实底按钮上的白色叠加（激活 tab 底纹 / spinner 边框） */
+  --color-on-primary-soft: rgba(255, 255, 255, 0.18);
+  --color-on-primary-line: rgba(255, 255, 255, 0.4);
   --color-primary-hover: #1D4ED8;
   --color-primary-active: #1E40AF;
   --color-primary-soft: #EFF6FF;
