@@ -12,11 +12,18 @@ async function init(env) {
     "SELECT COUNT(*) AS cnt FROM sqlite_master WHERE type = 'table' AND name IN ('categories', 'bookmarks', 'settings')"
   ).first();
   if (row && row.cnt === REQUIRED_TABLE_COUNT) return;
-  // schema.sql 全部为 IF NOT EXISTS / 条件插入，并发 isolate 重复执行安全
-  // D1 exec 逐语句 prepare，不接受纯注释段（"-- 分类表" 会报 did not contain a statement）；
-  // schema.sql 的注释均为独立行，执行前剥离即可（文件本身不动，保持唯一数据源）
-  const sql = schemaSql.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
-  await env.DB.exec(sql);
+  // 本地 miniflare 的 D1 exec 对注释段与多行语句均报错（did not contain a statement /
+  // incomplete input），不可依赖；改为剥离整行注释后按分号拆分、batch 顺序执行，
+  // batch 为常规 API，本地与线上行为一致。schema.sql 注释均为独立行且字符串值不含
+  // 分号，拆分安全；语句本身全部为 IF NOT EXISTS / 条件插入，并发 isolate 重复执行安全
+  const statements = schemaSql
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('--'))
+    .join('\n')
+    .split(';')
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+  await env.DB.batch(statements.map((statement) => env.DB.prepare(statement)));
 }
 
 export async function ensureSchema(env) {

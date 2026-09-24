@@ -13,10 +13,8 @@ describe('ensureSchema', () => {
     const db = createMockDB() // 默认 first() 返回 null → 视为表缺失
     await ensureSchema({ DB: db })
     expect(db.calls.some(c => c.method === 'first' && c.sql.includes('sqlite_master'))).toBe(true)
-    expect(db.calls.filter(c => c.method === 'exec')).toHaveLength(1)
-    const execSql = db.calls.find(c => c.method === 'exec').sql
-    expect(execSql).toContain('CREATE TABLE IF NOT EXISTS bookmarks')
-    expect(execSql).toContain("INSERT INTO categories")
+    expect(db.calls.some(c => c.method === 'run' && c.sql.includes('CREATE TABLE IF NOT EXISTS bookmarks'))).toBe(true)
+    expect(db.calls.some(c => c.method === 'run' && c.sql.startsWith('INSERT INTO categories'))).toBe(true)
   })
 
   it('三张关键表齐全时跳过初始化', async () => {
@@ -25,7 +23,7 @@ describe('ensureSchema', () => {
       if (method === 'first' && sql.includes('sqlite_master')) return { cnt: 3 }
     })
     await ensureSchema({ DB: db })
-    expect(db.calls.some(c => c.method === 'exec')).toBe(false)
+    expect(db.calls.some(c => c.method === 'run')).toBe(false)
   })
 
   it('部分表缺失（旧库）也会执行幂等 schema 补齐', async () => {
@@ -34,35 +32,36 @@ describe('ensureSchema', () => {
       if (method === 'first' && sql.includes('sqlite_master')) return { cnt: 2 }
     })
     await ensureSchema({ DB: db })
-    expect(db.calls.some(c => c.method === 'exec')).toBe(true)
+    expect(db.calls.some(c => c.method === 'run')).toBe(true)
   })
 
   it('初始化失败后可重试（缓存被清除）', async () => {
     const ensureSchema = await load()
     let fail = true
     const db = createMockDB(({ method }) => {
-      if (method === 'exec' && fail) { fail = false; throw new Error('boom') }
+      if (method === 'run' && fail) { fail = false; throw new Error('boom') }
     })
     await expect(ensureSchema({ DB: db })).rejects.toThrow('boom')
     await expect(ensureSchema({ DB: db })).resolves.toBeUndefined()
-    expect(db.calls.filter(c => c.method === 'exec')).toHaveLength(2)
+    // 首次 batch 在首条语句（categories 建表）即抛错中断；重试完整执行，共 2 次
+    expect(db.calls.filter(c => c.method === 'run' && c.sql.includes('CREATE TABLE IF NOT EXISTS categories')).length).toBe(2)
   })
 
-  it('同一 DB 二次调用复用缓存，只探测一次', async () => {
+  it('同一 DB 二次调用复用缓存，只探测执行一次', async () => {
     const ensureSchema = await load()
     const db = createMockDB()
     await ensureSchema({ DB: db })
     await ensureSchema({ DB: db })
     expect(db.calls.filter(c => c.method === 'first')).toHaveLength(1)
-    expect(db.calls.filter(c => c.method === 'exec')).toHaveLength(1)
+    expect(db.calls.filter(c => c.method === 'run' && c.sql.includes('CREATE TABLE IF NOT EXISTS categories')).length).toBe(1)
   })
 
-  it('传给 exec 的 SQL 已剥离整行注释（D1 exec 不接受纯注释段）', async () => {
+  it('执行的 SQL 已剥离整行注释（D1 不接受纯注释段）', async () => {
     const ensureSchema = await load()
     const db = createMockDB()
     await ensureSchema({ DB: db })
-    const execSql = db.calls.find(c => c.method === 'exec').sql
-    expect(execSql).not.toMatch(/(^|\n)\s*--/)
-    expect(execSql).toContain('CREATE TABLE IF NOT EXISTS bookmarks')
+    const executed = db.calls.filter(c => c.method === 'run').map(c => c.sql).join('\n')
+    expect(executed).not.toMatch(/(^|\n)\s*--/)
+    expect(executed).toContain('CREATE TABLE IF NOT EXISTS bookmarks')
   })
 })

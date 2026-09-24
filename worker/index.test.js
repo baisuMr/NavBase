@@ -97,7 +97,7 @@ describe('schema 自动初始化集成', () => {
     const res = await w.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
     expect(res.status).toBe(200)
     expect(env.DB.calls.some(c => c.method === 'first' && c.sql.includes('sqlite_master'))).toBe(true)
-    expect(env.DB.calls.some(c => c.method === 'exec' && c.sql.includes('CREATE TABLE'))).toBe(true)
+    expect(env.DB.calls.some(c => c.method === 'run' && c.sql.includes('CREATE TABLE'))).toBe(true)
   })
 
   it('favicon 请求不触发数据库初始化', async () => {
@@ -110,7 +110,7 @@ describe('schema 自动初始化集成', () => {
   it('初始化失败返回 500 DB_INIT_FAILED', async () => {
     const w = await freshWorker()
     const env = makeEnv(createMockDB(({ method }) => {
-      if (method === 'exec') throw new Error('boom')
+      if (method === 'run') throw new Error('boom')
     }))
     const res = await w.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
     expect(res.status).toBe(500)
