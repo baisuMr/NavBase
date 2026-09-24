@@ -1,5 +1,6 @@
 // NavBase Worker 入口：认证门 → 显式路由表 → ASSETS 兜底（SPA 回退由 assets 配置应用）
 import { authGate } from './auth.js';
+import { ensureSchema } from './schema-init.js';
 import { handle as handleLogin } from './routes/login.js';
 import {
   collection as bookmarksCollection,
@@ -73,6 +74,16 @@ export default {
 
     const matched = matchRoute(new URL(request.url).pathname);
     if (matched) {
+      // favicon 是免认证高频接口且不依赖 DB，跳过初始化；其余 API 路由（含登录）
+      // 首次请求惰性建表，保证一键部署出的空库开箱即用
+      if (matched.handler !== handleFavicon) {
+        try {
+          await ensureSchema(env);
+        } catch (err) {
+          console.error('schema init failed', err);
+          return Response.json({ error: 'DB_INIT_FAILED' }, { status: 500 });
+        }
+      }
       return matched.handler(request, env, matched.params, ctx);
     }
 

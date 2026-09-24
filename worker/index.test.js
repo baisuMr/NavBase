@@ -83,3 +83,37 @@ describe('Worker 入口路由', () => {
     expect(env.DB.calls.some(c => c.sql.includes('FROM bookmarks'))).toBe(true)
   })
 })
+
+describe('schema 自动初始化集成', () => {
+  // schema-init 有模块级缓存，须与入口一起取全新模块实例
+  const freshWorker = async () => {
+    vi.resetModules()
+    return (await import('./index.js')).default
+  }
+
+  it('首个 API 请求触发建表：探测 sqlite_master 并执行全量 schema', async () => {
+    const w = await freshWorker()
+    const env = makeEnv()
+    const res = await w.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
+    expect(res.status).toBe(200)
+    expect(env.DB.calls.some(c => c.method === 'first' && c.sql.includes('sqlite_master'))).toBe(true)
+    expect(env.DB.calls.some(c => c.method === 'exec' && c.sql.includes('CREATE TABLE'))).toBe(true)
+  })
+
+  it('favicon 请求不触发数据库初始化', async () => {
+    const w = await freshWorker()
+    const env = makeEnv()
+    await w.fetch(req('/api/favicon/localhost'), env, {})
+    expect(env.DB.calls).toHaveLength(0)
+  })
+
+  it('初始化失败返回 500 DB_INIT_FAILED', async () => {
+    const w = await freshWorker()
+    const env = makeEnv(createMockDB(({ method }) => {
+      if (method === 'exec') throw new Error('boom')
+    }))
+    const res = await w.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toBe('DB_INIT_FAILED')
+  })
+})
