@@ -1,6 +1,6 @@
 name = "navbase"
 main = "./worker/index.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2026-09-24"
 
 # 让 worker 以文本形式 import 根目录 schema.sql（单一数据源，避免 SQL 双份维护）；
 # fallthrough = true：未匹配本规则的模块回落到 wrangler 默认 Text 规则（.txt/.html），
