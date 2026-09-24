@@ -20,6 +20,10 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 - `node scripts/generate-fonts.mjs` 正文字体子集再生成（需可访问 fonts.googleapis.com）
 - wrangler d1 默认操作本地库，**操作线上库必须追加 `--remote`**
 
+## 开发流程
+
+- **分支约定**：`main` 即线上（Cloudflare Workers Builds 仅监听 `main`，推送即自动构建部署）；日常开发在 `dev` 分支提交、推送（不触发部署），功能完成后再合并 `dev` → `main` 上线；紧急修复可直推 `main`，之后把 `main` 合回 `dev` 保持同步
+
 ## 项目架构
 
 （首屏的时钟/搜索/常用站点已内联进 views/Home.vue）

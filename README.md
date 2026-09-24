@@ -70,11 +70,23 @@
 
 ### 日常更新
 
+约定：**`main` 分支即线上**（Workers Builds 仅监听 `main` 的推送），日常开发在 **`dev` 分支**进行：
+
 ```bash
-git pull && git push   # 或直接在你的仓库修改后 push
+# 日常开发：随便提交推送，不会触发部署
+git checkout dev
+git pull
+git commit ...
+git push
+
+# 功能完成：合并进 main 才上线（唯一触发部署的动作）
+git checkout main
+git merge dev
+git push
 ```
 
-Workers Builds 检测到推送后自动重新部署，无需任何本地命令。
+- 未完成功能想在线验收：开 `dev` → `main` 的 Pull Request，自动生成预览 URL，满意后再合并
+- 紧急修复线上问题：可在 `main` 直接修复并推送上线，之后执行 `git checkout dev && git merge main` 把修复同步回 `dev`
 
 ### 绑定自定义域名（可选）
 
