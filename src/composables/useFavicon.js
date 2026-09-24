@@ -6,7 +6,7 @@ const FAILED_TTL = 10 * 60 * 1000
 
 // 站点图标统一解析（BookmarkCard / HeroSearch 共用）：
 // 1. bookmark.icon_url 非空 → 直接使用（历史数据为上游直链）
-// 2. 为空 → 走 /api/favicon/:domain 图片代理（中间件免认证放行，<img> 可直接引用）
+// 2. 为空 → 走 /api/favicon/:domain 图片代理（认证门免认证放行，<img> 可直接引用）
 // 3. 加载失败 → src 置空，调用方渲染「首字头像」兜底（v-else 分支）
 export function useFavicon() {
   // 加载失败的图标 key → 失败时间戳（id 优先，无 id 用 url 兜底），整体替换以触发重渲染

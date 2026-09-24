@@ -1,19 +1,10 @@
 # 待办事项
 
-> 来源：2026-09-23 全项目深度评审。已修复 6 项（favicon 重定向域名白名单、删除分类事务化、拖动排序失败提示、favicon 文档、sortablejs 动态加载、HTML 截断读取），以下为剩余待办，按需择机处理。
-
-## 安全
-
-- [ ] **拒绝 SVG 图标**（低危）：`worker/routes/favicon.js` 的 `looksLikeImage` 对 `content-type: image/svg+xml` 无条件放行。`<img>` 标签渲染不执行脚本（当前功能路径安全），但用户直接访问该 URL 时，恶意 SVG 会在站点源下执行脚本。favicon 场景 PNG/ICO 足够，建议对 `image/svg+xml` 返回 false。改动 1 行 + 1 个测试。
+> 来源：2026-09-23 全项目深度评审（当时修复 6 项：favicon 重定向域名白名单、删除分类事务化、拖动排序失败提示、favicon 文档、sortablejs 动态加载、HTML 截断读取）；2026-09-24 全面梳理又修复 7 项（favicon 拒收 SVG、分类图标回退接线、CORS 样板删除、dist 冗余字体裁剪、Esc 关确认弹窗、样式 token 化、登录响应文档补齐）。以下为剩余待办，按需择机处理。
 
 ## 性能
 
-- [ ] **remixicon CSS 子集化**（可选，需取舍）：remixicon 全量 CSS 打包 164KB（gzip 26KB），实际仅用约 50 个图标，子集化可省约 15KB gzip。但现有约定是「新增图标直接写 `ri-xxx-line` class，无需重跑脚本」——子集化会破坏该便利性，需在 `scripts/generate-fonts.mjs` 旁增加图标清单维护脚本。若嫌维护成本高，保持现状合理（26KB 对现代网络可接受）。
-- [ ] **dist 冗余字体格式**（顺带项）：remixicon 的 eot/ttf/svg 格式一并打包（约 4.5MB 产物）。浏览器只传输 woff2，仅影响部署产物体积，可裁剪 CSS 中 woff2 以外的 `@font-face` src 声明。
-
-## 可维护性
-
-- [ ] **CORS 样板去重**（可选）：各 API 处理函数各自重复 4 行 CORS headers 定义（约 36 行）。可抽 `worker/utils/response.js` 共享工厂，收益是防未来漂移。
+- [ ] **remixicon CSS 子集化**（可选，需取舍）：remixicon 全量 CSS 打包 164KB（gzip 26KB），实际仅用约 50 个图标，子集化可省约 15KB gzip。但现有约定是「新增图标直接写 `ri-xxx-line` class，无需重跑脚本」——子集化会破坏该便利性，需在 `scripts/generate-fonts.mjs` 旁增加图标清单维护脚本。若嫌维护成本高，保持现状合理（26KB 对现代网络可接受）。（非 woff2 字体格式已于 2026-09-24 裁掉，部署产物不再携带约 4.5MB 冗余字体。）
 
 ## 测试
 
