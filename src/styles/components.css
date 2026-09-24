@@ -510,3 +510,7 @@
   cursor: grab;
   text-decoration: none;
 }
+.shortcut-bookmarklet-btn:hover {
+  color: var(--color-on-primary);
+  
+}
