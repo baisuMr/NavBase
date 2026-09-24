@@ -2,7 +2,19 @@
 
 自用的网址导航管理平台，替代浏览器书签功能。前端 SPA 与 API 统一运行在 [Cloudflare Workers](https://workers.cloudflare.com/) 上，数据存于 [Cloudflare D1](https://developers.cloudflare.com/d1/)——**零成本部署**（免费计划额度远超个人书签站用量）、无服务器运维、部署即接入全球边缘网络。
 
+> **部署流程**：先 [Fork](https://github.com/baisuMr/NavBase/fork) 本仓库 → 在你 Fork 后的仓库里点击下方按钮一键部署 → 向导中选择你 Fork 的仓库。详细步骤见 [部署步骤](#部署步骤)。
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/baisuMr/NavBase)
+
+## 界面预览
+
+**导航首页** - 大字时钟 / 日期农历周数 / 多引擎搜索 / 常用站点快捷卡片
+
+![导航首页](./docs/01.png)
+
+**书签库** - 分类筛选 / 书签卡片 / 右键菜单管理
+
+![书签库](./docs/02.png)
 
 ## 功能特性
 
@@ -33,14 +45,14 @@
 
 ### 部署步骤
 
-1. 准备一个 [Cloudflare 账号](https://dash.cloudflare.com/)（免费计划即可）并点击上方 **Deploy to Cloudflare** 按钮
-2. 授权 Cloudflare 访问你的 GitHub 账号
-3. 在「设置您的应用程序」页按下表填写：
+1. **Fork 本仓库**：打开 [baisuMr/NavBase](https://github.com/baisuMr/NavBase/fork) 点击 **Fork**，把仓库复制到你的 GitHub 账号
+2. **一键部署**：进入你 Fork 后的仓库，在 README 中点击 **Deploy to Cloudflare** 按钮（准备一个 [Cloudflare 账号](https://dash.cloudflare.com/)，免费计划即可），按提示授权 Cloudflare 访问你的 GitHub 账号
+3. 在「设置您的应用程序」页按下表填写（关键是**选择你 Fork 后的仓库**）：
 
    | 页面字段 | 怎么填 |
    |--------|--------|
-   | Git 帐户 | 选择你的 GitHub 账号。向导会在其下创建本仓库的 Git 存储库并连接应用，对生产分支的每次推送都会自动部署 |
-   | 创建专用 Git 存储库 | 可按需勾选 |
+   | Git 帐户 | 选择你的 GitHub 账号，并选中你 Fork 后的仓库（NavBase）进行连接，对生产分支的每次推送都会自动部署 |
+   | 创建专用 Git 存储库 | 不勾选——部署直接使用你 Fork 的仓库，无需另建仓库 |
    | 项目名称 | 默认 `navbase`，可自定义；这是 Worker 名，决定访问地址 |
    | Select D1 数据库 | 保持默认 `navbase-db`（向导自动创建并绑定） |
    | ADMIN_USERNAME / ADMIN_PASSWORD | **可以不填**：⚠️ 这里填的值只会成为**构建环境变量**，**不会**成为 Worker 运行时 Secret，登录凭据以第 5 步手动补配的为准 |
@@ -62,7 +74,7 @@
 
 ### 一键部署自动完成了什么
 
-- 将本仓库克隆到你的 GitHub 账号（后续可自由修改）
+- 连接你 Fork 的仓库作为应用的 Git 源（后续可自由修改）
 - 创建 D1 数据库并绑定到 Worker（`database_id` 自动回写进你仓库的 `wrangler.toml`）
 - **首次请求自动建表**（worker 检测到空库时幂等执行 `schema.sql`，无需手动初始化）
 - 配置 Workers Builds：之后 `git push` 到 main 分支即自动构建重新部署，Pull Request 自动生成预览 URL

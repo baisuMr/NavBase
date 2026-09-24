@@ -38,3 +38,4 @@ pnpm-debug.log*
 
 # 工作区任务文件
 .superpowers/
+superpowers/
