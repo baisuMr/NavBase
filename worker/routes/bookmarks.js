@@ -16,19 +16,6 @@ export function validateBookmark(item) {
 // GET /api/bookmarks - 获取所有书签
 // POST /api/bookmarks - 创建书签
 export async function collection(request, env) {
-  // CORS headers
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-
-  // Handle OPTIONS request
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
-
   try {
     // GET - 获取所有书签
     if (request.method === 'GET') {
@@ -39,7 +26,7 @@ export async function collection(request, env) {
         ORDER BY b.sort_order, b.id
       `).all();
 
-      return Response.json(results, { headers });
+      return Response.json(results);
     }
 
     // POST - 创建书签
@@ -47,7 +34,7 @@ export async function collection(request, env) {
       const data = await request.json();
       const err = validateBookmarkPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400, headers });
+        return Response.json({ error: err }, { status: 400 });
       }
       const { title, url, description, category_id, icon_url } = data;
 
@@ -64,19 +51,19 @@ export async function collection(request, env) {
 
       return Response.json(
         { id: result.meta.last_row_id, success: true },
-        { status: 201, headers }
+        { status: 201 }
       );
     }
 
     return Response.json(
       { error: 'Method not allowed' },
-      { status: 405, headers }
+      { status: 405 }
     );
   } catch (error) {
     console.error('Bookmarks API error:', error);
     return Response.json(
       { error: '服务器错误' },
-      { status: 500, headers }
+      { status: 500 }
     );
   }
 }
@@ -86,19 +73,6 @@ export async function collection(request, env) {
 // DELETE /api/bookmarks/:id - 删除书签
 export async function item(request, env, params) {
   const { id } = params;
-
-  // CORS headers
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-
-  // Handle OPTIONS request
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
 
   try {
     // GET - 获取单个书签
@@ -113,11 +87,11 @@ export async function item(request, env, params) {
       if (!result) {
         return Response.json(
           { error: '书签不存在' },
-          { status: 404, headers }
+          { status: 404 }
         );
       }
 
-      return Response.json(result, { headers });
+      return Response.json(result);
     }
 
     // PUT - 更新书签
@@ -125,7 +99,7 @@ export async function item(request, env, params) {
       const data = await request.json();
       const err = validateBookmarkPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400, headers });
+        return Response.json({ error: err }, { status: 400 });
       }
       const { title, url, description, category_id, icon_url } = data;
 
@@ -137,7 +111,7 @@ export async function item(request, env, params) {
       if (!existing) {
         return Response.json(
           { error: '书签不存在' },
-          { status: 404, headers }
+          { status: 404 }
         );
       }
 
@@ -153,7 +127,7 @@ export async function item(request, env, params) {
         id
       ).run();
 
-      return Response.json({ success: true }, { headers });
+      return Response.json({ success: true });
     }
 
     // DELETE - 删除书签
@@ -166,7 +140,7 @@ export async function item(request, env, params) {
       if (!existing) {
         return Response.json(
           { error: '书签不存在' },
-          { status: 404, headers }
+          { status: 404 }
         );
       }
 
@@ -174,18 +148,18 @@ export async function item(request, env, params) {
         'DELETE FROM bookmarks WHERE id = ?'
       ).bind(id).run();
 
-      return Response.json({ success: true }, { headers });
+      return Response.json({ success: true });
     }
 
     return Response.json(
       { error: 'Method not allowed' },
-      { status: 405, headers }
+      { status: 405 }
     );
   } catch (error) {
     console.error('Bookmark API error:', error);
     return Response.json(
       { error: '服务器错误' },
-      { status: 500, headers }
+      { status: 500 }
     );
   }
 }
@@ -220,19 +194,8 @@ async function dedupe(env, items) {
 // POST /api/bookmarks/batch - 批量创建书签（用于导入）
 // 批内与库内双重去重，避免重复导入产生冗余书签
 export async function batch(request, env) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
-
   if (request.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405, headers });
+    return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
 
   try {
@@ -240,16 +203,16 @@ export async function batch(request, env) {
     const items = Array.isArray(data?.bookmarks) ? data.bookmarks : [];
 
     if (items.length === 0) {
-      return Response.json({ error: 'bookmarks 不能为空' }, { status: 400, headers });
+      return Response.json({ error: 'bookmarks 不能为空' }, { status: 400 });
     }
     if (items.length > MAX_BATCH_SIZE) {
-      return Response.json({ error: `单次最多导入 ${MAX_BATCH_SIZE} 条` }, { status: 400, headers });
+      return Response.json({ error: `单次最多导入 ${MAX_BATCH_SIZE} 条` }, { status: 400 });
     }
 
     for (const item of items) {
       const err = validateBookmark(item);
       if (err) {
-        return Response.json({ error: `${err}: ${item?.url || ''}` }, { status: 400, headers });
+        return Response.json({ error: `${err}: ${item?.url || ''}` }, { status: 400 });
       }
     }
 
@@ -285,9 +248,9 @@ export async function batch(request, env) {
       count += chunk.length;
     }
 
-    return Response.json({ success: true, count, skipped }, { headers });
+    return Response.json({ success: true, count, skipped });
   } catch (error) {
     console.error('Batch import error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500, headers });
+    return Response.json({ error: '服务器错误' }, { status: 500 });
   }
 }

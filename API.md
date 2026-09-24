@@ -187,7 +187,7 @@ Content-Type: application/json
 GET /api/favicon/:domain
 ```
 
-**免认证**：`<img>` 标签无法携带 Basic Auth 头，该端点在中间件中放行；仅返回公开网站图标（域名由调用方提供），不含任何用户数据。
+**免认证**：`<img>` 标签无法携带 Basic Auth 头，该端点在认证门中放行；仅返回公开网站图标（域名由调用方提供），不含任何用户数据。
 
 **响应**：成功返回 `200` + 图片字节（`Cache-Control: public, max-age=604800`，响应头 `X-Favicon-Source` 标明命中的源）；全部源失败返回 `404`（缓存 10 分钟）。
 
@@ -198,7 +198,7 @@ GET /api/favicon/:domain
   3. favicon.im
   4. DuckDuckGo
   5. Google Favicon（Cloudflare 边缘可达性最好）
-- 响应经图片魔数校验（PNG/GIF/JPEG/BMP/ICO/WebP/SVG），错误页等非图片内容视为失败；单图上限 512KB
+- 响应经图片魔数校验（PNG/GIF/JPEG/BMP/ICO/WebP），错误页等非图片内容视为失败；单图上限 512KB；**SVG 一律拒收**（直接访问该 URL 时恶意 SVG 可在站点源下执行脚本）
 - 结果经 Cache API 缓存：成功 7 天，失败 10 分钟
 - 域名格式校验：仅接受合法 hostname，防止拼接路径/内网地址（SSRF）；重定向最多跟随 3 跳，且每跳目标同样必须是合法域名（杜绝跳转到内网 IP/localhost）
 
@@ -260,6 +260,7 @@ Content-Type: application/json
   "token": "YWRtaW46eW91ci1wYXNzd29yZA==",
   "expiresAt": 1758240000000,
   "durationDays": 7,
+  "remember": false,
   "username": "admin",
   "success": true
 }

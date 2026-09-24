@@ -73,10 +73,24 @@ describe('GET /api/favicon/:domain', () => {
     }
   })
 
-  it('非 GET 请求返回 405，OPTIONS 直接放行', async () => {
+  it('非 GET 请求（含 OPTIONS）返回 405', async () => {
     stubFetch({})
     expect((await invoke(makeFixture('example.com', 'POST'))).status).toBe(405)
-    expect((await invoke(makeFixture('example.com', 'OPTIONS'))).status).toBe(200)
+    expect((await invoke(makeFixture('example.com', 'OPTIONS'))).status).toBe(405)
+  })
+
+  it('SVG 一律拒收（防直接访问时在站点源下执行脚本）', async () => {
+    const svgBytes = new TextEncoder().encode('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>')
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      // content-type 声称 svg 与伪装成 png 但内容是 svg 的两种形态都要拒
+      'https://example.com/favicon.ico': imageResponse(svgBytes, 'image/svg+xml'),
+      'https://favicon.im/example.com': imageResponse(svgBytes, 'image/png'),
+      'https://icons.duckduckgo.com/ip3/example.com.ico': imageResponse(svgBytes, ''),
+      'https://www.google.com/s2/favicons': imageResponse(svgBytes, 'image/svg+xml')
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(404)
   })
 
   it('全部源失败返回 404，并写入负面缓存', async () => {

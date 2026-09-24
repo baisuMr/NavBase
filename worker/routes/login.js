@@ -2,24 +2,11 @@
 import { secureCompare } from '../auth.js';
 
 export async function handle(request, env) {
-  // CORS headers
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
-  };
-
-  // Handle OPTIONS request
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
-
   // 只允许 POST 请求
   if (request.method !== 'POST') {
     return Response.json(
       { error: 'Method not allowed' },
-      { status: 405, headers }
+      { status: 405 }
     );
   }
 
@@ -29,7 +16,7 @@ export async function handle(request, env) {
     if (!username || !password) {
       return Response.json(
         { error: '用户名和密码不能为空' },
-        { status: 400, headers }
+        { status: 400 }
       );
     }
 
@@ -37,7 +24,7 @@ export async function handle(request, env) {
     if (!env.ADMIN_PASSWORD) {
       return Response.json(
         { error: '服务器未配置 ADMIN_PASSWORD' },
-        { status: 500, headers }
+        { status: 500 }
       );
     }
 
@@ -66,8 +53,7 @@ export async function handle(request, env) {
           remember: rememberMe,
           username,
           success: true
-        },
-        { headers }
+        }
       );
     }
 
@@ -76,13 +62,13 @@ export async function handle(request, env) {
 
     return Response.json(
       { error: '用户名或密码错误' },
-      { status: 401, headers }
+      { status: 401 }
     );
   } catch (error) {
     console.error('Login error:', error);
     return Response.json(
       { error: '服务器错误' },
-      { status: 500, headers }
+      { status: 500 }
     );
   }
 }

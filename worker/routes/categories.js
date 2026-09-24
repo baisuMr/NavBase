@@ -6,19 +6,6 @@ import { validateCategoryPayload } from '../utils/validate.js';
 // GET /api/categories - 获取所有分类
 // POST /api/categories - 创建分类
 export async function collection(request, env) {
-  // CORS headers
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-
-  // Handle OPTIONS request
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
-
   try {
     // GET - 获取所有分类
     if (request.method === 'GET') {
@@ -26,7 +13,7 @@ export async function collection(request, env) {
         'SELECT * FROM categories ORDER BY sort_order, id'
       ).all();
 
-      return Response.json(results, { headers });
+      return Response.json(results);
     }
 
     // POST - 创建分类
@@ -34,7 +21,7 @@ export async function collection(request, env) {
       const data = await request.json();
       const err = validateCategoryPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400, headers });
+        return Response.json({ error: err }, { status: 400 });
       }
       const { name, icon, color } = data;
 
@@ -45,19 +32,19 @@ export async function collection(request, env) {
 
       return Response.json(
         { id: result.meta.last_row_id, success: true },
-        { status: 201, headers }
+        { status: 201 }
       );
     }
 
     return Response.json(
       { error: 'Method not allowed' },
-      { status: 405, headers }
+      { status: 405 }
     );
   } catch (error) {
     console.error('Categories API error:', error);
     return Response.json(
       { error: '服务器错误' },
-      { status: 500, headers }
+      { status: 500 }
     );
   }
 }
@@ -67,19 +54,6 @@ export async function collection(request, env) {
 // DELETE /api/categories/:id - 删除分类
 export async function item(request, env, params) {
   const { id } = params;
-
-  // CORS headers
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-
-  // Handle OPTIONS request
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
 
   try {
     // GET - 获取单个分类
@@ -91,11 +65,11 @@ export async function item(request, env, params) {
       if (!result) {
         return Response.json(
           { error: '分类不存在' },
-          { status: 404, headers }
+          { status: 404 }
         );
       }
 
-      return Response.json(result, { headers });
+      return Response.json(result);
     }
 
     // PUT - 更新分类
@@ -103,7 +77,7 @@ export async function item(request, env, params) {
       const data = await request.json();
       const err = validateCategoryPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400, headers });
+        return Response.json({ error: err }, { status: 400 });
       }
       const { name, icon, color } = data;
 
@@ -115,7 +89,7 @@ export async function item(request, env, params) {
       if (!existing) {
         return Response.json(
           { error: '分类不存在' },
-          { status: 404, headers }
+          { status: 404 }
         );
       }
 
@@ -124,7 +98,7 @@ export async function item(request, env, params) {
         'UPDATE categories SET name = ?, icon = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
       ).bind(name.trim(), icon || 'ri-folder-line', color || '#10b981', id).run();
 
-      return Response.json({ success: true }, { headers });
+      return Response.json({ success: true });
     }
 
     // DELETE - 删除分类
@@ -137,7 +111,7 @@ export async function item(request, env, params) {
       if (!existing) {
         return Response.json(
           { error: '分类不存在' },
-          { status: 404, headers }
+          { status: 404 }
         );
       }
 
@@ -147,18 +121,18 @@ export async function item(request, env, params) {
         env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id)
       ]);
 
-      return Response.json({ success: true }, { headers });
+      return Response.json({ success: true });
     }
 
     return Response.json(
       { error: 'Method not allowed' },
-      { status: 405, headers }
+      { status: 405 }
     );
   } catch (error) {
     console.error('Category API error:', error);
     return Response.json(
       { error: '服务器错误' },
-      { status: 500, headers }
+      { status: 500 }
     );
   }
 }
@@ -166,19 +140,8 @@ export async function item(request, env, params) {
 // PUT /api/categories/sort - 按传入顺序重排分类（重编 sort_order 为 1..n）
 // 与 PUT /api/categories/:id 分工：编辑分类不改排序，重排只走本端点
 export async function sort(request, env) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
-
   if (request.method !== 'PUT') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405, headers });
+    return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
 
   try {
@@ -192,14 +155,14 @@ export async function sort(request, env) {
       !ids.every((id) => Number.isInteger(id) && id > 0) ||
       new Set(ids).size !== ids.length
     ) {
-      return Response.json({ error: '排序字段不正确' }, { status: 400, headers });
+      return Response.json({ error: '排序字段不正确' }, { status: 400 });
     }
 
     // 集合校验：ids 须与库内现有分类完全一致（防丢分类/幻影 id）
     const { results } = await env.DB.prepare('SELECT id FROM categories').all();
     const existing = new Set(results.map((r) => r.id));
     if (existing.size !== ids.length || !ids.every((id) => existing.has(id))) {
-      return Response.json({ error: '排序列表与现有分类不一致' }, { status: 400, headers });
+      return Response.json({ error: '排序列表与现有分类不一致' }, { status: 400 });
     }
 
     // batch 事务式重编号
@@ -208,9 +171,9 @@ export async function sort(request, env) {
     );
     await env.DB.batch(stmts);
 
-    return Response.json({ success: true }, { headers });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Category sort API error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500, headers });
+    return Response.json({ error: '服务器错误' }, { status: 500 });
   }
 }

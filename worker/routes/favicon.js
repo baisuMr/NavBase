@@ -22,13 +22,11 @@ const IMAGE_MAGIC = [
   [0x52, 0x49, 0x46, 0x46] // RIFF（WebP 容器头）
 ];
 
-function looksLikeImage(buffer, contentType) {
-  if (contentType === 'image/svg+xml') return true;
+// 仅接受位图魔数；SVG 一律拒收（不看 content-type、不做文本探测）：
+// 用户直接访问本 URL 时恶意 SVG 会在站点源下执行脚本，favicon 场景 PNG/ICO 已足够
+function looksLikeImage(buffer) {
   const head = new Uint8Array(buffer, 0, Math.min(12, buffer.byteLength));
-  if (IMAGE_MAGIC.some(sig => sig.every((byte, i) => head[i] === byte))) return true;
-  // SVG 可能带 XML 声明头，魔数覆盖不到，按文本探测
-  const text = new TextDecoder().decode(new Uint8Array(buffer, 0, Math.min(256, buffer.byteLength))).toLowerCase();
-  return text.includes('<svg');
+  return IMAGE_MAGIC.some(sig => sig.every((byte, i) => head[i] === byte));
 }
 
 /**
@@ -140,7 +138,7 @@ async function probeHtmlIcon(domain, signal) {
       const buffer = await res.arrayBuffer();
       if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) continue;
       const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
-      if (!looksLikeImage(buffer, ct)) continue;
+      if (!looksLikeImage(buffer)) continue;
       return { buffer, contentType: ct || 'image/x-icon', source: iconUrl };
     } catch {
       continue;
@@ -156,7 +154,7 @@ async function probeUrl(url, signal) {
   const buffer = await res.arrayBuffer();
   if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) throw new Error('图片大小越界');
   const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
-  if (!looksLikeImage(buffer, ct)) throw new Error('响应不是图片');
+  if (!looksLikeImage(buffer)) throw new Error('响应不是图片');
   return { buffer, contentType: ct || 'image/x-icon', source: url };
 }
 
@@ -188,22 +186,13 @@ function raceProbes(factories) {
 export async function handle(request, env, params, ctx) {
   const domain = String(params.domain || '').toLowerCase();
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS'
-  };
-
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers });
-  }
   if (request.method !== 'GET') {
-    return Response.json({ error: '仅支持 GET' }, { status: 405, headers });
+    return Response.json({ error: '仅支持 GET' }, { status: 405 });
   }
 
   // 域名格式校验：只放行合法 hostname，杜绝把路径/凭据拼进上游 URL（SSRF）
   if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain)) {
-    return Response.json({ error: '域名格式不合法' }, { status: 400, headers });
+    return Response.json({ error: '域名格式不合法' }, { status: 400 });
   }
 
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次
@@ -230,8 +219,7 @@ export async function handle(request, env, params, ctx) {
       headers: {
         'Content-Type': result.contentType,
         'Cache-Control': `public, max-age=${CACHE_TTL}`,
-        'X-Favicon-Source': result.source,
-        'Access-Control-Allow-Origin': '*'
+        'X-Favicon-Source': result.source
       }
     });
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
@@ -240,7 +228,7 @@ export async function handle(request, env, params, ctx) {
     // 全部源失败：负面缓存 10 分钟，浏览器端也缓存，避免反复探测拖慢页面
     const miss = new Response(null, {
       status: 404,
-      headers: { 'Cache-Control': `public, max-age=${MISS_TTL}`, 'Access-Control-Allow-Origin': '*' }
+      headers: { 'Cache-Control': `public, max-age=${MISS_TTL}` }
     });
     ctx.waitUntil(cache.put(cacheKey, miss.clone()));
     return miss;

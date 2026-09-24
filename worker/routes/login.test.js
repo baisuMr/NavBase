@@ -59,11 +59,9 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(500)
   })
 
-  it('非 POST 返回 405，OPTIONS 返回 CORS 预检', async () => {
+  it('非 POST（含 OPTIONS）返回 405', async () => {
     expect((await handle(makeRequest(undefined, 'GET'), ENV)).status).toBe(405)
-    const opt = await handle(makeRequest(undefined, 'OPTIONS'), ENV)
-    expect(opt.status).toBe(200)
-    expect(opt.headers.get('Access-Control-Allow-Methods')).toContain('POST')
+    expect((await handle(makeRequest(undefined, 'OPTIONS'), ENV)).status).toBe(405)
   })
 
   it('非法 JSON 请求体返回 500', async () => {
