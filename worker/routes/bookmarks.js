@@ -40,6 +40,14 @@ export async function collection(request, env) {
       }
       const { title, url, description, category_id, icon_url } = data;
 
+      // 分类存在性校验：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400；缺省/0/null 视为未分类合法
+      if (category_id) {
+        const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(category_id).first();
+        if (!cat) {
+          return Response.json({ error: '分类不存在', code: 'CATEGORY_NOT_FOUND' }, { status: 400 });
+        }
+      }
+
       // sort_order 取 MAX+1：新书签固定排最后，忽略传入值
       const result = await env.DB.prepare(
         'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM bookmarks))'
@@ -115,6 +123,14 @@ export async function item(request, env, params) {
           { error: '书签不存在' },
           { status: 404 }
         );
+      }
+
+      // 分类存在性校验：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400；缺省/0/null 视为未分类合法
+      if (category_id) {
+        const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(category_id).first();
+        if (!cat) {
+          return Response.json({ error: '分类不存在', code: 'CATEGORY_NOT_FOUND' }, { status: 400 });
+        }
       }
 
       // is_pinned 缺省表示不修改（编辑书签保留固定状态），显式传值才写入并归一为 0/1
