@@ -111,6 +111,7 @@ import { useCategories } from '../../composables/useCategories'
 import { useAuth } from '../../composables/useAuth'
 import { useToast } from '../../composables/useToast'
 import { parseNetscapeBookmarks } from '../../utils/importBookmarks'
+import { chunkArray } from '../../utils/chunk'
 
 defineEmits(['close'])
 
@@ -240,7 +241,25 @@ async function handleImportFile(event) {
       )
     ]
 
-    const { count, skipped } = await importBookmarks(items)
+    // 按 500/批 分块顺序提交，避免超出服务端单批上限导致整批失败
+    const chunks = chunkArray(items, 500)
+    let count = 0
+    let skipped = 0
+    let completedBatches = 0
+    try {
+      for (const chunk of chunks) {
+        const r = await importBookmarks(chunk)
+        count += r.count
+        skipped += r.skipped
+        completedBatches++
+      }
+    } catch (err) {
+      showError(
+        `已导入前 ${completedBatches} 批，第 ${completedBatches + 1} 批失败: ` + err.message
+      )
+      return
+    }
+
     success(
       `已导入 ${count} 个书签` +
       (skipped ? `（跳过 ${skipped} 条重复）` : '') +
