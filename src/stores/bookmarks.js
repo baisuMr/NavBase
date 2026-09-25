@@ -5,21 +5,26 @@ export const useBookmarksStore = defineStore('bookmarks', {
   state: () => ({
     bookmarks: [],
     loading: false,
-    error: null
+    error: null,
+    fetchSeq: 0 // 请求序号：并发拉取时只认最后一次请求的结果
   }),
 
   actions: {
     // 获取所有书签
     async fetchBookmarks() {
+      const seq = ++this.fetchSeq
       this.loading = true
       this.error = null
       try {
-        this.bookmarks = await bookmarksApi.getAll()
+        const data = await bookmarksApi.getAll()
+        if (seq !== this.fetchSeq) return // 已有更新的请求，丢弃过期响应
+        this.bookmarks = data
       } catch (error) {
+        if (seq !== this.fetchSeq) return // 过期请求的失败不影响当前状态
         this.error = error.message
         console.error('Failed to fetch bookmarks:', error)
       } finally {
-        this.loading = false
+        if (seq === this.fetchSeq) this.loading = false // 仅最新请求复位 loading
       }
     },
 

@@ -85,3 +85,42 @@ describe('bookmarks store fetchBookmarks 失败路径', () => {
     expect(store.bookmarks).toHaveLength(1)
   })
 })
+
+describe('bookmarks store fetchBookmarks 请求序号', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    bookmarksApi.getAll.mockResolvedValue([])
+  })
+
+  it('过期响应不覆盖新数据', async () => {
+    const store = useBookmarksStore()
+    let resolveFirst
+    bookmarksApi.getAll
+      .mockImplementationOnce(() => new Promise(r => { resolveFirst = r }))
+      .mockImplementationOnce(async () => [{ id: 2 }])
+    const p1 = store.fetchBookmarks()
+    const p2 = store.fetchBookmarks()
+    await p2
+    resolveFirst([{ id: 1 }]) // 旧请求晚到
+    await p1
+    expect(store.bookmarks.map(b => b.id)).toEqual([2])
+    expect(store.loading).toBe(false)
+  })
+
+  it('过期请求失败不写入 error 也不影响 loading 复位', async () => {
+    const store = useBookmarksStore()
+    let rejectFirst
+    bookmarksApi.getAll
+      .mockImplementationOnce(() => new Promise((_, rej) => { rejectFirst = rej }))
+      .mockImplementationOnce(async () => [{ id: 2 }])
+    const p1 = store.fetchBookmarks()
+    const p2 = store.fetchBookmarks()
+    await p2
+    rejectFirst(new Error('过期错误')) // 旧请求晚到且失败
+    await p1
+    expect(store.error).toBeNull()
+    expect(store.bookmarks.map(b => b.id)).toEqual([2])
+    expect(store.loading).toBe(false)
+  })
+})

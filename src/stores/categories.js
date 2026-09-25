@@ -5,21 +5,26 @@ export const useCategoriesStore = defineStore('categories', {
   state: () => ({
     categories: [],
     loading: false,
-    error: null
+    error: null,
+    fetchSeq: 0 // 请求序号：并发拉取时只认最后一次请求的结果
   }),
 
   actions: {
     // 获取所有分类
     async fetchCategories() {
+      const seq = ++this.fetchSeq
       this.loading = true
       this.error = null
       try {
-        this.categories = await categoriesApi.getAll()
+        const data = await categoriesApi.getAll()
+        if (seq !== this.fetchSeq) return // 已有更新的请求，丢弃过期响应
+        this.categories = data
       } catch (error) {
+        if (seq !== this.fetchSeq) return // 过期请求的失败不影响当前状态
         this.error = error.message
         console.error('Failed to fetch categories:', error)
       } finally {
-        this.loading = false
+        if (seq === this.fetchSeq) this.loading = false // 仅最新请求复位 loading
       }
     },
 
