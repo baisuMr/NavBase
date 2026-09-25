@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_category ON bookmarks(category_id);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_sort ON bookmarks(sort_order);
-CREATE INDEX IF NOT EXISTS idx_bookmarks_url ON bookmarks(url);
+-- url 唯一索引：导入去重下推数据库兜底（配合 INSERT OR IGNORE，并发不产生重复行）
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bookmarks_url ON bookmarks(url);
 
 -- 插入默认分类（幂等：同名分类已存在时跳过，可重复执行）
 -- 颜色取自前端预设 10 色（Home.vue presetColors），与 UI 配色体系一致

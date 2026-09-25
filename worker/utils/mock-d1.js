@@ -9,7 +9,8 @@ export function createMockDB(handler = () => undefined) {
   const makeStmt = (sql, args) => ({
     async run() {
       calls.push({ sql, args, method: 'run' })
-      return handler({ sql, args, method: 'run' }) ?? { meta: { last_row_id: 1 } }
+      // 默认对齐真实 D1：变更类语句 meta.changes 为受影响行数（单条写入默认 1）
+      return handler({ sql, args, method: 'run' }) ?? { meta: { last_row_id: 1, changes: 1 } }
     },
     async first() {
       calls.push({ sql, args, method: 'first' })

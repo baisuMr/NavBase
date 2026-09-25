@@ -70,6 +70,13 @@ export async function collection(request, env) {
       { status: 405 }
     );
   } catch (error) {
+    // 唯一索引兜底：撞重复 url 返回 400 而非 500
+    if (isDuplicateUrlError(error)) {
+      return Response.json(
+        { error: '书签链接已存在', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
     console.error('Bookmarks API error:', error);
     return Response.json(
       { error: '服务器错误', code: 'INTERNAL_ERROR' },
@@ -194,6 +201,13 @@ export async function item(request, env, params) {
       { status: 405 }
     );
   } catch (error) {
+    // 唯一索引兜底：编辑把 url 改成已存在的链接返回 400 而非 500
+    if (isDuplicateUrlError(error)) {
+      return Response.json(
+        { error: '书签链接已存在', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      );
+    }
     console.error('Bookmark API error:', error);
     return Response.json(
       { error: '服务器错误', code: 'INTERNAL_ERROR' },
@@ -202,7 +216,8 @@ export async function item(request, env, params) {
   }
 }
 
-// 按 url 字面值去重（保留首条）；比对库内已有书签，跳过重复
+// 按 url 字面值去重（保留首条）；比对库内已有书签，提前过滤省写入
+// 并发竞态（查库后被抢先写入）由唯一索引 + INSERT OR IGNORE 兜底，见 batch
 async function dedupe(env, items) {
   const seen = new Set();
   const batchUnique = [];
@@ -223,14 +238,16 @@ async function dedupe(env, items) {
     for (const row of results) existing.add(row.url);
   }
 
-  return {
-    toInsert: batchUnique.filter(i => !existing.has(i.url)),
-    skipped: items.length - batchUnique.filter(i => !existing.has(i.url)).length
-  };
+  return batchUnique.filter(i => !existing.has(i.url));
+}
+
+// 唯一索引冲突（单条新增/编辑撞重复 url）转 400，避免兜底成 500
+function isDuplicateUrlError(error) {
+  return /UNIQUE constraint failed: bookmarks\.url/i.test(String(error?.message || ''));
 }
 
 // POST /api/bookmarks/batch - 批量创建书签（用于导入）
-// 批内与库内双重去重，避免重复导入产生冗余书签
+// 批内与库内双重去重 + 唯一索引兜底，避免重复导入产生冗余书签
 export async function batch(request, env) {
   if (request.method !== 'POST') {
     return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
@@ -255,7 +272,7 @@ export async function batch(request, env) {
     }
 
     // 批内 + 库内双重去重，避免重复导入产生冗余书签
-    const { toInsert, skipped } = await dedupe(env, items);
+    const toInsert = await dedupe(env, items);
 
     // 新导入书签排最后：从库内 MAX(sort_order)+1 起按导入顺序递增
     let nextSort = 1;
@@ -267,12 +284,14 @@ export async function batch(request, env) {
     }
 
     // D1 单次 batch 有语句数限制，分块提交
+    // 插入用 INSERT OR IGNORE：唯一索引兜底查库后被并发抢先写入的竞态
+    // count 按实际受影响行数统计（被忽略的行 changes 为 0），skipped 相应为总数减 count
     let count = 0;
     for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
       const chunk = toInsert.slice(i, i + CHUNK_SIZE);
       const stmts = chunk.map((item, j) =>
         env.DB.prepare(
-          'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
+          'INSERT OR IGNORE INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
         ).bind(
           item.title.trim(),
           item.url,
@@ -282,11 +301,11 @@ export async function batch(request, env) {
           nextSort + i + j
         )
       );
-      await env.DB.batch(stmts);
-      count += chunk.length;
+      const results = await env.DB.batch(stmts);
+      for (const r of results) count += r?.meta?.changes ?? 0;
     }
 
-    return Response.json({ success: true, count, skipped });
+    return Response.json({ success: true, count, skipped: items.length - count });
   } catch (error) {
     console.error('Batch import error:', error);
     return Response.json({ error: '服务器错误', code: 'INTERNAL_ERROR' }, { status: 500 });

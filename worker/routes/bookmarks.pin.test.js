@@ -133,7 +133,7 @@ describe('批量导入不固定', () => {
       })
     }), { DB: db })
     expect(res.status).toBe(200)
-    const insert = db.calls.find(c => c.sql.includes('INSERT INTO bookmarks'))
+    const insert = db.calls.find(c => /INSERT( OR IGNORE)? INTO bookmarks/.test(c.sql))
     expect(insert.sql).not.toMatch(/is_pinned/)
   })
 })
