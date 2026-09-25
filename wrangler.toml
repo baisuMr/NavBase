@@ -28,6 +28,9 @@ enabled = true
 binding = "DB"
 database_name = "navbase-db"
 database_id = "be7711a1-76f4-4c81-80fc-36bd92168612"
+# 分支预览构建用的独立预览库（与下方 [[previews.d1_databases]] 同一个库）；
+# 补此项后可用 `wrangler d1 execute navbase-db --preview --remote` 直连预览库做运维
+preview_database_id = "30944c4c-3e8a-4c6d-8c9a-a90b769091c4"
 
 [vars]
 # 非敏感配置可放这里；ADMIN_USERNAME / ADMIN_PASSWORD 属于凭据，
