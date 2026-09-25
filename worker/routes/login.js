@@ -1,5 +1,6 @@
 // POST /api/auth/login - 用户登录
 import { secureCompare } from '../auth.js';
+import { utf8ToBase64 } from '../utils/base64.js';
 
 export async function handle(request, env) {
   // 只允许 POST 请求
@@ -34,8 +35,8 @@ export async function handle(request, env) {
     const userOk = await secureCompare(username, adminUsername);
     const passOk = await secureCompare(password, env.ADMIN_PASSWORD);
     if (userOk && passOk) {
-      // 生成 Basic Auth token
-      const token = btoa(`${username}:${password}`);
+      // 生成 Basic Auth token（UTF-8 安全，支持中文等非 Latin-1 字符）
+      const token = utf8ToBase64(`${username}:${password}`);
 
       // 勾选记住设备 → REMEMBER_DURATION_DAYS（默认30天）；否则 LOGIN_DURATION_DAYS（默认7天）
       const rememberMe = remember === true;

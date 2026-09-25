@@ -1,5 +1,7 @@
 // Basic Auth 认证门（原 Pages _middleware.js 平移）
 // 契约：返回 null 表示放行，返回 Response 表示拒绝
+import { base64ToUtf8 } from './utils/base64.js';
+
 function jsonResponse(body, status) {
   return new Response(JSON.stringify(body), {
     status,
@@ -77,7 +79,12 @@ export async function authGate(request, env) {
   }
 
   try {
-    const decoded = atob(authHeader.replace('Basic ', ''));
+    // UTF-8 安全解码；非法 base64 返回 null（不抛错），走 401 分支避免落 500
+    const decoded = base64ToUtf8(authHeader.replace('Basic ', ''));
+    if (decoded === null) {
+      await bruteDelay();
+      return jsonResponse({ error: '认证失败', code: 'AUTH_ERROR' }, 401);
+    }
     // Basic Auth 规范：用户名不含冒号，密码可以含冒号，因此只按第一个冒号分割
     const sep = decoded.indexOf(':');
     const username = sep === -1 ? decoded : decoded.slice(0, sep);
