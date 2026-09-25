@@ -87,6 +87,13 @@ export default {
       return matched.handler(request, env, matched.params, ctx);
     }
 
+    // API 路径未命中路由表：显式 404 JSON，避免落 SPA 回退返回 index.html
+    // 前缀判断与认证门一致（归一化 + 小写化），大小写变体一并覆盖；其余路径保持 SPA 回退
+    const normalized = normalizePath(new URL(request.url).pathname).toLowerCase();
+    if (normalized.startsWith('/api/')) {
+      return Response.json({ error: '接口不存在', code: 'NOT_FOUND' }, { status: 404 });
+    }
+
     // 未命中路由：交回静态资源服务（not_found_handling 的 SPA 回退在此生效）
     return env.ASSETS.fetch(request);
   }

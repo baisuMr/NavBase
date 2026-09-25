@@ -76,6 +76,25 @@ describe('Worker 入口路由', () => {
     expect(env.ASSETS.fetch).toHaveBeenCalledTimes(1)
   })
 
+  it('未命中的 /api/* 路径返回 404 JSON 而非 SPA 页面', async () => {
+    const env = makeEnv()
+    const res = await worker.fetch(req('/api/bookmarkz', { headers: AUTH }), env, {})
+    expect(res.status).toBe(404)
+    expect(res.headers.get('Content-Type')).toContain('application/json')
+    const body = await res.json()
+    expect(body.error).toBe('接口不存在')
+    expect(body.code).toBe('NOT_FOUND')
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled()
+  })
+
+  it('未命中的 /API/* 大小写变体同样返回 404 JSON', async () => {
+    const env = makeEnv()
+    const res = await worker.fetch(req('/API/bookmarkz', { headers: AUTH }), env, {})
+    expect(res.status).toBe(404)
+    expect((await res.json()).code).toBe('NOT_FOUND')
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled()
+  })
+
   it('尾斜杠与重复斜杠归一化后命中同一处理函数', async () => {
     const env = makeEnv()
     const res = await worker.fetch(req('//api//bookmarks//', { headers: AUTH }), env, {})
