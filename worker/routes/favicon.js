@@ -2,7 +2,7 @@
 // <img> 标签无法携带 Basic Auth 头，此端点在认证门中免认证放行；
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
 const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
-const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件
+export const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件（导出供测试断言流式截断阈值）
 const CACHE_TTL = 604800; // 成功结果缓存 7 天（Cloudflare Cache API + 浏览器）
 const MISS_TTL = 600; // 失败结果缓存 10 分钟，避免对不可达站点反复探测
 const SOURCE_TIMEOUT = 3000; // 单源超时（毫秒）

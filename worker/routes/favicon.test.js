@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { handle } from './favicon.js'
+import { handle, MAX_ICON_BYTES } from './favicon.js'
 
 // 模拟 Cloudflare Cache API（node 环境没有 caches 全局，函数在调用期才访问它）
 const cacheStore = new Map()
@@ -204,14 +204,35 @@ describe('GET /api/favicon/:domain', () => {
   })
 
   it('图标体超过 512KB 时流式截断拒收，不读完整个响应', async () => {
-    const big = new Uint8Array(600 * 1024)
+    // 流式 body 每 8KB 推一块、共 600KB；pull 中计数推给消费者的字节数：
+    // 流式实现读到 512KB 上限附近即 cancel（不再触发 pull），整读实现（arrayBuffer）会推满 600KB
+    const CHUNK = 8 * 1024
+    const TOTAL = 600 * 1024
+    const big = new Uint8Array(TOTAL)
     big.set(ICO_HEAD, 0)
+    let sent = 0
+    const stream = new ReadableStream({
+      pull(controller) {
+        if (sent >= TOTAL) {
+          controller.close()
+          return
+        }
+        const end = Math.min(sent + CHUNK, TOTAL)
+        controller.enqueue(big.slice(sent, end))
+        sent = end
+      }
+    })
     stubFetch({
       'https://example.com/': htmlResponse('<html></html>'),
-      'https://example.com/favicon.ico': imageResponse(big, 'image/x-icon')
+      'https://example.com/favicon.ico': () => new Response(stream, { status: 200, headers: { 'Content-Type': 'image/x-icon' } })
     })
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(404) // 该源被拒，其余源失败 → 整体 404
+    // 交付字节数显著小于 600KB：阈值 = 512KB 上限 + 4 块 8KB 裕量
+    // （读满上限后边界再读 1 块、hwm 预取回填与取消时机的差额）；
+    // 整读实现推满 600KB，必然超出该阈值
+    expect(sent, `sent=${sent} 超出流式截断阈值`).toBeLessThanOrEqual(MAX_ICON_BYTES + 4 * CHUNK)
+    expect(sent, `sent=${sent} 推满整段 body`).toBeLessThan(TOTAL)
   })
 
   it('全部源挂起滴流时，总预算 5 秒内返回 404', async () => {
