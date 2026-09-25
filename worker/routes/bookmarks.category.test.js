@@ -15,6 +15,7 @@ describe('category_id 存在性校验', () => {
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toBe('分类不存在')
+    expect(body.code).toBe('CATEGORY_NOT_FOUND')
     expect(db.calls.find(c => c.sql.includes('INSERT INTO bookmarks'))).toBeUndefined()
   })
 
@@ -29,6 +30,7 @@ describe('category_id 存在性校验', () => {
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toBe('分类不存在')
+    expect(body.code).toBe('CATEGORY_NOT_FOUND')
     // 校验失败不得写库
     expect(db.calls.find(c => c.sql.includes('UPDATE bookmarks'))).toBeUndefined()
   })

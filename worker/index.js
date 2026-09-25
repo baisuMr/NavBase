@@ -81,7 +81,7 @@ export default {
           await ensureSchema(env);
         } catch (err) {
           console.error('schema init failed', err);
-          return Response.json({ error: 'DB_INIT_FAILED' }, { status: 500 });
+          return Response.json({ error: '数据库初始化失败', code: 'DB_INIT_FAILED' }, { status: 500 });
         }
       }
       return matched.handler(request, env, matched.params, ctx);

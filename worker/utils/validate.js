@@ -87,7 +87,7 @@ export function validateSettingsPayload(data) {
   }
   if (data.site_name !== undefined) {
     const name = data.site_name;
-    if (name !== '' && !isNonEmptyString(name)) return '网站名称不能为空白';
+    if (name !== '' && !isNonEmptyString(name)) return '网站名称不能是空白';
     if (typeof name === 'string' && name.trim().length > MAX_SITE_NAME_LENGTH) {
       return `网站名称不能超过 ${MAX_SITE_NAME_LENGTH} 个字`;
     }

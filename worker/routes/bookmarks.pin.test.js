@@ -86,6 +86,7 @@ describe('固定上限 10', () => {
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/最多固定/)
+    expect(body.code).toBe('VALIDATION_ERROR')
     // 超限时不得写库
     expect(db.calls.find(c => c.sql.includes('UPDATE bookmarks'))).toBeUndefined()
   })

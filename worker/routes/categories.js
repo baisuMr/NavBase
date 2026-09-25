@@ -21,7 +21,7 @@ export async function collection(request, env) {
       const data = await request.json();
       const err = validateCategoryPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
       const { name, icon, color } = data;
 
@@ -37,7 +37,7 @@ export async function collection(request, env) {
     }
 
     return Response.json(
-      { error: 'Method not allowed' },
+      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
       { status: 405 }
     );
   } catch (error) {
@@ -64,7 +64,7 @@ export async function item(request, env, params) {
 
       if (!result) {
         return Response.json(
-          { error: '分类不存在' },
+          { error: '分类不存在', code: 'NOT_FOUND' },
           { status: 404 }
         );
       }
@@ -77,7 +77,7 @@ export async function item(request, env, params) {
       const data = await request.json();
       const err = validateCategoryPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
       const { name, icon, color } = data;
 
@@ -88,7 +88,7 @@ export async function item(request, env, params) {
 
       if (!existing) {
         return Response.json(
-          { error: '分类不存在' },
+          { error: '分类不存在', code: 'NOT_FOUND' },
           { status: 404 }
         );
       }
@@ -110,7 +110,7 @@ export async function item(request, env, params) {
 
       if (!existing) {
         return Response.json(
-          { error: '分类不存在' },
+          { error: '分类不存在', code: 'NOT_FOUND' },
           { status: 404 }
         );
       }
@@ -125,7 +125,7 @@ export async function item(request, env, params) {
     }
 
     return Response.json(
-      { error: 'Method not allowed' },
+      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
       { status: 405 }
     );
   } catch (error) {
@@ -141,7 +141,7 @@ export async function item(request, env, params) {
 // 与 PUT /api/categories/:id 分工：编辑分类不改排序，重排只走本端点
 export async function sort(request, env) {
   if (request.method !== 'PUT') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
   }
 
   try {
@@ -155,14 +155,14 @@ export async function sort(request, env) {
       !ids.every((id) => Number.isInteger(id) && id > 0) ||
       new Set(ids).size !== ids.length
     ) {
-      return Response.json({ error: '排序字段不正确' }, { status: 400 });
+      return Response.json({ error: '排序字段不正确', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     // 集合校验：ids 须与库内现有分类完全一致（防丢分类/幻影 id）
     const { results } = await env.DB.prepare('SELECT id FROM categories').all();
     const existing = new Set(results.map((r) => r.id));
     if (existing.size !== ids.length || !ids.every((id) => existing.has(id))) {
-      return Response.json({ error: '排序列表与现有分类不一致' }, { status: 400 });
+      return Response.json({ error: '排序列表与现有分类不一致', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     // batch 事务式重编号

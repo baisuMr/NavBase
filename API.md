@@ -285,9 +285,26 @@ Content-Type: application/json
 所有错误响应格式：
 ```json
 {
-  "error": "错误信息"
+  "error": "错误信息",
+  "code": "ERROR_CODE"
 }
 ```
+
+- `error`：中文错误文案，供人阅读与前端展示（前端只读该字段）
+- `code`：机器可读的错误码，便于排障与程序分支处理；取值如下表
+
+| `code` | 含义 |
+|--------|------|
+| `NOT_CONFIGURED` | 服务端缺少必需配置（如 `ADMIN_PASSWORD` 未设置） |
+| `UNAUTHORIZED` | 未携带认证凭据 |
+| `INVALID_CREDENTIALS` | 用户名或密码错误 |
+| `VALIDATION_ERROR` | 请求参数或请求体校验失败 |
+| `NOT_FOUND` | 资源或接口不存在 |
+| `METHOD_NOT_ALLOWED` | 请求方法不支持 |
+| `DB_INIT_FAILED` | 数据库初始化失败 |
+| `CATEGORY_NOT_FOUND` | 书签引用的分类不存在（创建/更新书签时的 400 校验） |
+
+说明：未预期的服务端内部异常走 500 兜底，仅返回 `{ "error": "服务器错误" }`（不含 `code`）。
 
 常见状态码：
 - `200` - 成功

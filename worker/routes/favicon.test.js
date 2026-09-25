@@ -73,9 +73,11 @@ describe('GET /api/favicon/:domain', () => {
     }
   })
 
-  it('非 GET 请求（含 OPTIONS）返回 405', async () => {
+  it('非 GET 请求（含 OPTIONS）返回 405 METHOD_NOT_ALLOWED', async () => {
     stubFetch({})
-    expect((await invoke(makeFixture('example.com', 'POST'))).status).toBe(405)
+    const post = await invoke(makeFixture('example.com', 'POST'))
+    expect(post.status).toBe(405)
+    expect(await post.json()).toEqual({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' })
     expect((await invoke(makeFixture('example.com', 'OPTIONS'))).status).toBe(405)
   })
 

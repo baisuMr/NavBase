@@ -13,17 +13,29 @@ export async function handle(request, env) {
   // 只允许 POST 请求
   if (request.method !== 'POST') {
     return Response.json(
-      { error: 'Method not allowed' },
+      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
       { status: 405 }
     );
   }
 
+  // JSON 解析失败单独捕获：请求体畸形属于客户端错误（400），
+  // 与下方 catch 的服务端 500 兜底区分开
+  let payload;
   try {
-    const { username, password, remember } = await request.json();
+    payload = await request.json();
+  } catch {
+    return Response.json(
+      { error: '请求体格式不正确', code: 'VALIDATION_ERROR' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { username, password, remember } = payload;
 
     if (!username || !password) {
       return Response.json(
-        { error: '用户名和密码不能为空' },
+        { error: '用户名和密码不能为空', code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
     }
@@ -31,7 +43,7 @@ export async function handle(request, env) {
     // 未配置密码时拒绝登录，避免出现无密码的公开实例
     if (!env.ADMIN_PASSWORD) {
       return Response.json(
-        { error: '服务器未配置 ADMIN_PASSWORD' },
+        { error: '服务器未配置 ADMIN_PASSWORD', code: 'NOT_CONFIGURED' },
         { status: 500 }
       );
     }
@@ -69,7 +81,7 @@ export async function handle(request, env) {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     return Response.json(
-      { error: '用户名或密码错误' },
+      { error: '用户名或密码错误', code: 'INVALID_CREDENTIALS' },
       { status: 401 }
     );
   } catch (error) {

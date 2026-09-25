@@ -248,12 +248,12 @@ export async function handle(request, env, params, ctx) {
   const domain = String(params.domain || '').toLowerCase();
 
   if (request.method !== 'GET') {
-    return Response.json({ error: '仅支持 GET' }, { status: 405 });
+    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
   }
 
   // 域名格式校验：只放行合法 hostname，杜绝把路径/凭据拼进上游 URL（SSRF）
   if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain)) {
-    return Response.json({ error: '域名格式不合法' }, { status: 400 });
+    return Response.json({ error: '域名格式不合法', code: 'VALIDATION_ERROR' }, { status: 400 });
   }
 
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次

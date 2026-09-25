@@ -61,6 +61,7 @@ describe('POST /api/auth/login', () => {
     }
     const res = await p
     expect(res.status).toBe(401)
+    expect((await res.json()).code).toBe('INVALID_CREDENTIALS')
   })
 
   it('登录失败响应延迟约 800ms 后才返回（防爆破）', async () => {
@@ -119,26 +120,37 @@ describe('POST /api/auth/login', () => {
     expect(Number.isFinite(body.expiresAt)).toBe(true)
   })
 
-  it('空用户名或密码返回 400', async () => {
-    expect((await handle(makeRequest({ username: '', password: 'x' }), ENV)).status).toBe(400)
-    expect((await handle(makeRequest({ username: 'admin' }), ENV)).status).toBe(400)
+  it('空用户名或密码返回 400 VALIDATION_ERROR', async () => {
+    const a = await handle(makeRequest({ username: '', password: 'x' }), ENV)
+    expect(a.status).toBe(400)
+    expect(await a.json()).toEqual({ error: '用户名和密码不能为空', code: 'VALIDATION_ERROR' })
+    const b = await handle(makeRequest({ username: 'admin' }), ENV)
+    expect(b.status).toBe(400)
+    expect((await b.json()).code).toBe('VALIDATION_ERROR')
   })
 
-  it('未配置密码返回 500', async () => {
+  it('未配置密码返回 500 NOT_CONFIGURED', async () => {
     const res = await handle(makeRequest({ username: 'admin', password: 'x' }), {
       ...ENV,
       ADMIN_PASSWORD: undefined
     })
     expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({
+      error: '服务器未配置 ADMIN_PASSWORD',
+      code: 'NOT_CONFIGURED'
+    })
   })
 
-  it('非 POST（含 OPTIONS）返回 405', async () => {
-    expect((await handle(makeRequest(undefined, 'GET'), ENV)).status).toBe(405)
+  it('非 POST（含 OPTIONS）返回 405 METHOD_NOT_ALLOWED', async () => {
+    const get = await handle(makeRequest(undefined, 'GET'), ENV)
+    expect(get.status).toBe(405)
+    expect(await get.json()).toEqual({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' })
     expect((await handle(makeRequest(undefined, 'OPTIONS'), ENV)).status).toBe(405)
   })
 
-  it('非法 JSON 请求体返回 500', async () => {
+  it('非法 JSON 请求体返回 400 VALIDATION_ERROR', async () => {
     const res = await handle(makeRequest('not-json', 'POST'), ENV)
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: '请求体格式不正确', code: 'VALIDATION_ERROR' })
   })
 })

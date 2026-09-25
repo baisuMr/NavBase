@@ -24,7 +24,7 @@ export async function handle(request, env) {
       const data = await request.json();
       const err = validateSettingsPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
 
       for (const key of ALLOWED_KEYS) {
@@ -38,7 +38,7 @@ export async function handle(request, env) {
       return Response.json(await readSettings(env));
     }
 
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
   } catch (error) {
     console.error('Settings error:', error);
     return Response.json({ error: '服务器错误' }, { status: 500 });

@@ -36,7 +36,7 @@ export async function collection(request, env) {
       const data = await request.json();
       const err = validateBookmarkPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
       const { title, url, description, category_id, icon_url } = data;
 
@@ -66,7 +66,7 @@ export async function collection(request, env) {
     }
 
     return Response.json(
-      { error: 'Method not allowed' },
+      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
       { status: 405 }
     );
   } catch (error) {
@@ -96,7 +96,7 @@ export async function item(request, env, params) {
 
       if (!result) {
         return Response.json(
-          { error: '书签不存在' },
+          { error: '书签不存在', code: 'NOT_FOUND' },
           { status: 404 }
         );
       }
@@ -109,7 +109,7 @@ export async function item(request, env, params) {
       const data = await request.json();
       const err = validateBookmarkPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
       const { title, url, description, category_id, icon_url } = data;
 
@@ -120,7 +120,7 @@ export async function item(request, env, params) {
 
       if (!existing) {
         return Response.json(
-          { error: '书签不存在' },
+          { error: '书签不存在', code: 'NOT_FOUND' },
           { status: 404 }
         );
       }
@@ -144,7 +144,7 @@ export async function item(request, env, params) {
         ).bind(id).first()) ?? { n: 0 };
         if (n >= MAX_PINNED) {
           return Response.json(
-            { error: `最多固定 ${MAX_PINNED} 个书签` },
+            { error: `最多固定 ${MAX_PINNED} 个书签`, code: 'VALIDATION_ERROR' },
             { status: 400 }
           );
         }
@@ -177,7 +177,7 @@ export async function item(request, env, params) {
 
       if (!existing) {
         return Response.json(
-          { error: '书签不存在' },
+          { error: '书签不存在', code: 'NOT_FOUND' },
           { status: 404 }
         );
       }
@@ -190,7 +190,7 @@ export async function item(request, env, params) {
     }
 
     return Response.json(
-      { error: 'Method not allowed' },
+      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
       { status: 405 }
     );
   } catch (error) {
@@ -233,7 +233,7 @@ async function dedupe(env, items) {
 // 批内与库内双重去重，避免重复导入产生冗余书签
 export async function batch(request, env) {
   if (request.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
   }
 
   try {
@@ -241,16 +241,16 @@ export async function batch(request, env) {
     const items = Array.isArray(data?.bookmarks) ? data.bookmarks : [];
 
     if (items.length === 0) {
-      return Response.json({ error: 'bookmarks 不能为空' }, { status: 400 });
+      return Response.json({ error: 'bookmarks 不能为空', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
     if (items.length > MAX_BATCH_SIZE) {
-      return Response.json({ error: `单次最多导入 ${MAX_BATCH_SIZE} 条` }, { status: 400 });
+      return Response.json({ error: `单次最多导入 ${MAX_BATCH_SIZE} 条`, code: 'VALIDATION_ERROR' }, { status: 400 });
     }
 
     for (const item of items) {
       const err = validateBookmark(item);
       if (err) {
-        return Response.json({ error: `${err}: ${item?.url || ''}` }, { status: 400 });
+        return Response.json({ error: `${err}: ${item?.url || ''}`, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
     }
 
