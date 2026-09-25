@@ -49,21 +49,41 @@ const closeBtn = ref(null)
 // 打开前持有焦点的元素，关闭时还原
 let lastFocused = null
 
-// Tab 焦点陷阱：Tab / Shift+Tab 在对话框内循环，跳过禁用元素
+// Tab 焦点陷阱（document 级）：焦点在弹窗内、或掉到 body（点击不可聚焦区域 /
+// loading 中按钮被禁用）时，把 Tab/Shift+Tab 循环限制在对话框内，防止逃逸到遮罩背后的页面。
+// 不能用 dialogEl 元素级监听——焦点在 body 时事件不经过 dialogEl，陷阱会"粘性"失效
 function trapTab(e) {
   if (e.key !== 'Tab') return
+  const dialog = dialogEl.value
+  if (!dialog) return
+  const active = document.activeElement
+  const inDialog = dialog.contains(active)
+  if (!inDialog && active !== document.body) return
+
   const focusables = [
-    ...dialogEl.value.querySelectorAll(
+    ...dialog.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     )
   ].filter(el => !el.disabled)
-  if (!focusables.length) return
+
+  // 弹窗内无可聚焦元素（如 loading 中全部禁用）：吞掉 Tab，焦点留在原地不逃逸
+  if (!focusables.length) {
+    e.preventDefault()
+    return
+  }
+
   const first = focusables[0]
   const last = focusables[focusables.length - 1]
-  if (e.shiftKey && document.activeElement === first) {
+  if (!inDialog) {
+    // 焦点在 body：按方向把焦点收进弹窗首/尾
+    e.preventDefault()
+    ;(e.shiftKey ? last : first).focus()
+    return
+  }
+  if (e.shiftKey && active === first) {
     e.preventDefault()
     last.focus()
-  } else if (!e.shiftKey && document.activeElement === last) {
+  } else if (!e.shiftKey && active === last) {
     e.preventDefault()
     first.focus()
   }
@@ -72,11 +92,11 @@ function trapTab(e) {
 onMounted(() => {
   lastFocused = document.activeElement
   closeBtn.value?.focus()
-  dialogEl.value?.addEventListener('keydown', trapTab)
+  document.addEventListener('keydown', trapTab)
 })
 
 onBeforeUnmount(() => {
-  dialogEl.value?.removeEventListener('keydown', trapTab)
+  document.removeEventListener('keydown', trapTab)
   if (lastFocused && typeof lastFocused.focus === 'function' && lastFocused.isConnected) {
     lastFocused.focus()
   }
