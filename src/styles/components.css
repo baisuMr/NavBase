@@ -127,6 +127,12 @@
   color: var(--color-text-muted);
 }
 
+/* 字段级校验错误（如书签 URL 协议不符），对齐表单错误提示风格 */
+.form-error {
+  font-size: var(--fs-card);
+  color: var(--color-error);
+}
+
 .form-icon-preview-row {
   display: flex;
   align-items: center;

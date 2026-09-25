@@ -211,7 +211,7 @@
     <Modal
       v-if="categoryModal.visible"
       :title="categoryModal.data ? '编辑分类' : '新建分类'"
-      @close="categoryModal.visible = false"
+      @close="closeCategoryModal"
     >
       <CategoryForm
         :category="categoryModal.data"
@@ -219,7 +219,7 @@
         :icons="presetIcons"
         :loading="categoryModal.loading"
         @submit="handleCategorySubmit"
-        @cancel="categoryModal.visible = false"
+        @cancel="closeCategoryModal"
       />
     </Modal>
 
@@ -227,14 +227,14 @@
     <Modal
       v-if="bookmarkModal.visible"
       :title="bookmarkModal.data ? '编辑书签' : '新建书签'"
-      @close="bookmarkModal.visible = false"
+      @close="closeBookmarkModal"
     >
       <BookmarkForm
         :bookmark="bookmarkModal.data"
         :categories="categories"
         :loading="bookmarkModal.loading"
         @submit="handleBookmarkSubmit"
-        @cancel="bookmarkModal.visible = false"
+        @cancel="closeBookmarkModal"
       />
     </Modal>
 
@@ -265,6 +265,7 @@
       v-if="toast.visible"
       :message="toast.message"
       :type="toast.type"
+      :seq="toast.seq"
       @close="hideToast"
     />
   </div>
@@ -559,8 +560,9 @@ useKeyboard({
   addBookmark: () => showBookmarkForm(),
   addCategory: () => showCategoryForm(),
   close: () => {
-    categoryModal.value.visible = false
-    bookmarkModal.value.visible = false
+    // 表单弹窗 loading 中不响应 ESC（焦点在弹窗外时由这里兜底，与 @close 守卫对齐）
+    closeCategoryModal()
+    closeBookmarkModal()
     settingsModal.value.visible = false
     shortcutModal.value.visible = false
     // 确认弹窗 loading 中不响应 ESC（焦点在弹窗外时由这里兜底）
@@ -672,6 +674,15 @@ async function handleConfirmAction() {
 // ── 表单 ──
 function showCategoryForm(data = null) { categoryModal.value = { visible: true, data, loading: false } }
 function showBookmarkForm(data = null) { bookmarkModal.value = { visible: true, data, loading: false } }
+
+// 表单弹窗 loading 中忽略关闭（遮罩/ESC/取消按钮均汇入此处，对齐 ConfirmModal 守卫语义），
+// 避免弹窗关掉但后台保存仍在跑
+function closeCategoryModal() {
+  if (!categoryModal.value.loading) categoryModal.value.visible = false
+}
+function closeBookmarkModal() {
+  if (!bookmarkModal.value.loading) bookmarkModal.value.visible = false
+}
 
 async function handleCategorySubmit(formData) {
   categoryModal.value.loading = true

@@ -1,6 +1,11 @@
 // 日期问候 / 农历 / 周数计算单测
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { useDateInfo } from './useLunar'
+
+afterEach(() => {
+  vi.doUnmock('lunar-javascript')
+  vi.resetModules()
+})
 
 const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText, getGreeting } = useDateInfo()
 
@@ -57,5 +62,18 @@ describe('getLunarText 农历（动态加载 lunar-javascript）', () => {
 
   it('异常输入返回空字符串而非抛错', async () => {
     expect(await getLunarText('not-a-date')).toBe('')
+  })
+
+  it('动态加载失败后下次调用重试（不永久缓存 rejected promise）', async () => {
+    // 动态 import 失败 mock：工厂抛错使 import('lunar-javascript') reject
+    vi.doMock('lunar-javascript', () => { throw new Error('chunk load fail') })
+    vi.resetModules()
+    const mod = await import('./useLunar')
+    const { getLunarText } = mod.useDateInfo()
+    // 首次加载失败 → 返回空字符串
+    await expect(getLunarText(new Date(2025, 0, 29))).resolves.toBe('')
+    // 恢复真实模块后，同一模块实例下次调用应重试成功（修复前 rejected promise 被永久缓存，仍返回 ''）
+    vi.doUnmock('lunar-javascript')
+    expect(await getLunarText(new Date(2025, 0, 29))).toBe('乙巳年 农历正月初一')
   })
 })

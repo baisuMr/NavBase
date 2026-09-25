@@ -8,7 +8,14 @@
  */
 let lunarModulePromise = null
 function loadLunar() {
-  if (!lunarModulePromise) lunarModulePromise = import('lunar-javascript')
+  if (!lunarModulePromise) {
+    lunarModulePromise = import('lunar-javascript').catch(err => {
+      // 加载失败清空缓存：发版瞬间旧页面的动态 import 可能失败，
+      // 永久缓存 rejected promise 会导致此后农历一直空白，允许下次调用重试
+      lunarModulePromise = null
+      throw err
+    })
+  }
   return lunarModulePromise
 }
 

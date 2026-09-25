@@ -1,8 +1,11 @@
 import { defineConfig } from 'vitest/config'
+import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  // 让测试中以文本形式 import .sql（与 wrangler.toml [[rules]] Text 对齐）
+  // 让测试中以文本形式 import .sql（与 wrangler.toml [[rules]] Text 对齐）；
+  // vue 插件用于编译组件测试（Home / ToastMessage / BookmarkForm）中的 SFC
   plugins: [
+    vue(),
     {
       name: 'import-sql-as-text',
       transform(code, id) {
