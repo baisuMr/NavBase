@@ -1,5 +1,9 @@
 <template>
-  <Modal :title="title" @close="$emit('cancel')">
+  <Modal
+    :title="title"
+    :close-btn-disabled="loading"
+    @close="handleClose"
+  >
     <p class="confirm-message">{{ message }}</p>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" :disabled="loading" @click="$emit('cancel')">取消</button>
@@ -13,7 +17,7 @@
 <script setup>
 import Modal from './Modal.vue'
 
-defineProps({
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -32,5 +36,11 @@ defineProps({
   }
 })
 
-defineEmits(['confirm', 'cancel'])
+const emit = defineEmits(['confirm', 'cancel'])
+
+// 遮罩点击 / 弹窗内 ESC 都经 Modal 的 close 汇入这里：
+// loading 期间忽略，避免弹窗关掉但后台操作仍在跑
+function handleClose() {
+  if (!props.loading) emit('cancel')
+}
 </script>

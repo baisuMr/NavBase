@@ -563,7 +563,10 @@ useKeyboard({
     bookmarkModal.value.visible = false
     settingsModal.value.visible = false
     shortcutModal.value.visible = false
-    confirmModal.value.visible = false
+    // 确认弹窗 loading 中不响应 ESC（焦点在弹窗外时由这里兜底）
+    if (!confirmModal.value.visible || !confirmModal.value.loading) {
+      confirmModal.value.visible = false
+    }
     closeEngineMenu()
     hideContextMenu()
   }
