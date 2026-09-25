@@ -67,7 +67,8 @@ describe('POST /api/auth/login', () => {
     vi.useFakeTimers()
     try {
       const p = handle(makeRequest({ username: 'admin', password: 'wrong' }), ENV)
-      // 等 secureCompare 的 digest 完成、防爆破定时器挂上假时钟（只空转真实轮次，不移动时钟）
+      // 等 secureCompare 的 digest 完成、防爆破定时器挂上假时钟（只空转真实轮次，不移动时钟）；
+      // 全量并行下 CPU 满载时轮次需求膨胀，故放宽上限
       for (let i = 0; i < 500 && vi.getTimerCount() === 0; i++) {
         await vi.advanceTimersByTimeAsync(0)
       }

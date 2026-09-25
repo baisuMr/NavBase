@@ -21,10 +21,17 @@ async function runWithFakeDelay(fn) {
   vi.useFakeTimers()
   try {
     const p = fn()
-    for (let i = 0; i < 50 && vi.getTimerCount() === 0; i++) {
+    // secureCompare 的 crypto.subtle.digest 需若干真实事件循环轮次，全量并行下 CPU 满载时
+    // 轮次需求会膨胀，故放宽空转上限；极端情况下退回真实时钟，避免 await p 挂到超时
+    for (let i = 0; i < 500 && vi.getTimerCount() === 0; i++) {
       await vi.advanceTimersByTimeAsync(0)
     }
-    await vi.advanceTimersByTimeAsync(801)
+    if (vi.getTimerCount() > 0) {
+      await vi.advanceTimersByTimeAsync(801)
+    } else {
+      // 定时器迟迟未挂上：退回真实时钟让 800ms 延迟真实走完（慢但不 flake）
+      vi.useRealTimers()
+    }
     return await p
   } finally {
     vi.useRealTimers()
@@ -115,10 +122,12 @@ describe('防爆破延迟', () => {
     try {
       const req = new Request('http://test/api/bookmarks', { headers: { Authorization: 'Basic ' + btoa('u:p') } })
       const p = authGate(req, { ADMIN_PASSWORD: 'x' })
-      // 等 secureCompare 的 digest 完成、防爆破定时器挂上假时钟（只空转真实轮次，不移动时钟）
-      for (let i = 0; i < 50 && vi.getTimerCount() === 0; i++) {
+      // 等 secureCompare 的 digest 完成、防爆破定时器挂上假时钟（只空转真实轮次，不移动时钟）；
+      // 全量并行下 CPU 满载时轮次需求膨胀，故放宽上限
+      for (let i = 0; i < 500 && vi.getTimerCount() === 0; i++) {
         await vi.advanceTimersByTimeAsync(0)
       }
+      expect(vi.getTimerCount()).toBeGreaterThan(0) // 定时器未挂上时明确失败，避免 await p 挂死
       await vi.advanceTimersByTimeAsync(799)
       let settled = false
       p.then(() => { settled = true })
