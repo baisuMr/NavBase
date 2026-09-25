@@ -22,6 +22,11 @@ const router = createRouter({
       name: 'home',
       component: () => import('../views/Home.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      // 兜底：站内未知路径一律回首页，避免渲染空白页
+      path: '/:pathMatch(.*)*',
+      redirect: '/'
     }
   ]
 })
