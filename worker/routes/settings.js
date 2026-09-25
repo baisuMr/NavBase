@@ -41,6 +41,6 @@ export async function handle(request, env) {
     return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
   } catch (error) {
     console.error('Settings error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500 });
+    return Response.json({ error: '服务器错误', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }

@@ -72,7 +72,7 @@ export async function collection(request, env) {
   } catch (error) {
     console.error('Bookmarks API error:', error);
     return Response.json(
-      { error: '服务器错误' },
+      { error: '服务器错误', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -196,7 +196,7 @@ export async function item(request, env, params) {
   } catch (error) {
     console.error('Bookmark API error:', error);
     return Response.json(
-      { error: '服务器错误' },
+      { error: '服务器错误', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -289,6 +289,6 @@ export async function batch(request, env) {
     return Response.json({ success: true, count, skipped });
   } catch (error) {
     console.error('Batch import error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500 });
+    return Response.json({ error: '服务器错误', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }

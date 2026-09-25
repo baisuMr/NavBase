@@ -298,13 +298,13 @@ Content-Type: application/json
 | `NOT_CONFIGURED` | 服务端缺少必需配置（如 `ADMIN_PASSWORD` 未设置） |
 | `UNAUTHORIZED` | 未携带认证凭据 |
 | `INVALID_CREDENTIALS` | 用户名或密码错误 |
+| `AUTH_ERROR` | 认证过程异常（凭据无法解析或比较失败） |
 | `VALIDATION_ERROR` | 请求参数或请求体校验失败 |
 | `NOT_FOUND` | 资源或接口不存在 |
 | `METHOD_NOT_ALLOWED` | 请求方法不支持 |
 | `DB_INIT_FAILED` | 数据库初始化失败 |
 | `CATEGORY_NOT_FOUND` | 书签引用的分类不存在（创建/更新书签时的 400 校验） |
-
-说明：未预期的服务端内部异常走 500 兜底，仅返回 `{ "error": "服务器错误" }`（不含 `code`）。
+| `INTERNAL_ERROR` | 服务端内部异常（500 兜底） |
 
 常见状态码：
 - `200` - 成功

@@ -43,7 +43,7 @@ export async function collection(request, env) {
   } catch (error) {
     console.error('Categories API error:', error);
     return Response.json(
-      { error: '服务器错误' },
+      { error: '服务器错误', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -131,7 +131,7 @@ export async function item(request, env, params) {
   } catch (error) {
     console.error('Category API error:', error);
     return Response.json(
-      { error: '服务器错误' },
+      { error: '服务器错误', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -174,6 +174,6 @@ export async function sort(request, env) {
     return Response.json({ success: true });
   } catch (error) {
     console.error('Category sort API error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500 });
+    return Response.json({ error: '服务器错误', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }

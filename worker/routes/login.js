@@ -87,7 +87,7 @@ export async function handle(request, env) {
   } catch (error) {
     console.error('Login error:', error);
     return Response.json(
-      { error: '服务器错误' },
+      { error: '服务器错误', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }

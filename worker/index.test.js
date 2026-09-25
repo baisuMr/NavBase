@@ -178,4 +178,13 @@ describe('API 错误契约统一（{ error, code }）', () => {
     expect(res.status).toBe(404)
     expect(await res.json()).toEqual({ error: '分类不存在', code: 'NOT_FOUND' })
   })
+
+  it('路由内部异常的 500 兜底返回 INTERNAL_ERROR', async () => {
+    const env = makeEnv(createMockDB(({ method }) => {
+      if (method === 'all') throw new Error('boom')
+    }))
+    const res = await worker.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({ error: '服务器错误', code: 'INTERNAL_ERROR' })
+  })
 })
