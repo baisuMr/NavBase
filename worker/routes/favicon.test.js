@@ -203,6 +203,36 @@ describe('GET /api/favicon/:domain', () => {
     expect(res.status).toBe(404)
   })
 
+  it('图标体超过 512KB 时流式截断拒收，不读完整个响应', async () => {
+    const big = new Uint8Array(600 * 1024)
+    big.set(ICO_HEAD, 0)
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(big, 'image/x-icon')
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(404) // 该源被拒，其余源失败 → 整体 404
+  })
+
+  it('全部源挂起滴流时，总预算 5 秒内返回 404', async () => {
+    vi.useFakeTimers()
+    try {
+      // 挂起的响应头 + 永不结束的 body 流
+      stubFetch({
+        'https://example.com/favicon.ico': () => new Response(
+          new ReadableStream({ start() {} }),
+          { status: 200, headers: { 'Content-Type': 'image/x-icon' } }
+        )
+      })
+      const p = invoke(makeFixture('example.com'))
+      await vi.advanceTimersByTimeAsync(5100)
+      const res = await p
+      expect(res.status).toBe(404)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('首页 HTML 只读取前 256KB，超大页面不整页读入', async () => {
     // 流式 body 统计实际读出的字节数；图标声明在 head 区（前 256KB 内）
     const full = new TextEncoder().encode(
