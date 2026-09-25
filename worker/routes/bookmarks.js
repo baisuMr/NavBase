@@ -253,8 +253,15 @@ export async function batch(request, env) {
     return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
   }
 
+  // JSON 解析失败单独捕获：请求体畸形属于客户端错误（400），与下方 catch 的服务端 500 兜底区分开
+  let data;
   try {
-    const data = await request.json();
+    data = await request.json();
+  } catch {
+    return Response.json({ error: '请求体格式不正确', code: 'VALIDATION_ERROR' }, { status: 400 });
+  }
+
+  try {
     const items = Array.isArray(data?.bookmarks) ? data.bookmarks : [];
 
     if (items.length === 0) {
@@ -268,6 +275,16 @@ export async function batch(request, env) {
       const err = validateBookmark(item);
       if (err) {
         return Response.json({ error: `${err}: ${item?.url || ''}`, code: 'VALIDATION_ERROR' }, { status: 400 });
+      }
+    }
+
+    // 分类存在性校验（对齐单条 POST/PUT）：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400
+    // 按去重后的 id 各查一次；缺省/null 视为未分类合法（0 等非法类型已被上一步 validateBookmark 拦下）
+    const catIds = [...new Set(items.map(i => i.category_id).filter(id => id !== undefined && id !== null))];
+    for (const catId of catIds) {
+      const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(catId).first();
+      if (!cat) {
+        return Response.json({ error: '分类不存在', code: 'CATEGORY_NOT_FOUND' }, { status: 400 });
       }
     }
 
