@@ -57,7 +57,7 @@
    | Select D1 数据库 | 保持默认 `navbase-db`（向导自动创建并绑定） |
    | ADMIN_USERNAME / ADMIN_PASSWORD | **可以不填**：⚠️ 这里填的值只会成为**构建环境变量**，**不会**成为 Worker 运行时 Secret，登录凭据以第 5 步手动补配的为准 |
    | LOGIN_DURATION_DAYS / REMEMBER_DURATION_DAYS | 保持默认 `7` / `30`；部署后可在仓库 `wrangler.toml` [vars] 中修改登录时效，推送后自动生效 |
-   | 构建命令 | `pnpm run build` |
+   | 构建命令 | `pnpm test && pnpm run build`（先跑全量测试再构建，测试不过构建失败、不会部署） |
    | 部署命令 | 默认 `pnpm run deploy`；也可填 `npx wrangler deploy`（构建命令已构建过，可省一次重复构建） |
    | 预览命令 | 默认即可 |
    | 启用预览构建 | 建议开启（Pull Request 自动生成预览） |
