@@ -98,7 +98,8 @@ git push
 ```
 
 - 未完成功能想在线验收：推送到非生产分支会自动构建 Preview，稳定 URL 为 `https://<分支名>-<Worker 名>.<账号子域>.workers.dev`，开 PR 还会把 URL 评论到 PR，满意后再合并
-- 预览构建使用 `wrangler.toml` 的 `[previews]` 独立配置（变量与绑定不复用生产设置）：自己部署时请把 `previews.d1_databases.database_id` 换成你自己的预览库（`wrangler d1 create <名称>` 获取），并用 `wrangler preview secret put ADMIN_PASSWORD` 配置预览登录密码
+- 合并上线前的检查清单：全量测试通过；若改过 `schema.sql`，先对生产库执行迁移（见 `migrations/` 脚本头部用法，加列类迁移对旧代码无害，务必先于新代码上线）
+- 预览构建使用 `wrangler.toml` 的 `[previews]` 独立配置（变量与绑定不复用生产设置）：自己部署时请把 `previews.d1_databases.database_id` 换成你自己的预览库（`wrangler d1 create <名称>` 获取）；预览登录凭据一次配置后持久生效——`wrangler preview base-config secret put ADMIN_PASSWORD`（之后新建的预览自动继承）+ `wrangler preview secret put ADMIN_PASSWORD --name dev`（补设已存在的预览，Base 配置不回溯）；勿在控制台「Runtime variables and secrets」里配预览凭据（部署级设置，下次构建即丢失）
 - 紧急修复线上问题：可在 `main` 直接修复并推送上线，之后执行 `git checkout dev && git merge main` 把修复同步回 `dev`
 
 ### 绑定自定义域名（可选）
@@ -122,7 +123,7 @@ git push
 
 | 现象 | 原因与解决 |
 |------|-----------|
-| 所有 API 返回 500 `NOT_CONFIGURED` | 未配置 `ADMIN_PASSWORD` Secret：部署向导里填的值不会自动生效，前往 Worker **Settings → Variables and Secrets** 添加 `ADMIN_PASSWORD`（类型选 Secret）后重试 |
+| 所有 API 返回 500 `NOT_CONFIGURED` | 未配置 `ADMIN_PASSWORD` Secret：部署向导里填的值不会自动生效，前往 Worker **Settings → Variables and Secrets** 添加 `ADMIN_PASSWORD`（类型选 Secret）后重试；预览环境则是缺预览凭据，按上文「预览登录凭据」一次配置即可持久 |
 | 部署设置页黄条提示 API 令牌缺少权限 | 缺少的是 `ssl_and_certificates_write`、`email_routing_*` 等本项目用不到的权限，直接点「部署」即可 |
 | 所有 API 返回 500 `DB_INIT_FAILED` | D1 初始化失败：检查 Worker 的 **Settings → Bindings** 中 D1 绑定是否存在，修复后重试（worker 会自动重试建表） |
 | 登录提示「用户名或密码错误」 | 核对 Secret 中的凭据；修改后需重新部署或等待缓存刷新 |
