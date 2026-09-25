@@ -108,6 +108,7 @@ GET /api/bookmarks
     "category_id": 1,
     "icon_url": "https://favicon.im/google.com",
     "sort_order": 0,
+    "is_pinned": 1,
     "created_at": "2026-09-08 02:36:25",
     "updated_at": "2026-09-08 02:36:25",
     "category_name": "常用",
@@ -137,7 +138,7 @@ Content-Type: application/json
 }
 ```
 
-**说明**：`sort_order` 由服务端管理（新建固定排最后），客户端传值无效；`category_id` 可缺省或为 `null`（未分类）。
+**说明**：`sort_order` 由服务端管理（新建固定排最后），客户端传值无效；`category_id` 可缺省或为 `null`（未分类）；创建时忽略 `is_pinned`（新建恒未固定，固定到首屏走更新接口）。
 
 #### 更新书签
 ```
@@ -150,9 +151,12 @@ Content-Type: application/json
   "url": "https://example.com",
   "description": "新描述",
   "category_id": 1,
-  "icon_url": "https://favicon.im/example.com"
+  "icon_url": "https://favicon.im/example.com",
+  "is_pinned": 1
 }
 ```
+
+**说明**：`is_pinned` 为固定到首屏标记（0/1 或布尔值），**缺省表示不修改**（编辑书签保留固定状态），显式传值才写入；转固定时服务端校验上限，已有 10 个固定时返回 400「最多固定 10 个书签」；取消固定不受上限影响。
 
 #### 删除书签
 ```
@@ -176,6 +180,7 @@ Content-Type: application/json
 **说明**：
 - 单次最多 500 条，URL 仅允许 http/https 协议
 - 批内与库内双重去重，重复书签自动跳过
+- 导入的书签默认未固定（即使携带 `is_pinned` 也不写入）
 - 返回 `{ "success": true, "count": 3, "skipped": 2 }`，count 为实际导入数量，skipped 为去重跳过数量
 
 ---

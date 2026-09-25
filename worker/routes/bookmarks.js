@@ -7,6 +7,8 @@ const MAX_BATCH_SIZE = 500;
 const CHUNK_SIZE = 50;
 // D1 单条语句 bind 参数上限为 100，留余量分块做 IN 查询
 const QUERY_CHUNK_SIZE = 90;
+// 首屏常用站点固定上限（与前端 src/utils/pinned.js 的 MAX_PINNED 保持一致）
+const MAX_PINNED = 10;
 
 // 供单元测试直接复用协议/字段校验逻辑
 export function validateBookmark(item) {
@@ -115,16 +117,36 @@ export async function item(request, env, params) {
         );
       }
 
+      // is_pinned 缺省表示不修改（编辑书签保留固定状态），显式传值才写入并归一为 0/1
+      const pinProvided = data.is_pinned !== undefined && data.is_pinned !== null;
+      const pinnedVal = data.is_pinned === true || data.is_pinned === 1 ? 1 : 0;
+
+      // 固定上限：转固定（is_pinned → 1）时校验；COUNT 排除自身，已固定的书签重复传 1 不算新增
+      if (pinProvided && pinnedVal === 1) {
+        const { n } = (await env.DB.prepare(
+          'SELECT COUNT(*) AS n FROM bookmarks WHERE is_pinned = 1 AND id != ?'
+        ).bind(id).first()) ?? { n: 0 };
+        if (n >= MAX_PINNED) {
+          return Response.json(
+            { error: `最多固定 ${MAX_PINNED} 个书签` },
+            { status: 400 }
+          );
+        }
+      }
+
       // 不更新 sort_order：编辑保留原排序
       await env.DB.prepare(
-        'UPDATE bookmarks SET title = ?, url = ?, description = ?, category_id = ?, icon_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        `UPDATE bookmarks SET title = ?, url = ?, description = ?, category_id = ?, icon_url = ?${pinProvided ? ', is_pinned = ?' : ''}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
       ).bind(
-        title.trim(),
-        url,
-        description || '',
-        category_id || null,
-        icon_url || '',
-        id
+        ...[
+          title.trim(),
+          url,
+          description || '',
+          category_id || null,
+          icon_url || '',
+          ...(pinProvided ? [pinnedVal] : []),
+          id
+        ]
       ).run();
 
       return Response.json({ success: true });

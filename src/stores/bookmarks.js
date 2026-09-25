@@ -36,6 +36,18 @@ export const useBookmarksStore = defineStore('bookmarks', {
       await this.fetchBookmarks()
     },
 
+    // 固定/取消固定到首屏：翻转 is_pinned 并携带完整字段（PUT 全量替换，缺字段会清空描述等）
+    async togglePin(bookmark) {
+      await this.updateBookmark(bookmark.id, {
+        title: bookmark.title,
+        url: bookmark.url,
+        description: bookmark.description,
+        category_id: bookmark.category_id,
+        icon_url: bookmark.icon_url,
+        is_pinned: bookmark.is_pinned ? 0 : 1
+      })
+    },
+
     // 删除书签
     async deleteBookmark(id) {
       await bookmarksApi.delete(id)

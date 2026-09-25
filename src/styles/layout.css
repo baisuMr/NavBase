@@ -395,7 +395,7 @@
   color: var(--color-primary);
 }
 
-/* 常用站点（排序前 5） */
+/* 常用站点（手动固定的书签，上限 10） */
 .hero-favorites {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -454,6 +454,26 @@
 
 .hero-fav-card:hover .hero-fav-name {
   color: var(--color-primary);
+}
+
+/* 常用站点空状态：一个都没固定时的轻量引导 */
+.hero-favorites-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-disabled);
+  font-size: var(--fs-label-sm);
+  user-select: none;
+}
+
+.hero-favorites-empty i {
+  font-size: var(--icon-size-md);
 }
 
 /* 滚动提示 */

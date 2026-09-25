@@ -20,6 +20,11 @@ export function isOptionalNonNegInt(v) {
   return v === undefined || v === null || (Number.isInteger(v) && v >= 0);
 }
 
+// 可选固定标记（is_pinned）：仅接受 0/1 或布尔值；undefined/null 视为缺省
+export function isOptionalPinFlag(v) {
+  return v === undefined || v === null || v === 0 || v === 1 || v === true || v === false;
+}
+
 // 书签载荷校验：返回错误消息，通过时返回 null
 export function validateBookmarkPayload(data) {
   if (!isNonEmptyString(data?.title)) return '标题不能为空';
@@ -39,6 +44,7 @@ export function validateBookmarkPayload(data) {
   }
   if (!isOptionalPositiveInt(data.category_id)) return '分类ID类型不正确';
   if (!isOptionalNonNegInt(data.sort_order)) return '排序字段类型不正确';
+  if (!isOptionalPinFlag(data.is_pinned)) return '固定标记类型不正确';
   return null;
 }
 

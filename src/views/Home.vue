@@ -121,7 +121,7 @@
             </div>
           </form>
 
-          <!-- 常用站点：排序前 5 -->
+          <!-- 常用站点：手动固定的书签（上限 10） -->
           <div v-if="favoriteBookmarks.length" class="hero-favorites">
             <a
               v-for="bm in favoriteBookmarks"
@@ -137,6 +137,12 @@
               </span>
               <span class="hero-fav-name">{{ bm.title }}</span>
             </a>
+          </div>
+
+          <!-- 空状态：一个都没固定时提示操作入口（库里没有书签时不提示） -->
+          <div v-else-if="bookmarks.length" class="hero-favorites-empty">
+            <i class="ri-pushpin-line"></i>
+            <span>右键书签卡片，可固定到首屏</span>
           </div>
         </div>
 
@@ -281,6 +287,7 @@ import { useFavicon } from '../composables/useFavicon'
 import { useDateInfo } from '../composables/useLunar'
 import { useSettingsStore } from '../stores/settings'
 import { CATEGORY_ICONS } from '../constants/categoryIcons'
+import { selectPinnedBookmarks } from '../utils/pinned'
 import pkg from '../../package.json'
 
 const settingsStore = useSettingsStore()
@@ -303,7 +310,7 @@ const presetColors = [
 const presetIcons = CATEGORY_ICONS
 
 // ── 组合式函数 ──
-const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, deleteBookmark } = useBookmarks()
+const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, togglePin, deleteBookmark } = useBookmarks()
 const { categories, fetchCategories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
 const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
@@ -496,12 +503,8 @@ function focusSearch() {
   searchInput.value?.select()
 }
 
-// ── 常用站点：按 sort_order 取前 5 ──
-const favoriteBookmarks = computed(() =>
-  [...bookmarks.value]
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .slice(0, 5)
-)
+// ── 常用站点：手动固定的书签（上限 10，宽屏一行 5 个最多两行） ──
+const favoriteBookmarks = computed(() => selectPinnedBookmarks(bookmarks.value))
 
 // ── 分类计数 ──
 const categoryCountMap = computed(() => {
@@ -555,6 +558,11 @@ function showBookmarkMenu(event, bookmark) {
   showContextMenu(event, [
     { icon: 'ri-edit-line', label: '编辑', action: 'edit-bookmark' },
     { icon: 'ri-file-copy-line', label: '复制链接', action: 'copy-link' },
+    {
+      icon: bookmark.is_pinned ? 'ri-unpin-line' : 'ri-pushpin-line',
+      label: bookmark.is_pinned ? '取消固定' : '固定到首屏',
+      action: 'toggle-pin'
+    },
     { divider: true },
     { icon: 'ri-delete-bin-line', label: '删除', action: 'delete-bookmark', danger: true }
   ], bookmark)
@@ -581,6 +589,14 @@ async function onMenuSelect(action) {
         success('链接已复制')
       } catch {
         showError('复制失败')
+      }
+      break
+    case 'toggle-pin':
+      try {
+        await togglePin(target)
+        success(target.is_pinned ? '已取消固定' : '已固定到首屏')
+      } catch (err) {
+        showError('操作失败: ' + err.message)
       }
       break
     case 'delete-bookmark':

@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   category_id INTEGER,
   icon_url TEXT DEFAULT '',
   sort_order INTEGER DEFAULT 0,
+  is_pinned INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL

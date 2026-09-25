@@ -11,6 +11,7 @@ export function useBookmarks() {
   const fetchBookmarks = () => store.fetchBookmarks()
   const createBookmark = (data) => store.createBookmark(data)
   const updateBookmark = (id, data) => store.updateBookmark(id, data)
+  const togglePin = (bookmark) => store.togglePin(bookmark)
   const deleteBookmark = (id) => store.deleteBookmark(id)
   const importBookmarks = (items) => store.importBookmarks(items)
 
@@ -21,6 +22,7 @@ export function useBookmarks() {
     fetchBookmarks,
     createBookmark,
     updateBookmark,
+    togglePin,
     deleteBookmark,
     importBookmarks
   }
