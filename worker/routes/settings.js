@@ -27,12 +27,19 @@ export async function handle(request, env) {
         return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
       }
 
+      // 先收集各键的 upsert 语句，再单次 batch 原子提交，避免多键写一半的半更新
+      const stmts = [];
       for (const key of ALLOWED_KEYS) {
         if (data[key] === undefined) continue;
-        await env.DB.prepare(
-          'INSERT INTO settings (key, value) VALUES (?, ?) ' +
-          'ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP'
-        ).bind(key, data[key]).run();
+        stmts.push(
+          env.DB.prepare(
+            'INSERT INTO settings (key, value) VALUES (?, ?) ' +
+            'ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP'
+          ).bind(key, data[key])
+        );
+      }
+      if (stmts.length > 0) {
+        await env.DB.batch(stmts);
       }
 
       return Response.json(await readSettings(env));
