@@ -153,11 +153,19 @@
         </a>
       </section>
 
+      <!-- 数据加载失败横幅：可见的失败态 + 重试入口（成功/加载中不显示） -->
+      <div v-if="loadError" class="load-error" role="alert">
+        <span>数据加载失败：{{ loadError }}</span>
+        <button type="button" class="btn btn-secondary btn-sm" @click="reload">重试</button>
+      </div>
+
       <!-- 第二屏：书签库 -->
       <BookmarkExplorer
         :bookmarks="bookmarks"
         :categories="explorerCategories"
         :active-cat="activeCategory"
+        :loading="bookmarksLoading"
+        :error="!!bookmarksError"
         @add-bookmark="showBookmarkForm()"
         @add-category="showCategoryForm()"
         @select-category="selectCategory"
@@ -310,8 +318,8 @@ const presetColors = [
 const presetIcons = CATEGORY_ICONS
 
 // ── 组合式函数 ──
-const { bookmarks, loading: bookmarksLoading, fetchBookmarks, createBookmark, updateBookmark, togglePin, deleteBookmark } = useBookmarks()
-const { categories, fetchCategories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
+const { bookmarks, loading: bookmarksLoading, error: bookmarksError, fetchBookmarks, createBookmark, updateBookmark, togglePin, deleteBookmark } = useBookmarks()
+const { categories, error: categoriesError, fetchCategories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
 const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
 const { toast, hideToast, success, error: showError } = useToast()
@@ -525,6 +533,14 @@ const explorerCategories = computed(() => {
     color: c.color
   }))
 })
+
+// ── 加载失败横幅：书签或分类任一拉取失败即显示（重试两个都重拉） ──
+const loadError = computed(() => bookmarksError.value || categoriesError.value)
+
+function reload() {
+  fetchBookmarks()
+  fetchCategories()
+}
 
 // ── 分类选择（tabs 位于第二屏，无需滚动） ──
 function selectCategory(id) {

@@ -1095,6 +1095,23 @@
   color: var(--color-text-muted);
 }
 
+/* ── 数据加载失败横幅（hero 与书签库之间） ── */
+.load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  width: var(--content-width);
+  max-width: var(--content-max-width);
+  margin: var(--space-lg) auto 0;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-error-soft);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body-sm);
+  color: var(--color-error);
+}
+
 /* ── 加载状态 ── */
 .loading-state {
   display: flex;

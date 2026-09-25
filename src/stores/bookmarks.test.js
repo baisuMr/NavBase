@@ -57,3 +57,31 @@ describe('bookmarks store togglePin', () => {
     })
   })
 })
+
+describe('bookmarks store fetchBookmarks 失败路径', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    bookmarksApi.getAll.mockResolvedValue([])
+  })
+
+  it('加载失败时写入 error 且不覆盖已有数据', async () => {
+    bookmarksApi.getAll.mockRejectedValue(new Error('网络错误'))
+    const store = useBookmarksStore()
+    store.bookmarks = [{ id: 1 }]
+    await store.fetchBookmarks()
+    expect(store.error).toBe('网络错误')
+    expect(store.bookmarks).toHaveLength(1) // 失败不清空旧数据
+    expect(store.loading).toBe(false)
+  })
+
+  it('失败后再次拉取成功时清除 error 并更新数据', async () => {
+    bookmarksApi.getAll.mockRejectedValue(new Error('网络错误'))
+    const store = useBookmarksStore()
+    await store.fetchBookmarks()
+    bookmarksApi.getAll.mockResolvedValue([{ id: 2 }])
+    await store.fetchBookmarks()
+    expect(store.error).toBeNull()
+    expect(store.bookmarks).toHaveLength(1)
+  })
+})
