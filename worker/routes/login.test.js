@@ -1,6 +1,9 @@
 // 登录端点单测：凭据校验、token 与过期时间、fail-closed
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { handle } from './login.js'
+
+// 假时钟用例兜底还原，防止泄漏到其它用例
+afterEach(() => vi.useRealTimers())
 
 const ENV = {
   ADMIN_USERNAME: 'admin',
@@ -42,7 +45,14 @@ describe('POST /api/auth/login', () => {
   })
 
   it('错误凭据返回 401', async () => {
-    const res = await handle(makeRequest({ username: 'admin', password: 'wrong' }), ENV)
+    // 假时钟跳过真实 800ms 防爆破等待；先等 digest 完成、定时器挂上假时钟再推钟
+    vi.useFakeTimers()
+    const p = handle(makeRequest({ username: 'admin', password: 'wrong' }), ENV)
+    for (let i = 0; i < 50 && vi.getTimerCount() === 0; i++) {
+      await vi.advanceTimersByTimeAsync(0)
+    }
+    await vi.advanceTimersByTimeAsync(801)
+    const res = await p
     expect(res.status).toBe(401)
   })
 
