@@ -24,7 +24,7 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 ## 开发流程
 
 - **分支约定**：`main` 即线上（Cloudflare Workers Builds 仅监听 `main`，推送即自动构建部署）；日常开发在 `dev` 分支提交、推送（自动构建 dev 预览供人工验证，不影响生产），验证通过后合并 `dev` → `main` 上线；紧急修复可直推 `main`，之后把 `main` 合回 `dev` 保持同步
-- **合并上线门禁**：合并 `dev` → `main` 前跑全量测试；改过 `schema.sql` 时先对生产库执行对应迁移（加列类迁移对旧代码无害，须在新代码上线前完成），用法见 `migrations/` 脚本头部注释。构建命令内含全量测试（`pnpm test && pnpm run build`），测试不过不会部署
+- **合并上线门禁**：合并 `dev` → `main` 前跑全量测试；改过 `schema.sql` 时先对生产与预览库执行对应迁移（加列类迁移对旧代码无害，须在新代码上线前完成；当前待执行：`migrations/2026-09-26-unique-bookmark-url.sql`），用法见 `migrations/` 脚本头部注释。部署配置需含测试门禁：Build command 应设为 `pnpm test && pnpm run build`（控制台 Settings → Build 配置；未配置则测试不阻断部署）
 - **分支预览**：推送非生产分支会自动构建 Preview（稳定 URL `https://<分支名>-navbase.<账号子域>.workers.dev`，每个分支/PR 各有独立预览，dev 分支的预览即测试环境），配置在 `wrangler.toml` [previews] 块（独立预览 D1 库，不复用生产设置）。预览凭据一次配置持久生效：`wrangler preview base-config secret put`（新建预览自动继承）+ `wrangler preview secret put --name dev`（补设已存在的预览，Base 配置不回溯）；勿用控制台「Runtime variables and secrets」配预览凭据（部署级设置，下次构建即丢失）
 
 ## 项目架构

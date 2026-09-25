@@ -125,6 +125,8 @@ describe('GET /api/favicon/:domain', () => {
     await Promise.all(fixture.waitUntilQueue)
     const keys = [...cacheStore.keys()]
     expect(keys).toHaveLength(1)
+    // 缓存键须带 v2 版本前缀：升级响应头策略（类型强制/nosniff）时靠换键作废旧缓存
+    expect(keys[0]).toBe('https://favicon-cache.local/v2/example.com')
     expect(cacheStore.get(keys[0]).status).toBe(404)
   })
 
@@ -339,7 +341,7 @@ describe('GET /api/favicon/:domain', () => {
 
   it('缓存命中时不发起上游请求', async () => {
     const cached = imageResponse(PNG_HEAD)
-    const key = new Request('https://favicon-cache.local/example.com')
+    const key = new Request('https://favicon-cache.local/v2/example.com')
     cacheStore.set(key.url, cached)
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)

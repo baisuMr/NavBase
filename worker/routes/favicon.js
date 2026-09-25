@@ -258,7 +258,8 @@ export async function handle(request, env, params, ctx) {
 
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次
   const cache = caches.default;
-  const cacheKey = new Request(`https://favicon-cache.local/${domain}`);
+  // 键带版本号：响应头策略变更（类型强制/nosniff）时换版本即可让旧缓存条目整体失效
+  const cacheKey = new Request(`https://favicon-cache.local/v2/${domain}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 

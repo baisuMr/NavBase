@@ -100,6 +100,16 @@ git push
 
 - 未完成功能想在线验收：推送到非生产分支会自动构建 Preview，稳定 URL 为 `https://<分支名>-<Worker 名>.<账号子域>.workers.dev`，开 PR 还会把 URL 评论到 PR，满意后再合并
 - 合并上线前的检查清单：全量测试通过；若改过 `schema.sql`，先对生产库执行迁移（见 `migrations/` 脚本头部用法，加列类迁移对旧代码无害，务必先于新代码上线）
+
+  > ⚠️ **合并/部署前必做——执行 `migrations/2026-09-26-unique-bookmark-url.sql`**（bookmarks.url 唯一索引换建，幂等可重复执行；命令以迁移文件头注释为准）：对**生产库**与**预览库**各执行一次：
+  >
+  > ```bash
+  > # 生产库
+  > wrangler d1 execute navbase-db --remote --file=migrations/2026-09-26-unique-bookmark-url.sql
+  > # 预览库（等价写法：wrangler d1 execute navbase-db --preview --remote --file=...，见 wrangler.toml 注释）
+  > wrangler d1 execute navbase-db-preview --remote --file=migrations/2026-09-26-unique-bookmark-url.sql
+  > ```
+
 - 预览构建使用 `wrangler.toml` 的 `[previews]` 独立配置（变量与绑定不复用生产设置）：自己部署时请把 `previews.d1_databases.database_id` 换成你自己的预览库（`wrangler d1 create <名称>` 获取）；预览登录凭据一次配置后持久生效——`wrangler preview base-config secret put ADMIN_PASSWORD`（之后新建的预览自动继承）+ `wrangler preview secret put ADMIN_PASSWORD --name dev`（补设已存在的预览，Base 配置不回溯）；勿在控制台「Runtime variables and secrets」里配预览凭据（部署级设置，下次构建即丢失）
 - 紧急修复线上问题：可在 `main` 直接修复并推送上线，之后执行 `git checkout dev && git merge main` 把修复同步回 `dev`
 
