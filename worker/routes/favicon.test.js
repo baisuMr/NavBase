@@ -93,6 +93,28 @@ describe('GET /api/favicon/:domain', () => {
     expect(res.status).toBe(404)
   })
 
+  it('上游声明 text/html 但内容是 GIF 时，响应 Content-Type 强制为 image/gif 并带 nosniff', async () => {
+    const gifBytes = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00]
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(gifBytes, 'text/html')
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/gif')
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
+  it('魔数命中 RIFF 时强制为 image/webp（不透传上游类型）', async () => {
+    const riffBytes = [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(riffBytes, 'text/plain')
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.headers.get('Content-Type')).toBe('image/webp')
+  })
+
   it('全部源失败返回 404，并写入负面缓存', async () => {
     stubFetch({})
     const fixture = makeFixture('example.com')
@@ -168,7 +190,8 @@ describe('GET /api/favicon/:domain', () => {
     })
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
-    expect(res.headers.get('Content-Type')).toBe('image/x-icon')
+    // 类型由魔数决定（PNG 字节 → image/png），与上游声明无关
+    expect(res.headers.get('Content-Type')).toBe('image/png')
   })
 
   it('超过大小上限的响应被拒绝', async () => {

@@ -12,21 +12,21 @@ const MAX_HTML_BYTES = 256 * 1024; // 首页 HTML 只读前 256KB（图标声明
 
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
-// 图片魔数白名单：不信任上游 content-type，按字节头确认是图片
+// 图片魔数 → MIME 映射：不信任上游 content-type，输出类型只由字节头决定
 const IMAGE_MAGIC = [
-  [0x89, 0x50, 0x4e, 0x47], // PNG
-  [0x47, 0x49, 0x46], // GIF
-  [0xff, 0xd8, 0xff], // JPEG
-  [0x42, 0x4d], // BMP
-  [0x00, 0x00, 0x01, 0x00], // ICO
-  [0x52, 0x49, 0x46, 0x46] // RIFF（WebP 容器头）
+  { sig: [0x89, 0x50, 0x4e, 0x47], mime: 'image/png' },
+  { sig: [0x47, 0x49, 0x46], mime: 'image/gif' },
+  { sig: [0xff, 0xd8, 0xff], mime: 'image/jpeg' },
+  { sig: [0x42, 0x4d], mime: 'image/bmp' },
+  { sig: [0x00, 0x00, 0x01, 0x00], mime: 'image/x-icon' },
+  { sig: [0x52, 0x49, 0x46, 0x46], mime: 'image/webp' }
 ];
 
-// 仅接受位图魔数；SVG 一律拒收（不看 content-type、不做文本探测）：
-// 用户直接访问本 URL 时恶意 SVG 会在站点源下执行脚本，favicon 场景 PNG/ICO 已足够
-function looksLikeImage(buffer) {
+// 按魔数返回强制 MIME；不在白名单（含 SVG）返回 null 一律拒收
+function mimeFromMagic(buffer) {
   const head = new Uint8Array(buffer, 0, Math.min(12, buffer.byteLength));
-  return IMAGE_MAGIC.some(sig => sig.every((byte, i) => head[i] === byte));
+  const hit = IMAGE_MAGIC.find(({ sig }) => sig.every((byte, i) => head[i] === byte));
+  return hit ? hit.mime : null;
 }
 
 /**
@@ -137,9 +137,9 @@ async function probeHtmlIcon(domain, signal) {
       if (!res.ok) continue;
       const buffer = await res.arrayBuffer();
       if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) continue;
-      const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
-      if (!looksLikeImage(buffer)) continue;
-      return { buffer, contentType: ct || 'image/x-icon', source: iconUrl };
+      const mime = mimeFromMagic(buffer);
+      if (!mime) continue;
+      return { buffer, contentType: mime, source: iconUrl };
     } catch {
       continue;
     }
@@ -153,9 +153,9 @@ async function probeUrl(url, signal) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buffer = await res.arrayBuffer();
   if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) throw new Error('图片大小越界');
-  const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
-  if (!looksLikeImage(buffer)) throw new Error('响应不是图片');
-  return { buffer, contentType: ct || 'image/x-icon', source: url };
+  const mime = mimeFromMagic(buffer);
+  if (!mime) throw new Error('响应不是图片');
+  return { buffer, contentType: mime, source: url };
 }
 
 // 并发竞速：所有源同时启动，第一个成功即 abort 其余在途请求（省出站请求与配额）
@@ -218,6 +218,8 @@ export async function handle(request, env, params, ctx) {
     const response = new Response(result.buffer, {
       headers: {
         'Content-Type': result.contentType,
+        // 禁止浏览器嗅探类型：即使被恶意构造也让类型严格等于魔数推断值
+        'X-Content-Type-Options': 'nosniff',
         'Cache-Control': `public, max-age=${CACHE_TTL}`,
         'X-Favicon-Source': result.source
       }
