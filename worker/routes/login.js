@@ -2,6 +2,13 @@
 import { secureCompare } from '../auth.js';
 import { utf8ToBase64 } from '../utils/base64.js';
 
+// 解析登录时长环境变量：非法（NaN）或非正数时回退默认，
+// 避免 expiresAt 变成 null/NaN 被前端误判为已过期、登录后立刻被踢回登录页
+function resolveDurationDays(raw, fallback) {
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 export async function handle(request, env) {
   // 只允许 POST 请求
   if (request.method !== 'POST') {
@@ -41,8 +48,8 @@ export async function handle(request, env) {
       // 勾选记住设备 → REMEMBER_DURATION_DAYS（默认30天）；否则 LOGIN_DURATION_DAYS（默认7天）
       const rememberMe = remember === true;
       const durationDays = rememberMe
-        ? parseInt(env.REMEMBER_DURATION_DAYS || '30', 10)
-        : parseInt(env.LOGIN_DURATION_DAYS || '7', 10);
+        ? resolveDurationDays(env.REMEMBER_DURATION_DAYS, 30)
+        : resolveDurationDays(env.LOGIN_DURATION_DAYS, 7);
       const expiresIn = durationDays * 24 * 60 * 60 * 1000;
       const expiresAt = Date.now() + expiresIn;
 
