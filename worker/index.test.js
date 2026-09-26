@@ -2,6 +2,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import worker from './index.js'
 import { createMockDB } from './utils/mock-d1.js'
+import { expectedToken } from './utils/token.js'
+import { deriveFaviconKey } from './utils/faviconKey.js'
 
 const basic = (u, p) => 'Basic ' + btoa(`${u}:${p}`)
 const AUTH = { Authorization: basic('admin', 's3cret') }
@@ -66,9 +68,18 @@ describe('Worker 入口路由', () => {
     expect(res.status).toBe(200)
   })
 
-  it('favicon 免认证：非法域名返回 400 而非 401', async () => {
+  it('favicon 端点在认证门放行：持证请求非法域名返回 400 而非 401', async () => {
     const env = makeEnv()
-    const res = await worker.fetch(req('/api/favicon/localhost'), env, {})
+    // 携带合法 k（favicon 处理器校验）与 Sec-Fetch 头（Task 7 校验）：
+    // 到达 400 域名校验即证明请求穿过了认证门（门上被拦会是 401）
+    const k = await deriveFaviconKey(expectedToken(env))
+    const res = await worker.fetch(
+      req(`/api/favicon/localhost?k=${encodeURIComponent(k)}`, {
+        headers: { 'Sec-Fetch-Dest': 'image', 'Sec-Fetch-Site': 'same-origin' }
+      }),
+      env,
+      {}
+    )
     expect(res.status).toBe(400)
   })
 
