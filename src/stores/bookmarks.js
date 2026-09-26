@@ -48,7 +48,6 @@ export const useBookmarksStore = defineStore('bookmarks', {
         url: bookmark.url,
         description: bookmark.description,
         category_id: bookmark.category_id,
-        icon_url: bookmark.icon_url,
         is_pinned: bookmark.is_pinned ? 0 : 1
       })
     },

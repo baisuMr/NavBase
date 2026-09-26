@@ -44,7 +44,7 @@ describe('bookmarks store togglePin', () => {
     expect(bookmarksApi.update).toHaveBeenCalledWith(3, expect.objectContaining({ is_pinned: 0 }))
   })
 
-  it('提交载荷携带完整书签字段（PUT 全量替换，缺字段会清空描述等）', async () => {
+  it('提交载荷不再携带 icon_url（弃用式收编，PUT 其余字段完整）', async () => {
     const store = useBookmarksStore()
     await store.togglePin({ ...PINNABLE, description: 'd', icon_url: 'https://i.png' })
     expect(bookmarksApi.update).toHaveBeenCalledWith(3, {
@@ -52,7 +52,6 @@ describe('bookmarks store togglePin', () => {
       url: 'https://a.com',
       description: 'd',
       category_id: 1,
-      icon_url: 'https://i.png',
       is_pinned: 1
     })
   })

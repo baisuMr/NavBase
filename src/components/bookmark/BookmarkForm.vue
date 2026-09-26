@@ -69,6 +69,7 @@
 <script setup>
 import { reactive, ref, computed, watch } from 'vue'
 import { isAllowedUrl } from '../../utils/url'
+import { getFaviconKey } from '../../utils/faviconKey'
 
 const props = defineProps({
   bookmark: { type: Object, default: null },
@@ -82,8 +83,7 @@ const form = reactive({
   url: '',
   title: '',
   description: '',
-  category_id: null,
-  icon_url: ''
+  category_id: null
 })
 
 watch(() => props.bookmark, (val) => {
@@ -92,20 +92,21 @@ watch(() => props.bookmark, (val) => {
       url: val.url || '',
       title: val.title || '',
       description: val.description || '',
-      category_id: val.category_id || null,
-      icon_url: val.icon_url || ''
+      category_id: val.category_id || null
     })
   }
 }, { immediate: true })
 
-// 图标预览：icon_url 已有（编辑）优先，否则走 /api/favicon 图片代理；
-// 探测在保存后的渲染阶段由代理统一完成，表单期不做网络请求
+// 图标预览：走 /api/favicon 图片代理（带持证参数 k），与列表渲染同一管线；
+// 探测在保存后的渲染阶段由代理统一完成，表单期不做额外网络请求
 const iconPreviewFailed = ref(false)
 const iconPreview = computed(() => {
   if (!isAllowedUrl(form.url)) return ''
+  const k = getFaviconKey()
+  if (!k) return ''
   try {
     const { hostname } = new URL(form.url)
-    return form.icon_url || `/api/favicon/${hostname.replace(/^www\./, '')}`
+    return `/api/favicon/${hostname.replace(/^www\./, '')}?k=${encodeURIComponent(k)}`
   } catch {
     return ''
   }
