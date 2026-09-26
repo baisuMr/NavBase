@@ -117,6 +117,7 @@
               :href="bm.url"
               target="_blank"
               rel="noopener noreferrer"
+              @contextmenu.prevent="showBookmarkMenu($event, bm)"
             >
               <span class="hero-fav-icon">
                 <img v-if="iconSrc(bm)" :src="iconSrc(bm)" :alt="bm.title" loading="lazy" @error="onIconError(bm)" />
@@ -177,6 +178,7 @@
           <span>{{ categories.length }} 个分类 · {{ bookmarks.length }} 个书签</span>
         </div>
         <div class="app-footer-links">
+          <a href="https://github.com/baisuMr/NavBase" target="_blank" rel="noopener noreferrer">GitHub</a>
           <button type="button" @click="settingsModal.visible = true">导入与导出</button>
           <button type="button" @click="shortcutModal.visible = true">键盘快捷键</button>
           <span class="app-footer-version">v{{ appVersion }}</span>

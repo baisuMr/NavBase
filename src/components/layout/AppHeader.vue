@@ -7,6 +7,17 @@
       </RouterLink>
 
       <div class="app-header-actions">
+        <a
+          class="app-header-btn"
+          href="https://github.com/baisuMr/NavBase"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <i class="ri-github-fill"></i>
+        </a>
+
         <button
           type="button"
           class="app-header-btn"

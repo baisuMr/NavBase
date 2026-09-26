@@ -14,8 +14,8 @@
       <span class="bookmark-card-title">{{ bookmark.title }}</span>
       <span class="bookmark-card-domain">{{ domain }}</span>
     </span>
-    <span class="bookmark-card-arrow">
-      <i class="ri-external-link-line"></i>
+    <span class="bookmark-card-arrow" :class="{ 'bookmark-card-arrow-pinned': bookmark.is_pinned }">
+      <i :class="bookmark.is_pinned ? 'ri-star-fill' : 'ri-external-link-line'"></i>
     </span>
   </a>
 </template>

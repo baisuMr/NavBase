@@ -90,6 +90,15 @@
         <span class="form-label">账号</span>
         <div class="settings-row settings-account">
           <span class="settings-username">{{ username }}</span>
+          <a
+            class="btn btn-secondary btn-sm"
+            href="https://github.com/baisuMr/NavBase"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="ri-github-fill" style="font-size:var(--icon-size-sm);"></i>
+            <span>GitHub</span>
+          </a>
           <button type="button" class="btn btn-danger btn-sm" @click="handleLogout">
             <i class="ri-logout-box-r-line" style="font-size:var(--icon-size-sm);"></i>
             <span>退出登录</span>

@@ -730,6 +730,11 @@
   transition: all var(--t-fast);
 }
 
+/* 已固定书签：星标常显主色亮色，作为「已固定」标记 */
+.bookmark-card-arrow-pinned {
+  color: var(--color-primary);
+}
+
 .bookmark-card:hover .bookmark-card-arrow {
   color: var(--color-primary);
   transform: translate(2px, -2px);
@@ -788,13 +793,15 @@
   gap: var(--space-lg);
 }
 
-.app-footer-links button {
+.app-footer-links button,
+.app-footer-links a {
   font-size: var(--fs-body-sm);
   color: var(--color-text-muted);
   transition: color var(--t-fast);
 }
 
-.app-footer-links button:hover {
+.app-footer-links button:hover,
+.app-footer-links a:hover {
   color: var(--color-primary);
 }
 
