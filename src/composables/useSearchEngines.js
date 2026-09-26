@@ -1,4 +1,5 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { isAllowedUrl } from '../utils/url'
 
 /**
  * 多搜索引擎定义与跳转
@@ -11,15 +12,15 @@ export const SEARCH_ENGINES = [
 ]
 
 export function useSearchEngines() {
+  // 单一真相源只存 id，currentEngine 由 id 派生，避免双份手工同步
   const currentEngineId = ref(SEARCH_ENGINES[0].id)
-
-  const currentEngine = ref(SEARCH_ENGINES[0])
+  const currentEngine = computed(
+    () => SEARCH_ENGINES.find(e => e.id === currentEngineId.value) || SEARCH_ENGINES[0]
+  )
 
   function setEngine(id) {
-    const engine = SEARCH_ENGINES.find(e => e.id === id)
-    if (engine) {
+    if (SEARCH_ENGINES.some(e => e.id === id)) {
       currentEngineId.value = id
-      currentEngine.value = engine
     }
   }
 
@@ -33,8 +34,8 @@ export function useSearchEngines() {
     const val = (query || '').trim()
     if (!val) return null
 
-    // 完整 URL
-    if (/^https?:\/\//i.test(val)) {
+    // 完整 URL（协议口径与书签白名单共用 isAllowedUrl）
+    if (isAllowedUrl(val)) {
       return { type: 'url', target: val }
     }
 
@@ -47,23 +48,11 @@ export function useSearchEngines() {
     return { type: 'search', target: currentEngine.value.url + encodeURIComponent(val) }
   }
 
-  /**
-   * 触发外部跳转（浏览器新窗口）
-   */
-  function execute(query) {
-    const result = resolveAndOpen(query)
-    if (result) {
-      window.open(result.target, '_blank', 'noopener,noreferrer')
-    }
-    return result
-  }
-
   return {
     engines: SEARCH_ENGINES,
     currentEngineId,
     currentEngine,
     setEngine,
-    resolveAndOpen,
-    execute
+    resolveAndOpen
   }
 }

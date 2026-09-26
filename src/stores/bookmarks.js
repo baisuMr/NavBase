@@ -59,9 +59,10 @@ export const useBookmarksStore = defineStore('bookmarks', {
     },
 
     // 批量导入书签，返回 { count, skipped }（skipped 为重复跳过数）
-    async importBookmarks(items) {
+    // refresh=false 供分块导入循环调用（全部提交完由调用方统一 fetchBookmarks）
+    async importBookmarks(items, refresh = true) {
       const data = await bookmarksApi.importMany(items)
-      await this.fetchBookmarks()
+      if (refresh) await this.fetchBookmarks()
       return { count: data.count, skipped: data.skipped || 0 }
     }
   }

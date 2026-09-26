@@ -14,23 +14,12 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: '',
     username: '',
-    expiresAt: 0,
-    isAuthenticated: false
+    expiresAt: 0
   }),
 
   getters: {
-    // 检查是否已过期
-    isExpired: (state) => {
-      if (!state.expiresAt) return true
-      return Date.now() > state.expiresAt
-    },
-
-    // 剩余天数
-    remainingDays: (state) => {
-      if (!state.expiresAt) return 0
-      const remaining = state.expiresAt - Date.now()
-      return Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)))
-    }
+    // 由 token 推导登录标记，避免与凭据双写不同步
+    isAuthenticated: (state) => !!state.token
   },
 
   actions: {
@@ -53,7 +42,6 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         this.username = storage.getItem(USERNAME_KEY) || ''
         this.expiresAt = expiresAt
-        this.isAuthenticated = true
         return true
       }
 
@@ -86,7 +74,6 @@ export const useAuthStore = defineStore('auth', {
         this.token = data.token
         this.username = data.username
         this.expiresAt = data.expiresAt
-        this.isAuthenticated = true
 
         // 派生 favicon 持证 URL 的 k（与登录态同步就绪）
         await initFaviconKey(data.token)
@@ -122,7 +109,6 @@ export const useAuthStore = defineStore('auth', {
       this.token = ''
       this.username = ''
       this.expiresAt = 0
-      this.isAuthenticated = false
 
       for (const storage of [localStorage, sessionStorage]) {
         storage.removeItem(TOKEN_KEY)

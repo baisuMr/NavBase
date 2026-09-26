@@ -29,21 +29,11 @@ export function useToast() {
     showToast(message, 'error')
   }
 
-  function warning(message) {
-    showToast(message, 'warning')
-  }
-
-  function info(message) {
-    showToast(message, 'info')
-  }
-
   return {
     toast,
     showToast,
     hideToast,
     success,
-    error,
-    warning,
-    info
+    error
   }
 }

@@ -118,6 +118,8 @@ GET /api/bookmarks
 ]
 ```
 
+（响应中的 `icon_url` 为兼容位，已弃用：前端不再读写，图标由 `/api/favicon` 代理统一探测。）
+
 #### 获取单个书签
 ```
 GET /api/bookmarks/:id
@@ -133,12 +135,11 @@ Content-Type: application/json
   "title": "书签标题",
   "url": "https://example.com",
   "description": "描述",
-  "category_id": 1,
-  "icon_url": "https://favicon.im/example.com"
+  "category_id": 1
 }
 ```
 
-**说明**：`sort_order` 由服务端管理（新建固定排最后），客户端传值无效；`category_id` 可缺省或为 `null`（未分类）；创建时忽略 `is_pinned`（新建恒未固定，固定到首屏走更新接口）。
+**说明**：`sort_order` 由服务端管理（新建固定排最后），客户端传值无效；`category_id` 可缺省或为 `null`（未分类）；创建时忽略 `is_pinned`（新建恒未固定，固定到首屏走更新接口）；`icon_url` 已弃用，无需传入（图标由 `/api/favicon` 代理统一探测）。
 
 #### 更新书签
 ```
@@ -151,7 +152,6 @@ Content-Type: application/json
   "url": "https://example.com",
   "description": "新描述",
   "category_id": 1,
-  "icon_url": "https://favicon.im/example.com",
   "is_pinned": 1
 }
 ```
@@ -172,7 +172,7 @@ Content-Type: application/json
 
 {
   "bookmarks": [
-    { "title": "书签标题", "url": "https://example.com", "description": "", "category_id": 1, "icon_url": "" }
+    { "title": "书签标题", "url": "https://example.com", "description": "", "category_id": 1 }
   ]
 }
 ```

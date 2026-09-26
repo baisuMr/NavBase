@@ -109,9 +109,9 @@ describe('折叠守卫：category_id 存在性', () => {
     // 拦截发生在插入前
     expect(redDb.calls.some(c => c.sql.includes('INTO bookmarks'))).toBe(false)
 
-    // 分类存在时正常导入（防止过度拦截）
+    // 分类存在时正常导入（防止过度拦截）；分类校验为一条 id IN 查询（all()）
     const okDb = createMockDB(({ sql, method }) => {
-      if (method === 'first' && sql.includes('FROM categories')) return { id: 999 }
+      if (method === 'all' && sql.includes('FROM categories')) return { results: [{ id: 999 }] }
       return baseMock({ sql, method })
     })
     const okRes = await batch(makeReq({

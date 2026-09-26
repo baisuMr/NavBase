@@ -11,24 +11,11 @@
       <!-- 第一屏：时钟 + 搜索 + 常用站点 -->
       <section id="startpage-hero" class="hero">
         <div class="hero-content">
-          <!-- 时钟 -->
-          <div class="hero-clock">
-            <span class="hero-clock-hm">{{ hhmm }}</span>
-            <span class="hero-clock-sec">:{{ ss }}</span>
-          </div>
-
-          <!-- 日期行 -->
-          <div class="hero-meta">
-            <span class="hero-meta-date">{{ gregorianText }}</span>
-            <span class="badge badge-primary">{{ weekdayText }}</span>
-            <span class="hero-meta-dot">•</span>
-            <span>{{ lunarText }}</span>
-            <span class="hero-meta-dot">•</span>
-            <span class="badge badge-mono">第 {{ weekOfYear }} 周</span>
-          </div>
+          <!-- 时钟 + 日期行（独立组件：秒级 tick 只重渲染该子树） -->
+          <HeroClock />
 
           <!-- 搜索 -->
-          <form class="hero-search" @submit.prevent="onSearchSubmit">
+          <form class="hero-search" @submit.prevent="submitSearch">
             <div class="hero-search-box">
               <div class="hero-search-engine-wrap">
                 <button
@@ -37,8 +24,8 @@
                   :aria-expanded="engineMenuOpen"
                   @click="toggleEngineMenu"
                 >
-                  <i class="hero-search-engine-logo" :class="currentEngineIcon"></i>
-                  <span>{{ currentEngineLabel }}</span>
+                  <i class="hero-search-engine-logo" :class="currentEngine.icon"></i>
+                  <span>{{ currentEngine.label }}</span>
                   <i class="ri-arrow-down-s-line"></i>
                 </button>
                 <div
@@ -112,11 +99,11 @@
               <div
                 class="hero-search-engine-hint"
                 :class="{ highlighted: highlightedIndex === internalResults.length }"
-                @click="onEngineSearchClick"
+                @click="submitSearch"
                 @mouseenter="highlightedIndex = internalResults.length"
               >
-                <template v-if="internalResults.length > 0">↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"</template>
-                <template v-else>无站内匹配，↵ 用 {{ currentEngineLabel }} 搜索 "{{ query }}"</template>
+                <template v-if="internalResults.length > 0">↵ 用 {{ currentEngine.label }} 搜索 "{{ query }}"</template>
+                <template v-else>无站内匹配，↵ 用 {{ currentEngine.label }} 搜索 "{{ query }}"</template>
               </div>
             </div>
           </form>
@@ -216,7 +203,7 @@
       <CategoryForm
         :category="categoryModal.data"
         :colors="presetColors"
-        :icons="presetIcons"
+        :icons="CATEGORY_ICONS"
         :loading="categoryModal.loading"
         @submit="handleCategorySubmit"
         @cancel="closeCategoryModal"
@@ -280,6 +267,7 @@ import BookmarkForm from '../components/bookmark/BookmarkForm.vue'
 import CategoryForm from '../components/category/CategoryForm.vue'
 import ConfirmModal from '../components/common/ConfirmModal.vue'
 import ContextMenu from '../components/common/ContextMenu.vue'
+import HeroClock from '../components/common/HeroClock.vue'
 import Modal from '../components/common/Modal.vue'
 import SettingsPanel from '../components/common/SettingsPanel.vue'
 import ShortcutHelp from '../components/common/ShortcutHelp.vue'
@@ -293,7 +281,6 @@ import { useKeyboard } from '../composables/useKeyboard'
 import { useToast } from '../composables/useToast'
 import { useSearchEngines } from '../composables/useSearchEngines'
 import { useFavicon } from '../composables/useFavicon'
-import { useDateInfo } from '../composables/useLunar'
 import { useSettingsStore } from '../stores/settings'
 import { CATEGORY_ICONS } from '../constants/categoryIcons'
 import { selectPinnedBookmarks } from '../utils/pinned'
@@ -316,17 +303,13 @@ const presetColors = [
   { name: '灰色', value: '#6B7280' }
 ]
 
-const presetIcons = CATEGORY_ICONS
-
-// ── 组合式函数 ──
 const { bookmarks, loading: bookmarksLoading, error: bookmarksError, fetchBookmarks, createBookmark, updateBookmark, togglePin, deleteBookmark } = useBookmarks()
 const { categories, error: categoriesError, fetchCategories, createCategory, updateCategory, deleteCategory, reorderCategories } = useCategories()
 const { username } = useAuth()
 const { contextMenu, showContextMenu, hideContextMenu, handleMenuSelect } = useContextMenu()
 const { toast, hideToast, success, error: showError } = useToast()
-const { engines, currentEngineId, setEngine, resolveAndOpen } = useSearchEngines()
+const { engines, currentEngineId, currentEngine, setEngine, resolveAndOpen } = useSearchEngines()
 const { iconSrc, onIconError, iconInitial } = useFavicon()
-const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
 
 // ── 本地状态 ──
 const activeCategory = ref('all')
@@ -337,28 +320,6 @@ const settingsModal = ref({ visible: false })
 const shortcutModal = ref({ visible: false })
 const confirmModal = ref({ visible: false, title: '', message: '', loading: false, onConfirm: null })
 
-// ── 时钟（每秒刷新；农历每分钟异步刷新） ──
-const now = ref(new Date())
-let clockTimer = null
-let lunarTimer = null
-
-const hhmm = computed(() => {
-  const h = String(now.value.getHours()).padStart(2, '0')
-  const m = String(now.value.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
-})
-
-const ss = computed(() => String(now.value.getSeconds()).padStart(2, '0'))
-const gregorianText = computed(() => getGregorianText(now.value))
-const weekdayText = computed(() => getWeekdayText(now.value))
-const weekOfYear = computed(() => getWeekOfYear(now.value))
-// 农历依赖较大，动态加载后异步填充
-const lunarText = ref('')
-
-async function refreshLunar() {
-  lunarText.value = await getLunarText(now.value)
-}
-
 // ── 搜索 ──
 const searchInput = ref(null)
 const query = ref('')
@@ -366,10 +327,6 @@ const hasFocus = ref(false)
 const engineMenuOpen = ref(false)
 // 下拉高亮索引：-1 表示未激活（仅按过 ↑/↓ 后才高亮，回车跳转选中项）
 const highlightedIndex = ref(-1)
-
-const currentEngineLabel = computed(() => engines.find(e => e.id === currentEngineId.value)?.label || '')
-const currentEngineIcon = computed(() => engines.find(e => e.id === currentEngineId.value)?.icon || '')
-const currentEngineHome = computed(() => engines.find(e => e.id === currentEngineId.value)?.home || '')
 
 // 站内匹配：标题 / URL
 const internalResults = computed(() => {
@@ -431,22 +388,13 @@ function submitSearch() {
   const result = resolveAndOpen(query.value)
   if (!result) {
     // 空输入回车：跳转当前搜索引擎主页
-    window.open(currentEngineHome.value, '_blank', 'noopener,noreferrer')
+    window.open(currentEngine.value.home, '_blank', 'noopener,noreferrer')
     hasFocus.value = false
     return
   }
   window.open(result.target, '_blank', 'noopener,noreferrer')
   query.value = ''
   hasFocus.value = false
-}
-
-function onSearchSubmit() {
-  submitSearch()
-}
-
-// 点击下拉中的搜索项：等价于回车搜索
-function onEngineSearchClick() {
-  submitSearch()
 }
 
 /**
@@ -722,17 +670,11 @@ async function handleBookmarkSubmit(formData) {
 
 // ── 生命周期 ──
 onMounted(async () => {
-  refreshLunar()
-  clockTimer = setInterval(() => { now.value = new Date() }, 1000)
-  // 农历一天才变一次，每分钟刷新足够
-  lunarTimer = setInterval(refreshLunar, 60000)
   document.addEventListener('click', onDocumentClick)
   await Promise.all([fetchBookmarks(), fetchCategories(), settingsStore.fetchSettings()])
 })
 
 onUnmounted(() => {
-  if (clockTimer) clearInterval(clockTimer)
-  if (lunarTimer) clearInterval(lunarTimer)
   document.removeEventListener('click', onDocumentClick)
 })
 </script>

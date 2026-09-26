@@ -14,7 +14,7 @@ const props = defineProps({
   type: {
     type: String,
     default: 'success',
-    validator: (value) => ['success', 'error', 'warning', 'info'].includes(value)
+    validator: (value) => ['success', 'error'].includes(value)
   },
   duration: { type: Number, default: 2400 },
   // 触发序号（来自 useToast）：同文案连续触发时 message 不变，靠 seq 变化重置计时

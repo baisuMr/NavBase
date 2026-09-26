@@ -3,7 +3,7 @@
     <div class="app-header-inner">
       <!-- 文字 logo：品牌字体渲染站点名称（缺字回退正文字体）；RouterLink 走 SPA 导航避免整页刷新 -->
       <RouterLink to="/" class="app-header-brand">
-        <span class="app-header-name">{{ siteName }}</span>
+        <span class="app-header-name">{{ settings.displayName }}</span>
       </RouterLink>
 
       <div class="app-header-actions">
@@ -29,7 +29,7 @@
 
         <!-- 头像仅作展示，退出登录在设置面板中 -->
         <div class="app-header-avatar" :title="username">
-          <img v-if="avatar" :src="avatar" alt="头像" />
+          <img v-if="settings.avatar" :src="settings.avatar" alt="头像" />
           <template v-else>{{ usernameInitial }}</template>
         </div>
       </div>
@@ -52,7 +52,5 @@ const props = defineProps({
 defineEmits(['open-settings', 'open-shortcuts'])
 
 const settings = useSettingsStore()
-const siteName = computed(() => settings.displayName)
-const avatar = computed(() => settings.avatar)
 const usernameInitial = computed(() => (props.username || 'N').charAt(0).toUpperCase())
 </script>

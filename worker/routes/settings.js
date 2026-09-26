@@ -1,6 +1,7 @@
 // GET /api/settings 读取站点设置、PUT /api/settings 部分更新
 // KV 存储于 D1 settings 表；认证由 auth.js 认证门统一保护
 import { validateSettingsPayload } from '../utils/validate.js';
+import { errorResponse } from '../utils/http.js';
 
 // 允许写入的键白名单，防止任意 KV 写入
 const ALLOWED_KEYS = ['site_name', 'avatar'];
@@ -24,7 +25,7 @@ export async function handle(request, env) {
       const data = await request.json();
       const err = validateSettingsPayload(data);
       if (err) {
-        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
+        return errorResponse(err, 'VALIDATION_ERROR', 400);
       }
 
       // 先收集各键的 upsert 语句，再单次 batch 原子提交，避免多键写一半的半更新
@@ -45,9 +46,9 @@ export async function handle(request, env) {
       return Response.json(await readSettings(env));
     }
 
-    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   } catch (error) {
     console.error('Settings error:', error);
-    return Response.json({ error: '服务器错误', code: 'INTERNAL_ERROR' }, { status: 500 });
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }

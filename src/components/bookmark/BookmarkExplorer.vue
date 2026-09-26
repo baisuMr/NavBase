@@ -10,7 +10,7 @@
           @click="$emit('select-category', 'all')"
         >
           <span>全部</span>
-          <span class="category-tab-count">{{ totalCount }}</span>
+          <span class="category-tab-count">{{ bookmarks.length }}</span>
         </button>
         <button
           v-for="cat in categories"
@@ -154,8 +154,6 @@ onBeforeUnmount(() => {
   sortable?.destroy()
   sortable = null
 })
-
-const totalCount = computed(() => props.bookmarks.length)
 
 const uncategorizedCount = computed(() => props.bookmarks.filter(b => !b.category_id).length)
 

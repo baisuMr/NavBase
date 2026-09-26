@@ -23,7 +23,7 @@
 <script setup>
 import { computed } from 'vue'
 
-import { useFavicon } from '../../composables/useFavicon'
+import { useFavicon, domainOf } from '../../composables/useFavicon'
 
 const props = defineProps({
   bookmark: {
@@ -36,11 +36,6 @@ defineEmits(['menu'])
 
 const { iconSrc, onIconError, iconInitial } = useFavicon()
 
-const domain = computed(() => {
-  try {
-    return new URL(props.bookmark.url).hostname.replace(/^www\./, '')
-  } catch {
-    return props.bookmark.url
-  }
-})
+// 域名展示：解析失败回退原始 url
+const domain = computed(() => domainOf(props.bookmark.url) || props.bookmark.url)
 </script>

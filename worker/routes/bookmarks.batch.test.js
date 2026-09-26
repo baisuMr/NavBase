@@ -1,7 +1,8 @@
 // 批量导入校验逻辑单测：协议白名单与字段类型、去重下推唯一索引语义
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { validateBookmark, batch, collection, item } from './bookmarks.js'
+import { validateBookmarkPayload } from '../utils/validate.js'
+import { batch, collection, item } from './bookmarks.js'
 import { createMockDB } from '../utils/mock-d1.js'
 import schemaSql from '../../schema.sql'
 
@@ -28,7 +29,7 @@ describe('validateBookmark 协议白名单', () => {
   ]
   for (const [url, label] of blocked) {
     it(`拦截 ${label}`, () => {
-      expect(validateBookmark({ title: 't', url })).toMatch(/仅支持|格式不正确/)
+      expect(validateBookmarkPayload({ title: 't', url })).toMatch(/仅支持|格式不正确/)
     })
   }
 
@@ -39,34 +40,34 @@ describe('validateBookmark 协议白名单', () => {
   ]
   for (const [url, label] of allowed) {
     it(`放行 ${label}`, () => {
-      expect(validateBookmark({ title: 't', url })).toBeNull()
+      expect(validateBookmarkPayload({ title: 't', url })).toBeNull()
     })
   }
 })
 
 describe('validateBookmark 字段校验', () => {
   it('缺失字段返回错误', () => {
-    expect(validateBookmark(null)).toBeTruthy()
-    expect(validateBookmark({})).toBeTruthy()
-    expect(validateBookmark({ title: 't' })).toBeTruthy()
-    expect(validateBookmark({ url: 'https://a.com' })).toBeTruthy()
+    expect(validateBookmarkPayload(null)).toBeTruthy()
+    expect(validateBookmarkPayload({})).toBeTruthy()
+    expect(validateBookmarkPayload({ title: 't' })).toBeTruthy()
+    expect(validateBookmarkPayload({ url: 'https://a.com' })).toBeTruthy()
   })
 
   it('纯空白标题被拒绝', () => {
-    expect(validateBookmark({ title: '   ', url: 'https://a.com' })).toBeTruthy()
+    expect(validateBookmarkPayload({ title: '   ', url: 'https://a.com' })).toBeTruthy()
   })
 
   it('非字符串标题被拒绝', () => {
-    expect(validateBookmark({ title: 123, url: 'https://a.com' })).toBeTruthy()
+    expect(validateBookmarkPayload({ title: 123, url: 'https://a.com' })).toBeTruthy()
   })
 
   it('非法类型 category_id / sort_order 返回错误而非 500', () => {
-    expect(validateBookmark({ title: 't', url: 'https://a.com', category_id: 'abc' })).toMatch(/分类ID/)
-    expect(validateBookmark({ title: 't', url: 'https://a.com', sort_order: { a: 1 } })).toMatch(/排序/)
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', category_id: 'abc' })).toMatch(/分类ID/)
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', sort_order: { a: 1 } })).toMatch(/排序/)
   })
 
   it('合法类型通过', () => {
-    expect(validateBookmark({
+    expect(validateBookmarkPayload({
       title: 't',
       url: 'https://a.com',
       description: 'd',

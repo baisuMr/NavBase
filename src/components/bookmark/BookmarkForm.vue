@@ -69,7 +69,7 @@
 <script setup>
 import { reactive, ref, computed, watch } from 'vue'
 import { isAllowedUrl } from '../../utils/url'
-import { getFaviconKey } from '../../utils/faviconKey'
+import { faviconSrc } from '../../composables/useFavicon'
 
 const props = defineProps({
   bookmark: { type: Object, default: null },
@@ -102,14 +102,7 @@ watch(() => props.bookmark, (val) => {
 const iconPreviewFailed = ref(false)
 const iconPreview = computed(() => {
   if (!isAllowedUrl(form.url)) return ''
-  const k = getFaviconKey()
-  if (!k) return ''
-  try {
-    const { hostname } = new URL(form.url)
-    return `/api/favicon/${hostname.replace(/^www\./, '')}?k=${encodeURIComponent(k)}`
-  } catch {
-    return ''
-  }
+  return faviconSrc(form.url)
 })
 
 // 协议级错误提示：原生 type="url" 不校验协议，javascript: 等可提交到后端，前端先拦

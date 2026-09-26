@@ -1,5 +1,6 @@
 import { isValidFaviconKey } from '../utils/faviconKey.js';
 import { acceptImageType } from '../utils/imageType.js';
+import { errorResponse, notConfiguredError } from '../utils/http.js';
 
 // GET /api/favicon/:domain - 代理并缓存网站图标
 // <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行、由处理器自验 ?k= 持证（详见 auth.js）；
@@ -70,33 +71,9 @@ function abortPromise(signal) {
   });
 }
 
-// 流式读取响应体的前 maxBytes 字节并解码为文本（提前取消剩余流，避免超大页面整页读入）
-async function readHtmlPrefix(res, maxBytes, signal) {
-  const reader = res.body.getReader();
-  const chunks = [];
-  let received = 0;
-  try {
-    while (received < maxBytes) {
-      const { done, value } = await Promise.race([reader.read(), abortPromise(signal)]);
-      if (done) break;
-      chunks.push(value);
-      received += value.byteLength;
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-  }
-  const all = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    all.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(all);
-}
-
-// 流式读取图片体，超过 maxBytes 立即取消（与 readHtmlPrefix 同思路：
-// 不等整个响应下载完才检查，防止恶意源慢慢滴流拖住内存）
-async function readImageBytes(res, maxBytes, signal) {
+// 流式读取响应体的前 maxBytes 字节（提前取消剩余流，不等整个响应下载完，
+// 防止恶意源慢慢滴流拖住内存）；返回已读字节的 Uint8Array，长度可能略超 maxBytes（最后一块整块计入）
+async function readBytes(res, maxBytes, signal) {
   const reader = res.body.getReader();
   const chunks = [];
   let received = 0;
@@ -110,13 +87,19 @@ async function readImageBytes(res, maxBytes, signal) {
   } finally {
     await reader.cancel().catch(() => {});
   }
-  if (received === 0 || received > maxBytes) throw new Error('图片大小越界');
   const all = new Uint8Array(received);
   let offset = 0;
   for (const chunk of chunks) {
     all.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return all;
+}
+
+// 流式读取图片体，超过 maxBytes 拒收（大小校验内聚在此，调用方只管定型）
+async function readImageBytes(res, maxBytes, signal) {
+  const all = await readBytes(res, maxBytes, signal);
+  if (all.byteLength === 0 || all.byteLength > maxBytes) throw new Error('图片大小越界');
   return all.buffer;
 }
 
@@ -154,7 +137,7 @@ async function probeHtmlIcon(domain, signal) {
   if (!page.ok) throw new Error(`首页 HTTP ${page.status}`);
   const contentType = (page.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   if (contentType && !contentType.includes('html')) throw new Error('首页不是 HTML');
-  const html = await readHtmlPrefix(page, MAX_HTML_BYTES, signal);
+  const html = new TextDecoder().decode(await readBytes(page, MAX_HTML_BYTES, signal));
 
   const candidates = parseIconLinks(html).sort(candidateCompare).slice(0, MAX_HTML_CANDIDATES);
   for (const link of candidates) {
@@ -165,14 +148,8 @@ async function probeHtmlIcon(domain, signal) {
       continue;
     }
     try {
-      const res = await fetchWithRedirects(iconUrl, { signal, timeout: SOURCE_TIMEOUT, headers: { 'User-Agent': BROWSER_UA } });
-      if (!res.ok) continue;
-      // 大小校验内聚在 readImageBytes：流式读取，超限立即断开
-      const buffer = await readImageBytes(res, MAX_ICON_BYTES, signal);
-      // 内容定型 + SVG 危险检测：任一不过按无效源跳过（可疑整份拒绝，不净化复用）
-      const mime = acceptImageType(buffer);
-      if (!mime) continue;
-      return { buffer, contentType: mime, source: iconUrl };
+      // 与直链源同一探测管线（fetch → 大小校验 → 内容定型），候选失败换下一个
+      return await probeUrl(iconUrl, signal);
     } catch {
       continue;
     }
@@ -242,15 +219,12 @@ export async function handle(request, env, params, ctx) {
   const domain = String(params.domain || '').toLowerCase();
 
   if (request.method !== 'GET') {
-    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405, headers: SECURITY_HEADERS });
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405, SECURITY_HEADERS);
   }
 
   // 持证校验：k 由登录凭据派生（详见 src/utils/faviconKey.js），未持证不进入任何探测
   if (!env.ADMIN_PASSWORD) {
-    return Response.json(
-      { error: '服务器未配置 ADMIN_PASSWORD', code: 'NOT_CONFIGURED' },
-      { status: 500, headers: SECURITY_HEADERS }
-    );
+    return notConfiguredError(SECURITY_HEADERS);
   }
   // 来源校验（fail-closed）：只接受页面内 <img> 请求。
   // Sec-Fetch-* 是 Fetch 规范 forbidden header，网页脚本无法伪造；
@@ -258,23 +232,17 @@ export async function handle(request, env, params, ctx) {
   const dest = request.headers.get('Sec-Fetch-Dest');
   const site = request.headers.get('Sec-Fetch-Site');
   if (dest !== 'image' || site !== 'same-origin') {
-    return Response.json(
-      { error: '仅允许页面内图片请求', code: 'FORBIDDEN_CONTEXT' },
-      { status: 403, headers: SECURITY_HEADERS }
-    );
+    return errorResponse('仅允许页面内图片请求', 'FORBIDDEN_CONTEXT', 403, SECURITY_HEADERS);
   }
 
   const k = new URL(request.url).searchParams.get('k');
   if (!(await isValidFaviconKey(k, env))) {
-    return Response.json(
-      { error: '未授权访问', code: 'UNAUTHORIZED' },
-      { status: 401, headers: SECURITY_HEADERS }
-    );
+    return errorResponse('未授权访问', 'UNAUTHORIZED', 401, SECURITY_HEADERS);
   }
 
   // 域名格式校验：只放行合法 hostname，杜绝把路径/凭据拼进上游 URL（SSRF）
   if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain)) {
-    return Response.json({ error: '域名格式不合法', code: 'VALIDATION_ERROR' }, { status: 400, headers: SECURITY_HEADERS });
+    return errorResponse('域名格式不合法', 'VALIDATION_ERROR', 400, SECURITY_HEADERS);
   }
 
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次

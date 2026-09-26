@@ -2,6 +2,7 @@
 // 集合 GET/POST、详情 GET/PUT/DELETE、批量导入 POST /api/bookmarks/batch
 // 字面量 batch 路由先于 :id 匹配（见 index.js 路由表顺序），与历史 Pages Functions 优先级一致
 import { validateBookmarkPayload } from '../utils/validate.js';
+import { errorResponse } from '../utils/http.js';
 
 const MAX_BATCH_SIZE = 500;
 const CHUNK_SIZE = 50;
@@ -10,9 +11,25 @@ const QUERY_CHUNK_SIZE = 90;
 // 首屏常用站点固定上限（与前端 src/utils/pinned.js 的 MAX_PINNED 保持一致）
 const MAX_PINNED = 10;
 
-// 供单元测试直接复用协议/字段校验逻辑
-export function validateBookmark(item) {
-  return validateBookmarkPayload(item);
+// 分类存在性校验：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400 Response；
+// 通过返回 null。缺省/null id 由调用方先行跳过（0 等非法类型已被字段校验拦下）
+async function ensureCategory(env, categoryId) {
+  const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(categoryId).first();
+  return cat ? null : errorResponse('分类不存在', 'CATEGORY_NOT_FOUND', 400);
+}
+
+// 唯一索引冲突（单条新增/编辑撞重复 url）转 400，避免兜底成 500
+function isDuplicateUrlError(error) {
+  return /UNIQUE constraint failed: bookmarks\.url/i.test(String(error?.message || ''));
+}
+
+// 写路径统一 catch：重复 url 400，其余 500
+function writeErrorResponse(error, logLabel) {
+  if (isDuplicateUrlError(error)) {
+    return errorResponse('书签链接已存在', 'VALIDATION_ERROR', 400);
+  }
+  console.error(logLabel, error);
+  return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
 }
 
 // GET /api/bookmarks - 获取所有书签
@@ -36,16 +53,13 @@ export async function collection(request, env) {
       const data = await request.json();
       const err = validateBookmarkPayload(data);
       if (err) {
-        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
+        return errorResponse(err, 'VALIDATION_ERROR', 400);
       }
       const { title, url, description, category_id, icon_url } = data;
 
-      // 分类存在性校验：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400；缺省/0/null 视为未分类合法
       if (category_id) {
-        const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(category_id).first();
-        if (!cat) {
-          return Response.json({ error: '分类不存在', code: 'CATEGORY_NOT_FOUND' }, { status: 400 });
-        }
+        const catErr = await ensureCategory(env, category_id);
+        if (catErr) return catErr;
       }
 
       // sort_order 取 MAX+1：新书签固定排最后，忽略传入值
@@ -65,23 +79,9 @@ export async function collection(request, env) {
       );
     }
 
-    return Response.json(
-      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
-      { status: 405 }
-    );
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   } catch (error) {
-    // 唯一索引兜底：撞重复 url 返回 400 而非 500
-    if (isDuplicateUrlError(error)) {
-      return Response.json(
-        { error: '书签链接已存在', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
-    }
-    console.error('Bookmarks API error:', error);
-    return Response.json(
-      { error: '服务器错误', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+    return writeErrorResponse(error, 'Bookmarks API error:');
   }
 }
 
@@ -102,10 +102,7 @@ export async function item(request, env, params) {
       `).bind(id).first();
 
       if (!result) {
-        return Response.json(
-          { error: '书签不存在', code: 'NOT_FOUND' },
-          { status: 404 }
-        );
+        return errorResponse('书签不存在', 'NOT_FOUND', 404);
       }
 
       return Response.json(result);
@@ -116,7 +113,7 @@ export async function item(request, env, params) {
       const data = await request.json();
       const err = validateBookmarkPayload(data);
       if (err) {
-        return Response.json({ error: err, code: 'VALIDATION_ERROR' }, { status: 400 });
+        return errorResponse(err, 'VALIDATION_ERROR', 400);
       }
       const { title, url, description, category_id, icon_url } = data;
 
@@ -126,18 +123,12 @@ export async function item(request, env, params) {
       ).bind(id).first();
 
       if (!existing) {
-        return Response.json(
-          { error: '书签不存在', code: 'NOT_FOUND' },
-          { status: 404 }
-        );
+        return errorResponse('书签不存在', 'NOT_FOUND', 404);
       }
 
-      // 分类存在性校验：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400；缺省/0/null 视为未分类合法
       if (category_id) {
-        const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(category_id).first();
-        if (!cat) {
-          return Response.json({ error: '分类不存在', code: 'CATEGORY_NOT_FOUND' }, { status: 400 });
-        }
+        const catErr = await ensureCategory(env, category_id);
+        if (catErr) return catErr;
       }
 
       // is_pinned 缺省表示不修改（编辑书签保留固定状态），显式传值才写入并归一为 0/1
@@ -150,10 +141,7 @@ export async function item(request, env, params) {
           'SELECT COUNT(*) AS n FROM bookmarks WHERE is_pinned = 1 AND id != ?'
         ).bind(id).first()) ?? { n: 0 };
         if (n >= MAX_PINNED) {
-          return Response.json(
-            { error: `最多固定 ${MAX_PINNED} 个书签`, code: 'VALIDATION_ERROR' },
-            { status: 400 }
-          );
+          return errorResponse(`最多固定 ${MAX_PINNED} 个书签`, 'VALIDATION_ERROR', 400);
         }
       }
 
@@ -183,10 +171,7 @@ export async function item(request, env, params) {
       ).bind(id).first();
 
       if (!existing) {
-        return Response.json(
-          { error: '书签不存在', code: 'NOT_FOUND' },
-          { status: 404 }
-        );
+        return errorResponse('书签不存在', 'NOT_FOUND', 404);
       }
 
       await env.DB.prepare(
@@ -196,23 +181,9 @@ export async function item(request, env, params) {
       return Response.json({ success: true });
     }
 
-    return Response.json(
-      { error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' },
-      { status: 405 }
-    );
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   } catch (error) {
-    // 唯一索引兜底：编辑把 url 改成已存在的链接返回 400 而非 500
-    if (isDuplicateUrlError(error)) {
-      return Response.json(
-        { error: '书签链接已存在', code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      );
-    }
-    console.error('Bookmark API error:', error);
-    return Response.json(
-      { error: '服务器错误', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    );
+    return writeErrorResponse(error, 'Bookmark API error:');
   }
 }
 
@@ -229,28 +200,29 @@ async function dedupe(env, items) {
 
   const existing = new Set();
   const urls = batchUnique.map(i => i.url);
+  // 各分块互不依赖，并行发出后合并命中集
+  const slices = [];
   for (let i = 0; i < urls.length; i += QUERY_CHUNK_SIZE) {
-    const slice = urls.slice(i, i + QUERY_CHUNK_SIZE);
+    slices.push(urls.slice(i, i + QUERY_CHUNK_SIZE));
+  }
+  const queried = await Promise.all(slices.map(slice => {
     const placeholders = slice.map(() => '?').join(',');
-    const { results } = await env.DB.prepare(
+    return env.DB.prepare(
       `SELECT url FROM bookmarks WHERE url IN (${placeholders})`
     ).bind(...slice).all();
+  }));
+  for (const { results } of queried) {
     for (const row of results) existing.add(row.url);
   }
 
   return batchUnique.filter(i => !existing.has(i.url));
 }
 
-// 唯一索引冲突（单条新增/编辑撞重复 url）转 400，避免兜底成 500
-function isDuplicateUrlError(error) {
-  return /UNIQUE constraint failed: bookmarks\.url/i.test(String(error?.message || ''));
-}
-
 // POST /api/bookmarks/batch - 批量创建书签（用于导入）
 // 批内与库内双重去重 + 唯一索引兜底，避免重复导入产生冗余书签
 export async function batch(request, env) {
   if (request.method !== 'POST') {
-    return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405 });
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   }
 
   // JSON 解析失败单独捕获：请求体畸形属于客户端错误（400），与下方 catch 的服务端 500 兜底区分开
@@ -258,33 +230,37 @@ export async function batch(request, env) {
   try {
     data = await request.json();
   } catch {
-    return Response.json({ error: '请求体格式不正确', code: 'VALIDATION_ERROR' }, { status: 400 });
+    return errorResponse('请求体格式不正确', 'VALIDATION_ERROR', 400);
   }
 
   try {
     const items = Array.isArray(data?.bookmarks) ? data.bookmarks : [];
 
     if (items.length === 0) {
-      return Response.json({ error: 'bookmarks 不能为空', code: 'VALIDATION_ERROR' }, { status: 400 });
+      return errorResponse('bookmarks 不能为空', 'VALIDATION_ERROR', 400);
     }
     if (items.length > MAX_BATCH_SIZE) {
-      return Response.json({ error: `单次最多导入 ${MAX_BATCH_SIZE} 条`, code: 'VALIDATION_ERROR' }, { status: 400 });
+      return errorResponse(`单次最多导入 ${MAX_BATCH_SIZE} 条`, 'VALIDATION_ERROR', 400);
     }
 
     for (const item of items) {
-      const err = validateBookmark(item);
+      const err = validateBookmarkPayload(item);
       if (err) {
-        return Response.json({ error: `${err}: ${item?.url || ''}`, code: 'VALIDATION_ERROR' }, { status: 400 });
+        return errorResponse(`${err}: ${item?.url || ''}`, 'VALIDATION_ERROR', 400);
       }
     }
 
     // 分类存在性校验（对齐单条 POST/PUT）：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400
-    // 按去重后的 id 各查一次；缺省/null 视为未分类合法（0 等非法类型已被上一步 validateBookmark 拦下）
+    // 去重后的 id 合成一条 IN 查询；缺省/null 视为未分类合法（0 等非法类型已被字段校验拦下）
     const catIds = [...new Set(items.map(i => i.category_id).filter(id => id !== undefined && id !== null))];
-    for (const catId of catIds) {
-      const cat = await env.DB.prepare('SELECT id FROM categories WHERE id = ?').bind(catId).first();
-      if (!cat) {
-        return Response.json({ error: '分类不存在', code: 'CATEGORY_NOT_FOUND' }, { status: 400 });
+    if (catIds.length > 0) {
+      const placeholders = catIds.map(() => '?').join(',');
+      const { results } = await env.DB.prepare(
+        `SELECT id FROM categories WHERE id IN (${placeholders})`
+      ).bind(...catIds).all();
+      const found = new Set(results.map(r => r.id));
+      if (catIds.some(id => !found.has(id))) {
+        return errorResponse('分类不存在', 'CATEGORY_NOT_FOUND', 400);
       }
     }
 
@@ -325,6 +301,6 @@ export async function batch(request, env) {
     return Response.json({ success: true, count, skipped: items.length - count });
   } catch (error) {
     console.error('Batch import error:', error);
-    return Response.json({ error: '服务器错误', code: 'INTERNAL_ERROR' }, { status: 500 });
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }

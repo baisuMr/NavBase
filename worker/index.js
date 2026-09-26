@@ -1,6 +1,7 @@
 // NavBase Worker 入口：认证门 → 显式路由表 → ASSETS 兜底（SPA 回退由 assets 配置应用）
 import { authGate } from './auth.js';
 import { ensureSchema } from './schema-init.js';
+import { normalizePath, isApiPath } from './utils/path.js';
 import { handle as handleLogin } from './routes/login.js';
 import {
   collection as bookmarksCollection,
@@ -17,6 +18,7 @@ import { handle as handleFavicon } from './routes/favicon.js';
 
 // 路由表：顺序即优先级，字面量段先于 :param 段（batch/sort 不会与 :id 冲突）
 // 匹配对路径大小写不敏感（与历史 Pages Functions 路由行为对齐）；params 值保留原始大小写
+// skipSchema：不依赖 DB 的路由（favicon 自验 k 持证）跳过惰性建表
 const routes = [
   { pattern: '/api/auth/login', handler: handleLogin },
   { pattern: '/api/bookmarks', handler: bookmarksCollection },
@@ -26,23 +28,8 @@ const routes = [
   { pattern: '/api/categories/sort', handler: categoriesSort },
   { pattern: '/api/categories/:id', handler: categoriesItem },
   { pattern: '/api/settings', handler: handleSettings },
-  { pattern: '/api/favicon/:domain', handler: handleFavicon }
+  { pattern: '/api/favicon/:domain', handler: handleFavicon, skipSchema: true }
 ];
-
-// 归一化：解码百分号编码、合并连续斜杠、去末尾斜杠（保留大小写，param 值不受影响）
-function normalizePath(pathname) {
-  let path = pathname;
-  try {
-    path = decodeURIComponent(path);
-  } catch {
-    // 畸形编码路径按原值参与匹配
-  }
-  path = path.replace(/\/{2,}/g, '/');
-  if (path.length > 1 && path.endsWith('/')) {
-    path = path.slice(0, -1);
-  }
-  return path;
-}
 
 function matchRoute(pathname) {
   const segments = normalizePath(pathname).split('/').filter(Boolean);
@@ -61,7 +48,7 @@ function matchRoute(pathname) {
         break;
       }
     }
-    if (matched) return { handler: route.handler, params };
+    if (matched) return { route, params };
   }
   return null;
 }
@@ -76,7 +63,7 @@ export default {
     if (matched) {
       // favicon 在认证门放行、由处理器自验 k 持证与 Sec-Fetch 来源，且不依赖 DB，跳过初始化；
       // 其余 API 路由（含登录）首次请求惰性建表，保证一键部署出的空库开箱即用
-      if (matched.handler !== handleFavicon) {
+      if (!matched.route.skipSchema) {
         try {
           await ensureSchema(env);
         } catch (err) {
@@ -84,13 +71,13 @@ export default {
           return Response.json({ error: '数据库初始化失败', code: 'DB_INIT_FAILED' }, { status: 500 });
         }
       }
-      return matched.handler(request, env, matched.params, ctx);
+      return matched.route.handler(request, env, matched.params, ctx);
     }
 
     // API 路径未命中路由表：显式 404 JSON，避免落 SPA 回退返回 index.html
     // 前缀判断与认证门一致（归一化 + 小写化），大小写变体一并覆盖；其余路径保持 SPA 回退
     const normalized = normalizePath(new URL(request.url).pathname).toLowerCase();
-    if (normalized.startsWith('/api/')) {
+    if (isApiPath(normalized)) {
       return Response.json({ error: '接口不存在', code: 'NOT_FOUND' }, { status: 404 });
     }
 

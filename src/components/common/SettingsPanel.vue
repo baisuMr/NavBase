@@ -117,8 +117,8 @@ defineEmits(['close'])
 
 const router = useRouter()
 const settings = useSettingsStore()
-const { bookmarks, importBookmarks } = useBookmarks()
-const { categories, createCategory } = useCategories()
+const { bookmarks, importBookmarks, fetchBookmarks } = useBookmarks()
+const { categories, createCategory, fetchCategories } = useCategories()
 const { username, logout } = useAuth()
 const { success, error: showError } = useToast()
 
@@ -224,15 +224,16 @@ async function handleImportFile(event) {
       return
     }
 
-    // 创建缺失的分类（同名分类自动复用）
+    // 创建缺失的分类（同名分类自动复用）；循环内只 POST 不重拉，结束后统一拉一次
     const catIdByName = new Map(categories.value.map(c => [c.name, c.id]))
     let newCatCount = 0
     for (const cat of importCats) {
       if (catIdByName.has(cat.name)) continue
-      const id = await createCategory({ name: cat.name })
+      const id = await createCategory({ name: cat.name }, false)
       catIdByName.set(cat.name, id)
       newCatCount++
     }
+    if (newCatCount) await fetchCategories()
 
     const items = [
       ...roots,
@@ -241,24 +242,27 @@ async function handleImportFile(event) {
       )
     ]
 
-    // 按 500/批 分块顺序提交，避免超出服务端单批上限导致整批失败
+    // 按 500/批 分块顺序提交，避免超出服务端单批上限导致整批失败；
+    // 各块只入库不重拉，全部提交完统一拉一次书签列表
     const chunks = chunkArray(items, 500)
     let count = 0
     let skipped = 0
     let completedBatches = 0
     try {
       for (const chunk of chunks) {
-        const r = await importBookmarks(chunk)
+        const r = await importBookmarks(chunk, false)
         count += r.count
         skipped += r.skipped
         completedBatches++
       }
     } catch (err) {
+      await fetchBookmarks() // 已入库的前几批立即可见
       showError(
         `已导入前 ${completedBatches} 批，第 ${completedBatches + 1} 批失败: ` + err.message
       )
       return
     }
+    await fetchBookmarks()
 
     success(
       `已导入 ${count} 个书签` +

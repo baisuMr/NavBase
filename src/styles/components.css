@@ -314,14 +314,6 @@
   background-color: var(--color-error);
 }
 
-.toast.warning::before {
-  background-color: var(--color-warning);
-}
-
-.toast.info::before {
-  background-color: var(--color-primary);
-}
-
 .toast-enter-active,
 .toast-leave-active {
   transition: all var(--t-base);

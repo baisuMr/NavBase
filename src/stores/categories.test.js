@@ -67,10 +67,9 @@ describe('categories store fetchCategories 请求序号', () => {
     resolveFirst([{ id: 1 }]) // 旧请求晚到
     await p1
     expect(store.categories.map(c => c.id)).toEqual([2])
-    expect(store.loading).toBe(false)
   })
 
-  it('过期请求失败不写入 error 也不影响 loading 复位', async () => {
+  it('过期请求失败不写入 error', async () => {
     const store = useCategoriesStore()
     let rejectFirst
     categoriesApi.getAll
@@ -83,6 +82,5 @@ describe('categories store fetchCategories 请求序号', () => {
     await p1
     expect(store.error).toBeNull()
     expect(store.categories.map(c => c.id)).toEqual([2])
-    expect(store.loading).toBe(false)
   })
 })

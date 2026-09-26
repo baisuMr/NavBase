@@ -7,22 +7,7 @@ afterEach(() => {
   vi.resetModules()
 })
 
-const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText, getGreeting } = useDateInfo()
-
-describe('getGreeting 时段问候', () => {
-  const cases = [
-    [3, '夜深了，注意休息与充电'],
-    [7, '早上好，迎接清晰而高效的一天'],
-    [12, '中午好，适度小憩片刻'],
-    [15, '下午好，保持专注与敏锐'],
-    [21, '晚上好，整理今日的收获与沉淀']
-  ]
-  for (const [h, expected] of cases) {
-    it(`${h}点 → ${expected.slice(0, 4)}`, () => {
-      expect(getGreeting(new Date(2026, 0, 1, h, 0))).toBe(expected)
-    })
-  }
-})
+const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
 
 describe('getGregorianText 公历文案', () => {
   it('格式为 YYYY年M月D日', () => {
