@@ -93,6 +93,9 @@ describe('GET /api/favicon/:domain', () => {
     })
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
+    // 200 空体 = 拒收走 miss 路径；若 SVG 被当成功响应接受，body 非空必红
+    expect((await res.arrayBuffer()).byteLength).toBe(0)
+    expect(res.headers.get('X-Favicon-Source')).toBe(null)
   })
 
   it('上游声明 text/html 但内容是 GIF 时，响应 Content-Type 强制为 image/gif 并带 nosniff', async () => {
@@ -365,5 +368,9 @@ describe('GET /api/favicon/:domain', () => {
     const miss = await invoke(makeFixture('example.org'))
     expect(miss.headers.get('Content-Security-Policy')).toBe('sandbox')
     expect(miss.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    const bad = await invoke(makeFixture('evil.com/path'))
+    expect(bad.status).toBe(400)
+    expect(bad.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(bad.headers.get('X-Content-Type-Options')).toBe('nosniff')
   })
 })
