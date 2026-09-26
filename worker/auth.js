@@ -58,8 +58,8 @@ export async function authGate(request, env) {
     return null;
   }
 
-  // favicon 图片代理免认证：<img> 标签无法携带 Basic Auth 头，
-  // 且该端点仅返回公开网站图标（域名由调用方提供），不含任何用户数据
+  // favicon 图片代理在认证门放行（<img> 无法携带 Basic Auth 头），
+  // 但不再免认证：由 favicon 处理器自验 ?k= 持证与 Sec-Fetch 来源（见 routes/favicon.js）
   if (request.method === 'GET' && normalized.startsWith('/api/favicon/')) {
     return null;
   }

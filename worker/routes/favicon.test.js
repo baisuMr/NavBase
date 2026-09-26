@@ -1,5 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { setTimeout as realSetTimeout } from 'node:timers'
 import { handle, MAX_ICON_BYTES } from './favicon.js'
+import { expectedToken } from '../utils/token.js'
+import { deriveFaviconKey } from '../utils/faviconKey.js'
+
+const TEST_ENV = { ADMIN_PASSWORD: 'secret' }
+let TEST_K = ''
+
+beforeAll(async () => {
+  TEST_K = await deriveFaviconKey(expectedToken(TEST_ENV))
+})
 
 // 模拟 Cloudflare Cache API（node 环境没有 caches 全局，函数在调用期才访问它）
 const cacheStore = new Map()
@@ -16,17 +26,22 @@ function stubCaches() {
 const PNG_HEAD = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
 const ICO_HEAD = [0x00, 0x00, 0x01, 0x00, 0x01, 0x00]
 
-function makeFixture(domain, method = 'GET') {
+function makeFixture(domain, { method = 'GET', k = TEST_K, dest = 'image', site = 'same-origin' } = {}) {
   const waitUntil = []
+  const url = new URL(`https://site.example/api/favicon/${domain}`)
+  if (k !== null) url.searchParams.set('k', k)
+  const headers = {}
+  if (dest !== null) headers['Sec-Fetch-Dest'] = dest
+  if (site !== null) headers['Sec-Fetch-Site'] = site
   return {
-    request: new Request(`https://site.example/api/favicon/${domain}`, { method }),
+    request: new Request(url, { method, headers }),
     params: { domain },
     ctx: { waitUntil: promise => waitUntil.push(promise) },
     waitUntilQueue: waitUntil
   }
 }
 
-const invoke = (f) => handle(f.request, {}, f.params, f.ctx)
+const invoke = (f, env = TEST_ENV) => handle(f.request, env, f.params, f.ctx)
 
 function htmlResponse(html) {
   return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
@@ -65,6 +80,26 @@ beforeEach(() => {
 })
 
 describe('GET /api/favicon/:domain', () => {
+  it('k 缺失或错误返回 401 UNAUTHORIZED', async () => {
+    stubFetch({})
+    const noK = await invoke(makeFixture('example.com', { k: null }))
+    expect(noK.status).toBe(401)
+    expect((await noK.json()).code).toBe('UNAUTHORIZED')
+    expect(noK.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(noK.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    const badK = await invoke(makeFixture('example.com', { k: 'wrong' }))
+    expect(badK.status).toBe(401)
+  })
+
+  it('未配置 ADMIN_PASSWORD 返回 500 NOT_CONFIGURED', async () => {
+    stubFetch({})
+    const res = await invoke(makeFixture('example.com'), {})
+    expect(res.status).toBe(500)
+    expect((await res.json()).code).toBe('NOT_CONFIGURED')
+    expect(res.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
   it('域名格式不合法返回 400', async () => {
     stubFetch({})
     for (const bad of ['ev il.com', 'localhost', '192.168.1.1', 'evil.com/path', '..']) {
@@ -75,10 +110,10 @@ describe('GET /api/favicon/:domain', () => {
 
   it('非 GET 请求（含 OPTIONS）返回 405 METHOD_NOT_ALLOWED', async () => {
     stubFetch({})
-    const post = await invoke(makeFixture('example.com', 'POST'))
+    const post = await invoke(makeFixture('example.com', { method: 'POST' }))
     expect(post.status).toBe(405)
     expect(await post.json()).toEqual({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' })
-    expect((await invoke(makeFixture('example.com', 'OPTIONS'))).status).toBe(405)
+    expect((await invoke(makeFixture('example.com', { method: 'OPTIONS' }))).status).toBe(405)
   })
 
   it('SVG 一律拒收（防直接访问时在站点源下执行脚本）', async () => {
@@ -256,6 +291,10 @@ describe('GET /api/favicon/:domain', () => {
         )
       })
       const p = invoke(makeFixture('example.com'))
+      // k 校验含 crypto.subtle（真实事件循环异步），虚拟时间推进不等待它完成：
+      // 须先真实等待预算定时器入队（k 校验路径无 fake timer，getTimerCount 0→1 即预算定时器已创建），
+      // 否则定时器在推进完成后才创建、永不触发，handle 悬挂至测试超时
+      while (vi.getTimerCount() === 0) await new Promise(r => realSetTimeout(r, 1))
       await vi.advanceTimersByTimeAsync(5100)
       const res = await p
       expect(res.status).toBe(200)

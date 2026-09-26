@@ -1,5 +1,7 @@
+import { isValidFaviconKey } from '../utils/faviconKey.js';
+
 // GET /api/favicon/:domain - 代理并缓存网站图标
-// <img> 标签无法携带 Basic Auth 头，此端点在认证门中免认证放行；
+// <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行、由处理器自验 ?k= 持证（详见 auth.js）；
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
 const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 export const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件（导出供测试断言流式截断阈值）
@@ -258,6 +260,21 @@ export async function handle(request, env, params, ctx) {
     return Response.json({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' }, { status: 405, headers: SECURITY_HEADERS });
   }
 
+  // 持证校验：k 由登录凭据派生（详见 src/utils/faviconKey.js），未持证不进入任何探测
+  if (!env.ADMIN_PASSWORD) {
+    return Response.json(
+      { error: '服务器未配置 ADMIN_PASSWORD', code: 'NOT_CONFIGURED' },
+      { status: 500, headers: SECURITY_HEADERS }
+    );
+  }
+  const k = new URL(request.url).searchParams.get('k');
+  if (!(await isValidFaviconKey(k, env))) {
+    return Response.json(
+      { error: '未授权访问', code: 'UNAUTHORIZED' },
+      { status: 401, headers: SECURITY_HEADERS }
+    );
+  }
+
   // 域名格式校验：只放行合法 hostname，杜绝把路径/凭据拼进上游 URL（SSRF）
   if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain)) {
     return Response.json({ error: '域名格式不合法', code: 'VALIDATION_ERROR' }, { status: 400, headers: SECURITY_HEADERS });
@@ -282,7 +299,7 @@ export async function handle(request, env, params, ctx) {
     signal => probeUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`, signal)
   ];
 
-  // 总预算定时器：到点 abort 全部在途探测（含 body 流式读取），防止免认证端点被滴流拖住
+  // 总预算定时器：到点 abort 全部在途探测（含 body 流式读取），防止该端点被滴流拖住
   const budget = new AbortController();
   const budgetTimer = setTimeout(() => budget.abort(), TOTAL_BUDGET_MS);
   try {
