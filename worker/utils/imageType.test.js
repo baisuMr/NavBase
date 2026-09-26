@@ -73,6 +73,27 @@ describe('findSvgDanger 危险构造检测', () => {
   ])('%s → %s', (_n, input, expected) => {
     expect(findSvgDanger(input)).toBe(expected)
   })
+
+  // XML 字符引用 / 内嵌空白绕过：原始文本拆开关键字，XML 解析后即活动内容
+  it.each([
+    ['数字引用拆分 t（javascrip&#116;:）', 'javascrip&#116;:alert(1)', 'javascript-url'],
+    ['数字引用拆分首字母（&#106;avascript:）', '&#106;avascript:alert(1)', 'javascript-url'],
+    ['data URL 拆分（htm&#108;）', 'data:text/htm&#108;,x', 'data-html'],
+    ['data URL 斜杠数字引用（&#47;）', 'data:text&#47;html,x', 'data-html'],
+    ['数字引用制表符拆分 scheme', 'java&#9;script:alert(1)', 'javascript-url'],
+    ['原始制表符拆分 scheme', 'java\tscript:alert(1)', 'javascript-url'],
+    ['十六进制引用拆分首字母（&#x6a;avascript:）', '&#x6a;avascript:alert(1)', 'javascript-url']
+  ])('%s → %s', (_n, input, expected) => {
+    expect(findSvgDanger(input)).toBe(expected)
+  })
+
+  it('XSLT 处理指令 <?xml-stylesheet → xsl', () => {
+    expect(findSvgDanger('<?xml-stylesheet type="text/xsl" href="evil.xsl"?><svg></svg>')).toBe('xsl')
+  })
+
+  it('归一化仅用于检测：良性 SVG 含转义文本仍 null', () => {
+    expect(findSvgDanger('<svg xmlns="http://www.w3.org/2000/svg"><text>a &amp; b &lt;c&gt;</text></svg>')).toBeNull()
+  })
 })
 
 describe('acceptImageType 组合判定', () => {
