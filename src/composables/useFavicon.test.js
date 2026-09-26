@@ -1,30 +1,37 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useFavicon } from './useFavicon'
+import { initFaviconKey, clearFaviconKey } from '../utils/faviconKey'
 
 // 失败回退 TTL 与后端负面缓存 MISS_TTL（10 分钟）对齐
 const FAILED_TTL = 10 * 60 * 1000
+const TOKEN = 'YWRtaW46c2VjcmV0'
+const K = '8cpjAAtxx2rvatP2WcPbyZJvRIdWpIZ0OyT5SqVOmlU'
 
 function bookmark(overrides = {}) {
-  return { id: 1, title: 'Example', url: 'https://www.example.com/page', icon_url: '', ...overrides }
+  return { id: 1, title: 'Example', url: 'https://www.example.com/page', ...overrides }
 }
 
 describe('useFavicon 图标解析', () => {
-  it('icon_url 非空直接使用', () => {
+  it('一律走代理并携带 k（域名去 www）', async () => {
+    await initFaviconKey(TOKEN)
     const { iconSrc } = useFavicon()
-    expect(iconSrc(bookmark({ icon_url: 'https://cdn.x/i.png' }))).toBe('https://cdn.x/i.png')
+    expect(iconSrc(bookmark())).toBe(`/api/favicon/example.com?k=${K}`)
   })
 
-  it('icon_url 为空走代理（域名去 www）', () => {
+  it('k 未就绪返回空（渲染首字头像，不发无 k 请求）', () => {
+    clearFaviconKey()
     const { iconSrc } = useFavicon()
-    expect(iconSrc(bookmark())).toBe('/api/favicon/example.com')
+    expect(iconSrc(bookmark())).toBe('')
   })
 
-  it('URL 非法时返回空', () => {
+  it('URL 非法时返回空', async () => {
+    await initFaviconKey(TOKEN)
     const { iconSrc } = useFavicon()
     expect(iconSrc(bookmark({ url: 'not-a-url' }))).toBe('')
   })
 
-  it('加载失败后 TTL 内持续回退空（渲染首字头像）', () => {
+  it('加载失败后 TTL 内持续回退空（渲染首字头像）', async () => {
+    await initFaviconKey(TOKEN)
     const { iconSrc, onIconError } = useFavicon()
     const bm = bookmark()
     onIconError(bm)
@@ -33,31 +40,24 @@ describe('useFavicon 图标解析', () => {
     expect(iconSrc(bm)).toBe('')
   })
 
-  it('失败超过 TTL 后自动恢复重试', () => {
+  it('失败超过 TTL 后自动恢复重试', async () => {
+    await initFaviconKey(TOKEN)
     const { iconSrc, onIconError } = useFavicon()
     const bm = bookmark()
     onIconError(bm)
     expect(iconSrc(bm)).toBe('')
     vi.advanceTimersByTime(FAILED_TTL + 1)
-    expect(iconSrc(bm)).toBe('/api/favicon/example.com')
+    expect(iconSrc(bm)).toBe(`/api/favicon/example.com?k=${K}`)
   })
 
-  it('TTL 内即使编辑了 icon_url 也保持回退，过期后优先 icon_url', () => {
-    const { iconSrc, onIconError } = useFavicon()
-    const bm = bookmark({ icon_url: 'https://cdn.x/i.png' })
-    onIconError(bm)
-    expect(iconSrc(bm)).toBe('')
-    vi.advanceTimersByTime(FAILED_TTL + 1)
-    expect(iconSrc(bm)).toBe('https://cdn.x/i.png')
-  })
-
-  it('keyOf 无 id 时用 url 兜底，失败记录互不影响', () => {
+  it('keyOf 无 id 时用 url 兜底，失败记录互不影响', async () => {
+    await initFaviconKey(TOKEN)
     const { iconSrc, onIconError } = useFavicon()
     const a = bookmark({ id: 1, url: 'https://a.com' })
     const b = bookmark({ id: 2, url: 'https://b.com' })
     onIconError(a)
     expect(iconSrc(a)).toBe('')
-    expect(iconSrc(b)).toBe('/api/favicon/b.com')
+    expect(iconSrc(b)).toBe(`/api/favicon/b.com?k=${K}`)
   })
 
   it('iconInitial 取标题首字符（中文/emoji 兼容），无标题退域名首字符', () => {
@@ -71,6 +71,7 @@ describe('useFavicon 图标解析', () => {
 
 beforeEach(() => {
   vi.useFakeTimers()
+  clearFaviconKey()
 })
 
 afterEach(() => {
