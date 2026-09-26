@@ -74,8 +74,8 @@ export default {
 
     const matched = matchRoute(new URL(request.url).pathname);
     if (matched) {
-      // favicon 是免认证高频接口且不依赖 DB，跳过初始化；其余 API 路由（含登录）
-      // 首次请求惰性建表，保证一键部署出的空库开箱即用
+      // favicon 在认证门放行、由处理器自验 k 持证与 Sec-Fetch 来源，且不依赖 DB，跳过初始化；
+      // 其余 API 路由（含登录）首次请求惰性建表，保证一键部署出的空库开箱即用
       if (matched.handler !== handleFavicon) {
         try {
           await ensureSchema(env);

@@ -192,9 +192,9 @@ Content-Type: application/json
 GET /api/favicon/:domain?k=<key>
 ```
 
-**鉴权（持证 URL）**：`<img>` 无法携带 Basic Auth 头，故本端点以 `?k=` 参数鉴权——`k = base64url(sha256("navbase-favicon:v1\n" + token))`，`token` 为登录接口下发的 Basic 凭据；改管理员密码后旧 k 全部失效。缺失或错误的 k 返回 `401 UNAUTHORIZED`；未配置 `ADMIN_PASSWORD` 返回 `500 NOT_CONFIGURED`。
+**来源校验（先于鉴权）**：仅接受页面内图片请求（`Sec-Fetch-Dest: image` 且 `Sec-Fetch-Site: same-origin`，fail-closed），其余（地址栏直接打开、iframe 嵌入、curl 等）返回 `403 FORBIDDEN_CONTEXT`。
 
-**来源校验**：仅接受页面内图片请求（`Sec-Fetch-Dest: image` 且 `Sec-Fetch-Site: same-origin`，fail-closed），其余（地址栏直接打开、iframe 嵌入、curl 等）返回 `403 FORBIDDEN_CONTEXT`。
+**鉴权（持证 URL，后于来源校验）**：`<img>` 无法携带 Basic Auth 头，故本端点以 `?k=` 参数鉴权——`k = base64url(sha256("navbase-favicon:v1\n" + token))`，`token` 为登录接口下发的 Basic 凭据；改管理员密码后旧 k 全部失效。在来源校验通过后，缺失或错误的 k 返回 `401 UNAUTHORIZED`；未配置 `ADMIN_PASSWORD` 返回 `500 NOT_CONFIGURED`（最先校验）。
 
 **响应**：成功返回 `200` + 图片字节（`Cache-Control: public, max-age=604800`，响应头 `X-Favicon-Source` 标明命中的源）；全部源失败返回 `200` + 空 body（`Content-Type: image/png`，缓存 10 分钟）——**不使用 404**，避免浏览器对失败子资源打印控制台错误。所有响应带 `Content-Security-Policy: sandbox` 与 `X-Content-Type-Options: nosniff`。
 
@@ -205,7 +205,7 @@ GET /api/favicon/:domain?k=<key>
   3. favicon.im
   4. DuckDuckGo
   5. Google Favicon（Cloudflare 边缘可达性最好）
-- 响应经内容定型（PNG/GIF/JPEG/BMP/ICO/WebP 魔数 + SVG 文本嗅探），错误页等非图片内容视为失败；单图上限 512KB。**支持 SVG 图标**，但含危险构造（`<script>`、`on*=` 事件属性、`<foreignobject>`、`javascript:`、`data:text/html`、DOCTYPE/ENTITY）的 SVG 整份拒绝、跳到下一源；UTF-16 编码的 SVG 同样拒绝
+- 响应经内容定型（PNG/GIF/JPEG/BMP/ICO/WebP 魔数 + SVG 文本嗅探），错误页等非图片内容视为失败；单图上限 512KB。**支持 SVG 图标**，但含危险构造（`<script>`、`on*=` 事件属性、`<foreignobject>`、`javascript:`、`data:text/html`、DOCTYPE/ENTITY、`<?xml-stylesheet`）的 SVG 整份拒绝、跳到下一源（检测前先解码 XML 字符引用并去除 scheme 内嵌空白，防 `javascrip&#116;:` 类绕过）；UTF-16 编码的 SVG 同样拒绝
 - 结果经 Cache API 缓存：成功 7 天，失败 10 分钟
 - 域名格式校验：仅接受合法 hostname，防止拼接路径/内网地址（SSRF）；重定向最多跟随 3 跳，且每跳目标同样必须是合法域名（杜绝跳转到内网 IP/localhost）
 
@@ -302,6 +302,7 @@ Content-Type: application/json
 | `INVALID_CREDENTIALS` | 用户名或密码错误 |
 | `AUTH_ERROR` | 认证过程异常（凭据无法解析或比较失败） |
 | `VALIDATION_ERROR` | 请求参数或请求体校验失败 |
+| `FORBIDDEN_CONTEXT` | 请求来源上下文不被允许（403，仅允许页面内图片请求） |
 | `NOT_FOUND` | 资源或接口不存在 |
 | `METHOD_NOT_ALLOWED` | 请求方法不支持 |
 | `DB_INIT_FAILED` | 数据库初始化失败 |
@@ -313,6 +314,7 @@ Content-Type: application/json
 - `201` - 创建成功
 - `400` - 请求参数错误
 - `401` - 未认证
+- `403` - 来源上下文被拒（仅允许页面内图片请求）
 - `404` - 资源不存在
 - `405` - 方法不允许
 - `500` - 服务器错误
