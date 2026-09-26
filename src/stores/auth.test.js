@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './auth'
-import { getFaviconKey } from '../utils/faviconKey'
+import { getFaviconKey, clearFaviconKey } from '../utils/faviconKey'
 
 const TOKEN = 'YWRtaW46c2VjcmV0'
 const K = '8cpjAAtxx2rvatP2WcPbyZJvRIdWpIZ0OyT5SqVOmlU'
@@ -156,6 +156,7 @@ describe('auth store 与 faviconKey 接线', () => {
     setActivePinia(createPinia())
     localStorage.clear()
     sessionStorage.clear()
+    clearFaviconKey()
   })
 
   it('登录成功后派生 k', async () => {
