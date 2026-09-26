@@ -53,8 +53,8 @@ describe('useFavicon 图标解析', () => {
   it('keyOf 无 id 时用 url 兜底，失败记录互不影响', async () => {
     await initFaviconKey(TOKEN)
     const { iconSrc, onIconError } = useFavicon()
-    const a = bookmark({ id: 1, url: 'https://a.com' })
-    const b = bookmark({ id: 2, url: 'https://b.com' })
+    const a = bookmark({ id: undefined, url: 'https://a.com' })
+    const b = bookmark({ id: undefined, url: 'https://b.com' })
     onIconError(a)
     expect(iconSrc(a)).toBe('')
     expect(iconSrc(b)).toBe(`/api/favicon/b.com?k=${K}`)
