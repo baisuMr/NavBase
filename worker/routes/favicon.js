@@ -11,6 +11,13 @@ const MAX_REDIRECTS = 3; // 手动跟随重定向上限
 const MAX_HTML_CANDIDATES = 3; // HTML 图标声明最多尝试的候选数
 const MAX_HTML_BYTES = 256 * 1024; // 首页 HTML 只读前 256KB（图标声明集中在 head 区）
 
+// 所有 favicon 响应统一带安全头（响应进缓存后一并生效）：
+// CSP sandbox 让响应即使被以文档方式打开也不透明源、脚本禁行；nosniff 防类型嗅探
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Content-Security-Policy': 'sandbox'
+};
+
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 // 图片魔数 → MIME 映射：不信任上游 content-type，输出类型只由字节头决定
@@ -259,7 +266,7 @@ export async function handle(request, env, params, ctx) {
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次
   const cache = caches.default;
   // 键带版本号：响应头策略变更（类型强制/nosniff）时换版本即可让旧缓存条目整体失效
-  const cacheKey = new Request(`https://favicon-cache.local/v2/${domain}`);
+  const cacheKey = new Request(`https://favicon-cache.local/v3/${domain}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
@@ -282,9 +289,8 @@ export async function handle(request, env, params, ctx) {
     const result = await raceProbes(factories, budget.signal);
     const response = new Response(result.buffer, {
       headers: {
+        ...SECURITY_HEADERS,
         'Content-Type': result.contentType,
-        // 禁止浏览器嗅探类型：即使被恶意构造也让类型严格等于魔数推断值
-        'X-Content-Type-Options': 'nosniff',
         'Cache-Control': `public, max-age=${CACHE_TTL}`,
         'X-Favicon-Source': result.source
       }
@@ -292,10 +298,16 @@ export async function handle(request, env, params, ctx) {
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch {
-    // 全部源失败（含总预算耗尽）：负面缓存 10 分钟，浏览器端也缓存，避免反复探测拖慢页面
+    // 全部源失败（含总预算耗尽）：200 空体而非 404——
+    // 浏览器对失败子资源必打控制台日志且无法抑制，200 空体使 <img> 触发 error 事件、
+    // 前端回退首字头像且控制台干净（负面缓存 10 分钟，与前端 FAILED_TTL 对齐）
     const miss = new Response(null, {
-      status: 404,
-      headers: { 'Cache-Control': `public, max-age=${MISS_TTL}` }
+      status: 200,
+      headers: {
+        ...SECURITY_HEADERS,
+        'Content-Type': 'image/png',
+        'Cache-Control': `public, max-age=${MISS_TTL}`
+      }
     });
     ctx.waitUntil(cache.put(cacheKey, miss.clone()));
     return miss;

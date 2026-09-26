@@ -92,7 +92,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://www.google.com/s2/favicons': imageResponse(svgBytes, 'image/svg+xml')
     })
     const res = await invoke(makeFixture('example.com'))
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
   })
 
   it('上游声明 text/html 但内容是 GIF 时，响应 Content-Type 强制为 image/gif 并带 nosniff', async () => {
@@ -117,17 +117,20 @@ describe('GET /api/favicon/:domain', () => {
     expect(res.headers.get('Content-Type')).toBe('image/webp')
   })
 
-  it('全部源失败返回 404，并写入负面缓存', async () => {
+  it('全部源失败返回 200 空体，并写入负面缓存', async () => {
     stubFetch({})
     const fixture = makeFixture('example.com')
     const res = await invoke(fixture)
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
+    expect((await res.arrayBuffer()).byteLength).toBe(0)
+    expect(res.headers.get('Content-Type')).toBe('image/png')
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=600')
     await Promise.all(fixture.waitUntilQueue)
     const keys = [...cacheStore.keys()]
     expect(keys).toHaveLength(1)
-    // 缓存键须带 v2 版本前缀：升级响应头策略（类型强制/nosniff）时靠换键作废旧缓存
-    expect(keys[0]).toBe('https://favicon-cache.local/v2/example.com')
-    expect(cacheStore.get(keys[0]).status).toBe(404)
+    // 缓存键带 v3 版本前缀：安全响应头策略变更时靠换键作废旧缓存
+    expect(keys[0]).toBe('https://favicon-cache.local/v3/example.com')
+    expect(cacheStore.get(keys[0]).status).toBe(200)
   })
 
   it('HTML 无图标声明时降级 favicon.ico 成功并带缓存头', async () => {
@@ -204,7 +207,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/favicon.ico': imageResponse(new Array(600 * 1024).fill(0x41))
     })
     const res = await invoke(makeFixture('example.com'))
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
   })
 
   it('图标体超过 512KB 时流式截断拒收，不读完整个响应', async () => {
@@ -231,7 +234,7 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/favicon.ico': () => new Response(stream, { status: 200, headers: { 'Content-Type': 'image/x-icon' } })
     })
     const res = await invoke(makeFixture('example.com'))
-    expect(res.status).toBe(404) // 该源被拒，其余源失败 → 整体 404
+    expect(res.status).toBe(200) // 该源被拒，其余源失败 → 整体失败返回 200 空体
     // 交付字节数显著小于 600KB：阈值 = 512KB 上限 + 4 块 8KB 裕量
     // （读满上限后边界再读 1 块、hwm 预取回填与取消时机的差额）；
     // 整读实现推满 600KB，必然超出该阈值
@@ -239,7 +242,7 @@ describe('GET /api/favicon/:domain', () => {
     expect(sent, `sent=${sent} 推满整段 body`).toBeLessThan(TOTAL)
   })
 
-  it('全部源挂起滴流时，总预算 5 秒内返回 404', async () => {
+  it('全部源挂起滴流时，总预算 5 秒内返回', async () => {
     vi.useFakeTimers()
     try {
       // 挂起的响应头 + 永不结束的 body 流
@@ -252,7 +255,7 @@ describe('GET /api/favicon/:domain', () => {
       const p = invoke(makeFixture('example.com'))
       await vi.advanceTimersByTimeAsync(5100)
       const res = await p
-      expect(res.status).toBe(404)
+      expect(res.status).toBe(200)
     } finally {
       vi.useRealTimers()
     }
@@ -341,12 +344,26 @@ describe('GET /api/favicon/:domain', () => {
 
   it('缓存命中时不发起上游请求', async () => {
     const cached = imageResponse(PNG_HEAD)
-    const key = new Request('https://favicon-cache.local/v2/example.com')
+    const key = new Request('https://favicon-cache.local/v3/example.com')
     cacheStore.set(key.url, cached)
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('所有响应带 CSP sandbox 与 nosniff 纵深安全头', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const ok = await invoke(makeFixture('example.com'))
+    expect(ok.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(ok.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    stubFetch({})
+    const miss = await invoke(makeFixture('example.org'))
+    expect(miss.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(miss.headers.get('X-Content-Type-Options')).toBe('nosniff')
   })
 })
