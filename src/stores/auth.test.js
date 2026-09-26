@@ -3,6 +3,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './auth'
+import { getFaviconKey } from '../utils/faviconKey'
+
+const TOKEN = 'YWRtaW46c2VjcmV0'
+const K = '8cpjAAtxx2rvatP2WcPbyZJvRIdWpIZ0OyT5SqVOmlU'
 
 describe('auth store', () => {
   beforeEach(() => {
@@ -144,5 +148,41 @@ describe('auth store', () => {
     await expect(store.login('admin', 'bad')).rejects.toThrow('用户名或密码错误')
     vi.unstubAllGlobals()
     consoleSpy.mockRestore()
+  })
+})
+
+describe('auth store 与 faviconKey 接线', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  it('登录成功后派生 k', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      token: TOKEN, username: 'admin', expiresAt: Date.now() + 60000, durationDays: 7, remember: false, success: true
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+    const store = useAuthStore()
+    await store.login('admin', 'secret', false)
+    expect(getFaviconKey()).toBe(K)
+    vi.unstubAllGlobals()
+  })
+
+  it('init 从存储恢复登录态后派生 k', async () => {
+    localStorage.setItem('auth_token', TOKEN)
+    localStorage.setItem('auth_expires_at', String(Date.now() + 60000))
+    const store = useAuthStore()
+    store.init()
+    await vi.waitFor(() => expect(getFaviconKey()).toBe(K))
+  })
+
+  it('登出清空 k', async () => {
+    localStorage.setItem('auth_token', TOKEN)
+    localStorage.setItem('auth_expires_at', String(Date.now() + 60000))
+    const store = useAuthStore()
+    store.init()
+    await vi.waitFor(() => expect(getFaviconKey()).toBe(K))
+    store.logout()
+    expect(getFaviconKey()).toBe('')
   })
 })

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { initFaviconKey, clearFaviconKey } from '../utils/faviconKey'
 
 const TOKEN_KEY = 'auth_token'
 const USERNAME_KEY = 'auth_username'
@@ -35,8 +36,11 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     // 初始化时检查登录状态（localStorage 优先，其次 sessionStorage）
     init() {
-      if (this.restoreFrom(localStorage)) return
-      if (this.restoreFrom(sessionStorage)) return
+      if (this.restoreFrom(localStorage) || this.restoreFrom(sessionStorage)) {
+        // fire-and-forget 派生 favicon key（init 保持同步，k 就绪后由 ref 触发重渲染）
+        initFaviconKey(this.token).catch(() => {})
+        return
+      }
       this.clearAuth()
     },
 
@@ -84,6 +88,9 @@ export const useAuthStore = defineStore('auth', {
         this.expiresAt = data.expiresAt
         this.isAuthenticated = true
 
+        // 派生 favicon 持证 URL 的 k（与登录态同步就绪）
+        await initFaviconKey(data.token)
+
         // 写入所选存储并清理另一处，避免两处残留不同凭据
         const target = authStorage(rememberMe)
         const other = target === localStorage ? sessionStorage : localStorage
@@ -122,6 +129,9 @@ export const useAuthStore = defineStore('auth', {
         storage.removeItem(USERNAME_KEY)
         storage.removeItem(EXPIRES_KEY)
       }
+
+      // 登出/清理时同步清空 favicon key
+      clearFaviconKey()
     },
 
     // 获取认证头
