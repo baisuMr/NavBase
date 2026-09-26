@@ -33,3 +33,29 @@ function isSvgText(bytes) {
   if (window512.includes('<html') || window512.includes('<!doctype html')) return false;
   return window512.includes('<svg');
 }
+
+// SVG 危险构造（命中任一即整份拒绝——可疑就拒，不剥离、不「净化后使用」）
+const SVG_DANGER_PATTERNS = [
+  { name: 'script', re: /<\s*script/i },
+  { name: 'event', re: /\son[a-z]+\s*=/i },
+  { name: 'foreignObject', re: /<\s*foreignobject/i },
+  { name: 'javascript-url', re: /javascript\s*:/i },
+  { name: 'data-html', re: /data\s*:\s*text\/html/i },
+  { name: 'doctype', re: /<!\s*(doctype|entity)/i }
+];
+
+export function findSvgDanger(text) {
+  const hit = SVG_DANGER_PATTERNS.find(({ re }) => re.test(text));
+  return hit ? hit.name : null;
+}
+
+// 探测源统一入口：定型 +（SVG 时）危险检测，任一不过按无效图片拒收
+export function acceptImageType(buffer) {
+  const mime = detectImageType(buffer);
+  if (!mime) return null;
+  if (mime === 'image/svg+xml') {
+    const text = new TextDecoder('utf-8').decode(new Uint8Array(buffer));
+    if (findSvgDanger(text)) return null;
+  }
+  return mime;
+}
