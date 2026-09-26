@@ -87,4 +87,15 @@ describe('parseNetscapeBookmarks', () => {
     const r = parseNetscapeBookmarks(html)
     expect(r.roots[0].title).toBe('https://notitle.com/')
   })
+
+  it('忽略 ICON 属性（icon_url 直链弃用式收编）', () => {
+    const html = `<DL><p>
+      <DT><A HREF="https://a.com/" ICON="data:image/png;base64,AAAA">A 站</A>
+      <DT><A HREF="https://b.com/" ICON="https://cdn.b.com/i.png">B 站</A>
+    </DL><p>`
+    const r = parseNetscapeBookmarks(html)
+    for (const link of [...r.roots]) {
+      expect(link).not.toHaveProperty('icon_url')
+    }
+  })
 })
