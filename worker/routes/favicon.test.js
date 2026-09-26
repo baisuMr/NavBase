@@ -116,21 +116,51 @@ describe('GET /api/favicon/:domain', () => {
     expect((await invoke(makeFixture('example.com', { method: 'OPTIONS' }))).status).toBe(405)
   })
 
-  it('SVG 一律拒收（防直接访问时在站点源下执行脚本）', async () => {
-    const svgBytes = new TextEncoder().encode('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>')
+  const BENIGN_SVG = new TextEncoder().encode(
+    '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M0 0h16v16H0z" fill="#2563EB"/></svg>'
+  )
+
+  it('良性 SVG 图标放行并强制 image/svg+xml', async () => {
     stubFetch({
       'https://example.com/': htmlResponse('<html></html>'),
-      // content-type 声称 svg 与伪装成 png 但内容是 svg 的两种形态都要拒
-      'https://example.com/favicon.ico': imageResponse(svgBytes, 'image/svg+xml'),
-      'https://favicon.im/example.com': imageResponse(svgBytes, 'image/png'),
-      'https://icons.duckduckgo.com/ip3/example.com.ico': imageResponse(svgBytes, ''),
-      'https://www.google.com/s2/favicons': imageResponse(svgBytes, 'image/svg+xml')
+      'https://example.com/favicon.ico': imageResponse(BENIGN_SVG, 'image/png') // 上游类型不作数
     })
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
-    // 200 空体 = 拒收走 miss 路径；若 SVG 被当成功响应接受，body 非空必红
-    expect((await res.arrayBuffer()).byteLength).toBe(0)
-    expect(res.headers.get('X-Favicon-Source')).toBe(null)
+    expect(res.headers.get('Content-Type')).toBe('image/svg+xml')
+    expect(res.headers.get('Content-Security-Policy')).toBe('sandbox')
+  })
+
+  it('危险 SVG（script/onload/DOCTYPE）整份拒绝，全部失败时回 200 空体', async () => {
+    for (const bad of [
+      '<svg><script>alert(1)</script></svg>',
+      '<svg onload="alert(1)"></svg>',
+      '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x "y">]><svg></svg>'
+    ]) {
+      cacheStore.clear()
+      const bytes = new TextEncoder().encode(bad)
+      stubFetch({
+        'https://example.com/': htmlResponse('<html></html>'),
+        'https://example.com/favicon.ico': imageResponse(bytes),
+        'https://favicon.im/example.com': imageResponse(bytes),
+        'https://icons.duckduckgo.com/ip3/example.com.ico': imageResponse(bytes),
+        'https://www.google.com/s2/favicons': imageResponse(bytes)
+      })
+      const res = await invoke(makeFixture('example.com'))
+      expect(res.status, bad).toBe(200)
+      expect((await res.arrayBuffer()).byteLength, bad).toBe(0)
+    }
+  })
+
+  it('危险 SVG 被跳过后取到下一源的安全图片', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html><link rel="icon" href="/evil.svg"></html>'),
+      'https://example.com/evil.svg': imageResponse(new TextEncoder().encode('<svg onload="alert(1)"></svg>')),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/favicon.ico')
   })
 
   it('上游声明 text/html 但内容是 GIF 时，响应 Content-Type 强制为 image/gif 并带 nosniff', async () => {

@@ -1,4 +1,5 @@
 import { isValidFaviconKey } from '../utils/faviconKey.js';
+import { acceptImageType } from '../utils/imageType.js';
 
 // GET /api/favicon/:domain - 代理并缓存网站图标
 // <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行、由处理器自验 ?k= 持证（详见 auth.js）；
@@ -21,23 +22,6 @@ const SECURITY_HEADERS = {
 };
 
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-
-// 图片魔数 → MIME 映射：不信任上游 content-type，输出类型只由字节头决定
-const IMAGE_MAGIC = [
-  { sig: [0x89, 0x50, 0x4e, 0x47], mime: 'image/png' },
-  { sig: [0x47, 0x49, 0x46], mime: 'image/gif' },
-  { sig: [0xff, 0xd8, 0xff], mime: 'image/jpeg' },
-  { sig: [0x42, 0x4d], mime: 'image/bmp' },
-  { sig: [0x00, 0x00, 0x01, 0x00], mime: 'image/x-icon' },
-  { sig: [0x52, 0x49, 0x46, 0x46], mime: 'image/webp' }
-];
-
-// 按魔数返回强制 MIME；不在白名单（含 SVG）返回 null 一律拒收
-function mimeFromMagic(buffer) {
-  const head = new Uint8Array(buffer, 0, Math.min(12, buffer.byteLength));
-  const hit = IMAGE_MAGIC.find(({ sig }) => sig.every((byte, i) => head[i] === byte));
-  return hit ? hit.mime : null;
-}
 
 /**
  * 手动跟随重定向的 fetch：
@@ -185,7 +169,8 @@ async function probeHtmlIcon(domain, signal) {
       if (!res.ok) continue;
       // 大小校验内聚在 readImageBytes：流式读取，超限立即断开
       const buffer = await readImageBytes(res, MAX_ICON_BYTES, signal);
-      const mime = mimeFromMagic(buffer);
+      // 内容定型 + SVG 危险检测：任一不过按无效源跳过（可疑整份拒绝，不净化复用）
+      const mime = acceptImageType(buffer);
       if (!mime) continue;
       return { buffer, contentType: mime, source: iconUrl };
     } catch {
@@ -201,8 +186,8 @@ async function probeUrl(url, signal) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   // 大小校验内聚在 readImageBytes：流式读取，超限立即断开
   const buffer = await readImageBytes(res, MAX_ICON_BYTES, signal);
-  const mime = mimeFromMagic(buffer);
-  if (!mime) throw new Error('响应不是图片');
+  const mime = acceptImageType(buffer);
+  if (!mime) throw new Error('响应不是合格图片');
   return { buffer, contentType: mime, source: url };
 }
 
