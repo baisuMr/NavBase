@@ -21,6 +21,11 @@ NavBase 是一个自用的网址导航管理平台，用于替代浏览器书签
 - 向本地库灌入测试数据（可重复执行）：`pnpm exec wrangler d1 execute navbase-db --file=scripts/seed-test-data.sql`
 - wrangler d1 默认操作本地库，**操作线上库必须追加 `--remote`**
 
+## 当前开发约定
+
+- **当前是本地开发**：代码和数据库均在本地，无需对线上代码和数据库做读写、验证等操作
+- 如需更新修改数据库表结构，或需要在 Cloudflare 控制台操作，**不要自行执行**，直接告诉用户，由用户处理
+
 ## 开发流程
 
 - **分支约定**：`main` 即线上（Cloudflare Workers Builds 仅监听 `main`，推送即自动构建部署）；日常开发在 `dev` 分支提交、推送（自动构建 dev 预览供人工验证，不影响生产），验证通过后合并 `dev` → `main` 上线；紧急修复可直推 `main`，之后把 `main` 合回 `dev` 保持同步
