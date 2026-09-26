@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { handle } from './settings.js'
 import { validateSettingsPayload } from '../utils/validate.js'
+import { createMockDB } from '../utils/mock-d1.js'
 
 // 构造带内存 KV 表的 mock env（模拟 settings 表的 upsert 语义）
 function makeFixture(body, method = 'PUT') {
@@ -21,6 +22,12 @@ function makeFixture(body, method = 'PUT') {
             }
           })
         }
+      },
+      // 与 D1 对齐：batch 顺序执行各语句（供多键原子提交路径使用）
+      async batch(stmts) {
+        const out = []
+        for (const s of stmts) out.push(await s.run())
+        return out
       }
     }
   }
@@ -31,6 +38,15 @@ function makeFixture(body, method = 'PUT') {
       : {})
   })
   return { request, env, rows }
+}
+
+// 构造 PUT /api/settings 请求（配合 createMockDB 验证批量提交行为）
+function makePut(body) {
+  return new Request('http://localhost/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' }
+  })
 }
 
 async function readJson(res) {
@@ -48,7 +64,8 @@ describe('validateSettingsPayload', () => {
     expect(validateSettingsPayload({})).toBeNull()
     expect(validateSettingsPayload({ site_name: '' })).toBeNull()
     expect(validateSettingsPayload({ site_name: '栞记' })).toBeNull()
-    expect(validateSettingsPayload({ site_name: '   ' })).toBeTruthy()
+    // 纯空白文案为「不能是空白」（历史「不能为空白」为病句，已修正）
+    expect(validateSettingsPayload({ site_name: '   ' })).toBe('网站名称不能是空白')
     expect(validateSettingsPayload({ site_name: 'a'.repeat(31) })).toBeTruthy()
     expect(validateSettingsPayload({ site_name: 123 })).toBeTruthy()
   })
@@ -96,10 +113,11 @@ describe('PUT /api/settings', () => {
     expect(data.avatar).toContain('data:image/png')
   })
 
-  it('非法载荷返回 400 且不落库', async () => {
+  it('非法载荷返回 400 VALIDATION_ERROR 且不落库', async () => {
     const { request, env, rows } = makeFixture({ site_name: '   ' })
-    const { status } = await readJson(await handle(request, env))
+    const { status, data } = await readJson(await handle(request, env))
     expect(status).toBe(400)
+    expect(data).toEqual({ error: '网站名称不能是空白', code: 'VALIDATION_ERROR' })
     expect(rows).toHaveLength(0)
   })
 
@@ -120,9 +138,17 @@ describe('PUT /api/settings', () => {
     expect(data.site_name).toBe('')
   })
 
-  it('不支持的方法返回 405', async () => {
+  it('不支持的方法返回 405 METHOD_NOT_ALLOWED', async () => {
     const { request, env } = makeFixture(undefined, 'DELETE')
-    const { status } = await readJson(await handle(request, env))
+    const { status, data } = await readJson(await handle(request, env))
     expect(status).toBe(405)
+    expect(data).toEqual({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' })
+  })
+
+  it('多键更新走单次 batch 原子提交', async () => {
+    const db = createMockDB()
+    await handle(makePut({ site_name: 'a', avatar: '' }), { DB: db })
+    expect(db.batchCalls).toHaveLength(1)
+    expect(db.batchCalls[0]).toHaveLength(2)
   })
 })

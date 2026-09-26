@@ -22,6 +22,7 @@
 - 🔗 **书签管理** - 自动获取网站图标，一键导入浏览器书签（HTML）
 - 🔍 **搜索功能** - 站内即时搜索 + 多引擎网页搜索（Tab 切换引擎）
 - 🕐 **导航首页** - 大字时钟/农历/周数、多引擎搜索、常用站点快捷卡片
+- 📌 **固定到首屏** - 右键书签固定常用站点到首屏，上限 10 个，宽屏最多两行
 - ⚙️ **站点设置** - 自定义网站名称与头像，书签导入导出
 - 🎨 **扁平浅色设计** - Slate 中性色 + 皇家蓝点缀，无深色模式
 - 🔒 **Basic Auth** - 单用户密码保护
@@ -57,7 +58,7 @@
    | Select D1 数据库 | 保持默认 `navbase-db`（向导自动创建并绑定） |
    | ADMIN_USERNAME / ADMIN_PASSWORD | **可以不填**：⚠️ 这里填的值只会成为**构建环境变量**，**不会**成为 Worker 运行时 Secret，登录凭据以第 5 步手动补配的为准 |
    | LOGIN_DURATION_DAYS / REMEMBER_DURATION_DAYS | 保持默认 `7` / `30`；部署后可在仓库 `wrangler.toml` [vars] 中修改登录时效，推送后自动生效 |
-   | 构建命令 | `pnpm run build` |
+   | 构建命令 | `pnpm test && pnpm run build`（先跑全量测试再构建，测试不过构建失败、不会部署） |
    | 部署命令 | 默认 `pnpm run deploy`；也可填 `npx wrangler deploy`（构建命令已构建过，可省一次重复构建） |
    | 预览命令 | 默认即可 |
    | 启用预览构建 | 建议开启（Pull Request 自动生成预览） |
@@ -99,6 +100,9 @@ git push
 
 - 未完成功能想在线验收：推送到非生产分支会自动构建 Preview，稳定 URL 为 `https://<分支名>-<Worker 名>.<账号子域>.workers.dev`，开 PR 还会把 URL 评论到 PR，满意后再合并
 - 合并上线前的检查清单：全量测试通过；若改过 `schema.sql`，先对生产库执行迁移（见 `migrations/` 脚本头部用法，加列类迁移对旧代码无害，务必先于新代码上线）
+
+  > ⚠️ **合并/部署前必做——执行 `migrations/2026-09-26-unique-bookmark-url.sql`**（bookmarks.url 唯一索引换建，幂等可重复执行）：对**生产库**与**预览库**各执行一次，命令见迁移文件头部注释。
+
 - 预览构建使用 `wrangler.toml` 的 `[previews]` 独立配置（变量与绑定不复用生产设置）：自己部署时请把 `previews.d1_databases.database_id` 换成你自己的预览库（`wrangler d1 create <名称>` 获取）；预览登录凭据一次配置后持久生效——`wrangler preview base-config secret put ADMIN_PASSWORD`（之后新建的预览自动继承）+ `wrangler preview secret put ADMIN_PASSWORD --name dev`（补设已存在的预览，Base 配置不回溯）；勿在控制台「Runtime variables and secrets」里配预览凭据（部署级设置，下次构建即丢失）
 - 紧急修复线上问题：可在 `main` 直接修复并推送上线，之后执行 `git checkout dev && git merge main` 把修复同步回 `dev`
 

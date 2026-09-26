@@ -29,6 +29,7 @@
       v-if="toast.visible"
       :message="toast.message"
       :type="toast.type"
+      :seq="toast.seq"
       @close="hideToast"
     />
   </div>

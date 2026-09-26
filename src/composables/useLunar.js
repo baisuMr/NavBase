@@ -1,14 +1,21 @@
 /**
  * 农历与周数计算
  * 用法：
- *   const { lunarText, weekOfYear } = useDateInfo()
+ *   const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
  *
  * lunar-javascript 体积较大（约占 Home 主包 2/3），故通过动态 import
  * 拆为独立 chunk 按需加载：农历文字稍后异步填充，不影响首屏渲染
  */
 let lunarModulePromise = null
 function loadLunar() {
-  if (!lunarModulePromise) lunarModulePromise = import('lunar-javascript')
+  if (!lunarModulePromise) {
+    lunarModulePromise = import('lunar-javascript').catch(err => {
+      // 加载失败清空缓存：发版瞬间旧页面的动态 import 可能失败，
+      // 永久缓存 rejected promise 会导致此后农历一直空白，允许下次调用重试
+      lunarModulePromise = null
+      throw err
+    })
+  }
   return lunarModulePromise
 }
 
@@ -63,23 +70,10 @@ export function useDateInfo() {
     return WEEKDAYS[date.getDay()]
   }
 
-  /**
-   * 根据小时返回问候文案
-   */
-  function getGreeting(date = new Date()) {
-    const h = date.getHours()
-    if (h < 6) return '夜深了，注意休息与充电'
-    if (h < 11) return '早上好，迎接清晰而高效的一天'
-    if (h < 13) return '中午好，适度小憩片刻'
-    if (h < 18) return '下午好，保持专注与敏锐'
-    return '晚上好，整理今日的收获与沉淀'
-  }
-
   return {
     getLunarText,
     getWeekOfYear,
     getGregorianText,
-    getWeekdayText,
-    getGreeting
+    getWeekdayText
   }
 }

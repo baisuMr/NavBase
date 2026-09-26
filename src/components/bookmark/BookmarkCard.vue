@@ -14,8 +14,8 @@
       <span class="bookmark-card-title">{{ bookmark.title }}</span>
       <span class="bookmark-card-domain">{{ domain }}</span>
     </span>
-    <span class="bookmark-card-arrow">
-      <i class="ri-external-link-line"></i>
+    <span class="bookmark-card-arrow" :class="{ 'bookmark-card-arrow-pinned': bookmark.is_pinned }">
+      <i :class="bookmark.is_pinned ? 'ri-star-fill' : 'ri-external-link-line'"></i>
     </span>
   </a>
 </template>
@@ -23,7 +23,7 @@
 <script setup>
 import { computed } from 'vue'
 
-import { useFavicon } from '../../composables/useFavicon'
+import { useFavicon, domainOf } from '../../composables/useFavicon'
 
 const props = defineProps({
   bookmark: {
@@ -36,11 +36,6 @@ defineEmits(['menu'])
 
 const { iconSrc, onIconError, iconInitial } = useFavicon()
 
-const domain = computed(() => {
-  try {
-    return new URL(props.bookmark.url).hostname.replace(/^www\./, '')
-  } catch {
-    return props.bookmark.url
-  }
-})
+// 域名展示：解析失败回退原始 url
+const domain = computed(() => domainOf(props.bookmark.url) || props.bookmark.url)
 </script>

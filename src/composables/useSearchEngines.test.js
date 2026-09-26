@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { SEARCH_ENGINES, useSearchEngines } from './useSearchEngines'
 
 describe('SEARCH_ENGINES 常量', () => {
@@ -20,7 +20,11 @@ describe('SEARCH_ENGINES 常量', () => {
 })
 
 describe('resolveAndOpen', () => {
-  const { setEngine, resolveAndOpen } = useSearchEngines()
+  let setEngine, resolveAndOpen
+  beforeEach(() => {
+    // 每个用例独立实例：useSearchEngines() 每次返回新 ref，天然隔离
+    ;({ setEngine, resolveAndOpen } = useSearchEngines())
+  })
 
   it('空输入返回 null（由调用方决定主页跳转）', () => {
     expect(resolveAndOpen('')).toBeNull()
@@ -55,6 +59,7 @@ describe('resolveAndOpen', () => {
   })
 
   it('切换不存在的引擎 id 保持原引擎', () => {
+    setEngine('google') // 显式设定前置，不再依赖上一用例
     setEngine('not-exist')
     const result = resolveAndOpen('vue')
     expect(result.target).toBe('https://www.google.com/search?q=vue')

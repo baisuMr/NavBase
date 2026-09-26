@@ -52,7 +52,7 @@ describe('书签排序', () => {
       })
     }), { DB: db })
     expect(res.status).toBe(200)
-    const inserts = db.calls.filter(c => c.sql.includes('INSERT INTO bookmarks'))
+    const inserts = db.calls.filter(c => /INSERT( OR IGNORE)? INTO bookmarks/.test(c.sql))
     expect(inserts.length).toBe(3)
     // sort_order 是 bind 的第 6 个参数，从 6 开始递增（库内 MAX=5）
     expect(inserts.map(c => c.args[5])).toEqual([6, 7, 8])

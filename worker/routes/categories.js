@@ -2,6 +2,7 @@
 // 集合 GET/POST、详情 GET/PUT/DELETE、重排 PUT /api/categories/sort
 // 字面量 sort 路由先于 :id 匹配（见 index.js 路由表顺序），与历史 Pages Functions 优先级一致
 import { validateCategoryPayload } from '../utils/validate.js';
+import { errorResponse } from '../utils/http.js';
 
 // GET /api/categories - 获取所有分类
 // POST /api/categories - 创建分类
@@ -21,7 +22,7 @@ export async function collection(request, env) {
       const data = await request.json();
       const err = validateCategoryPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return errorResponse(err, 'VALIDATION_ERROR', 400);
       }
       const { name, icon, color } = data;
 
@@ -36,16 +37,10 @@ export async function collection(request, env) {
       );
     }
 
-    return Response.json(
-      { error: 'Method not allowed' },
-      { status: 405 }
-    );
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   } catch (error) {
     console.error('Categories API error:', error);
-    return Response.json(
-      { error: '服务器错误' },
-      { status: 500 }
-    );
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }
 
@@ -63,10 +58,7 @@ export async function item(request, env, params) {
       ).bind(id).first();
 
       if (!result) {
-        return Response.json(
-          { error: '分类不存在' },
-          { status: 404 }
-        );
+        return errorResponse('分类不存在', 'NOT_FOUND', 404);
       }
 
       return Response.json(result);
@@ -77,7 +69,7 @@ export async function item(request, env, params) {
       const data = await request.json();
       const err = validateCategoryPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return errorResponse(err, 'VALIDATION_ERROR', 400);
       }
       const { name, icon, color } = data;
 
@@ -87,10 +79,7 @@ export async function item(request, env, params) {
       ).bind(id).first();
 
       if (!existing) {
-        return Response.json(
-          { error: '分类不存在' },
-          { status: 404 }
-        );
+        return errorResponse('分类不存在', 'NOT_FOUND', 404);
       }
 
       // 不更新 sort_order：编辑保留原排序
@@ -109,10 +98,7 @@ export async function item(request, env, params) {
       ).bind(id).first();
 
       if (!existing) {
-        return Response.json(
-          { error: '分类不存在' },
-          { status: 404 }
-        );
+        return errorResponse('分类不存在', 'NOT_FOUND', 404);
       }
 
       // 置空书签 + 删除分类经 batch 原子执行，避免中途失败留下半删状态
@@ -124,16 +110,10 @@ export async function item(request, env, params) {
       return Response.json({ success: true });
     }
 
-    return Response.json(
-      { error: 'Method not allowed' },
-      { status: 405 }
-    );
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   } catch (error) {
     console.error('Category API error:', error);
-    return Response.json(
-      { error: '服务器错误' },
-      { status: 500 }
-    );
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }
 
@@ -141,7 +121,7 @@ export async function item(request, env, params) {
 // 与 PUT /api/categories/:id 分工：编辑分类不改排序，重排只走本端点
 export async function sort(request, env) {
   if (request.method !== 'PUT') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   }
 
   try {
@@ -155,14 +135,14 @@ export async function sort(request, env) {
       !ids.every((id) => Number.isInteger(id) && id > 0) ||
       new Set(ids).size !== ids.length
     ) {
-      return Response.json({ error: '排序字段不正确' }, { status: 400 });
+      return errorResponse('排序字段不正确', 'VALIDATION_ERROR', 400);
     }
 
     // 集合校验：ids 须与库内现有分类完全一致（防丢分类/幻影 id）
     const { results } = await env.DB.prepare('SELECT id FROM categories').all();
     const existing = new Set(results.map((r) => r.id));
     if (existing.size !== ids.length || !ids.every((id) => existing.has(id))) {
-      return Response.json({ error: '排序列表与现有分类不一致' }, { status: 400 });
+      return errorResponse('排序列表与现有分类不一致', 'VALIDATION_ERROR', 400);
     }
 
     // batch 事务式重编号
@@ -174,6 +154,6 @@ export async function sort(request, env) {
     return Response.json({ success: true });
   } catch (error) {
     console.error('Category sort API error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500 });
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }

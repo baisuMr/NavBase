@@ -4,9 +4,6 @@ export const bookmarksApi = {
   // 获取所有书签
   getAll: () => api.get('/bookmarks'),
 
-  // 获取单个书签
-  getById: (id) => api.get(`/bookmarks/${id}`),
-
   // 创建书签
   create: (data) => api.post('/bookmarks', data),
 

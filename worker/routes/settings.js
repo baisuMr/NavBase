@@ -1,6 +1,7 @@
 // GET /api/settings 读取站点设置、PUT /api/settings 部分更新
 // KV 存储于 D1 settings 表；认证由 auth.js 认证门统一保护
 import { validateSettingsPayload } from '../utils/validate.js';
+import { errorResponse } from '../utils/http.js';
 
 // 允许写入的键白名单，防止任意 KV 写入
 const ALLOWED_KEYS = ['site_name', 'avatar'];
@@ -24,23 +25,30 @@ export async function handle(request, env) {
       const data = await request.json();
       const err = validateSettingsPayload(data);
       if (err) {
-        return Response.json({ error: err }, { status: 400 });
+        return errorResponse(err, 'VALIDATION_ERROR', 400);
       }
 
+      // 先收集各键的 upsert 语句，再单次 batch 原子提交，避免多键写一半的半更新
+      const stmts = [];
       for (const key of ALLOWED_KEYS) {
         if (data[key] === undefined) continue;
-        await env.DB.prepare(
-          'INSERT INTO settings (key, value) VALUES (?, ?) ' +
-          'ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP'
-        ).bind(key, data[key]).run();
+        stmts.push(
+          env.DB.prepare(
+            'INSERT INTO settings (key, value) VALUES (?, ?) ' +
+            'ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP'
+          ).bind(key, data[key])
+        );
+      }
+      if (stmts.length > 0) {
+        await env.DB.batch(stmts);
       }
 
       return Response.json(await readSettings(env));
     }
 
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   } catch (error) {
     console.error('Settings error:', error);
-    return Response.json({ error: '服务器错误' }, { status: 500 });
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }

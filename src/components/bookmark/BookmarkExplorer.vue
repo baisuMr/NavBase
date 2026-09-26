@@ -10,7 +10,7 @@
           @click="$emit('select-category', 'all')"
         >
           <span>全部</span>
-          <span class="category-tab-count">{{ totalCount }}</span>
+          <span class="category-tab-count">{{ bookmarks.length }}</span>
         </button>
         <button
           v-for="cat in categories"
@@ -68,7 +68,7 @@
           @menu="$emit('menu', $event, bm)"
         />
       </template>
-      <div v-else class="bookmark-empty">
+      <div v-else-if="!loading && !error" class="bookmark-empty">
         <i class="ri-bookmark-line"></i>
         <div>{{ emptyText }}</div>
       </div>
@@ -95,6 +95,15 @@ const props = defineProps({
   activeCat: {
     type: [String, Number],
     default: 'all'
+  },
+  // 加载中/加载失败时不显示「暂无书签」空态，避免误导（失败提示由外层横幅承担）
+  loading: {
+    type: Boolean,
+    default: false
+  },
+  error: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -145,8 +154,6 @@ onBeforeUnmount(() => {
   sortable?.destroy()
   sortable = null
 })
-
-const totalCount = computed(() => props.bookmarks.length)
 
 const uncategorizedCount = computed(() => props.bookmarks.filter(b => !b.category_id).length)
 

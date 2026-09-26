@@ -63,4 +63,22 @@ describe('useKeyboard', () => {
     press({ key: 'Escape', code: 'Escape' })
     expect(close).toHaveBeenCalledTimes(1)
   })
+
+  it('Ctrl+Alt+N（AltGr）不触发新建书签，也不拦截默认输入', () => {
+    const addBookmark = vi.fn()
+    mount({ addBookmark })
+    const e = new KeyboardEvent('keydown', {
+      code: 'KeyN', altKey: true, ctrlKey: true, bubbles: true, cancelable: true
+    })
+    window.dispatchEvent(e)
+    expect(addBookmark).not.toHaveBeenCalled()
+    expect(e.defaultPrevented).toBe(false)
+  })
+
+  it('Ctrl+Alt+Shift+N 不触发添加分类', () => {
+    const addCategory = vi.fn()
+    mount({ addCategory })
+    press({ code: 'KeyN', altKey: true, ctrlKey: true, shiftKey: true })
+    expect(addCategory).not.toHaveBeenCalled()
+  })
 })

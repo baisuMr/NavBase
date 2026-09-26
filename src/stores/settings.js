@@ -7,8 +7,7 @@ export const DEFAULT_SITE_NAME = 'NavBase'
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     siteName: '',
-    avatar: '',
-    loaded: false
+    avatar: ''
   }),
 
   getters: {
@@ -20,7 +19,6 @@ export const useSettingsStore = defineStore('settings', {
       try {
         const data = await settingsApi.get()
         this.applySettings(data)
-        this.loaded = true
       } catch (error) {
         console.error('Failed to fetch settings:', error)
       }

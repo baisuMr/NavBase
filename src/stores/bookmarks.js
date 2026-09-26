@@ -5,21 +5,26 @@ export const useBookmarksStore = defineStore('bookmarks', {
   state: () => ({
     bookmarks: [],
     loading: false,
-    error: null
+    error: null,
+    fetchSeq: 0 // 请求序号：并发拉取时只认最后一次请求的结果
   }),
 
   actions: {
     // 获取所有书签
     async fetchBookmarks() {
+      const seq = ++this.fetchSeq
       this.loading = true
       this.error = null
       try {
-        this.bookmarks = await bookmarksApi.getAll()
+        const data = await bookmarksApi.getAll()
+        if (seq !== this.fetchSeq) return // 已有更新的请求，丢弃过期响应
+        this.bookmarks = data
       } catch (error) {
+        if (seq !== this.fetchSeq) return // 过期请求的失败不影响当前状态
         this.error = error.message
         console.error('Failed to fetch bookmarks:', error)
       } finally {
-        this.loading = false
+        if (seq === this.fetchSeq) this.loading = false // 仅最新请求复位 loading
       }
     },
 
@@ -43,7 +48,6 @@ export const useBookmarksStore = defineStore('bookmarks', {
         url: bookmark.url,
         description: bookmark.description,
         category_id: bookmark.category_id,
-        icon_url: bookmark.icon_url,
         is_pinned: bookmark.is_pinned ? 0 : 1
       })
     },
@@ -55,9 +59,10 @@ export const useBookmarksStore = defineStore('bookmarks', {
     },
 
     // 批量导入书签，返回 { count, skipped }（skipped 为重复跳过数）
-    async importBookmarks(items) {
+    // refresh=false 供分块导入循环调用（全部提交完由调用方统一 fetchBookmarks）
+    async importBookmarks(items, refresh = true) {
       const data = await bookmarksApi.importMany(items)
-      await this.fetchBookmarks()
+      if (refresh) await this.fetchBookmarks()
       return { count: data.count, skipped: data.skipped || 0 }
     }
   }

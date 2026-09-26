@@ -5,18 +5,16 @@ export function useCategories() {
   const store = useCategoriesStore()
 
   const categories = computed(() => store.categories)
-  const loading = computed(() => store.loading)
   const error = computed(() => store.error)
 
   const fetchCategories = () => store.fetchCategories()
-  const createCategory = (data) => store.createCategory(data)
+  const createCategory = (data, refresh) => store.createCategory(data, refresh)
   const updateCategory = (id, data) => store.updateCategory(id, data)
   const deleteCategory = (id) => store.deleteCategory(id)
   const reorderCategories = (ids) => store.reorderCategories(ids)
 
   return {
     categories,
-    loading,
     error,
     fetchCategories,
     createCategory,

@@ -13,7 +13,7 @@ export function useBookmarks() {
   const updateBookmark = (id, data) => store.updateBookmark(id, data)
   const togglePin = (bookmark) => store.togglePin(bookmark)
   const deleteBookmark = (id) => store.deleteBookmark(id)
-  const importBookmarks = (items) => store.importBookmarks(items)
+  const importBookmarks = (items, refresh) => store.importBookmarks(items, refresh)
 
   return {
     bookmarks,

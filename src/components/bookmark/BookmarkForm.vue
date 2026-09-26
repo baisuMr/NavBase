@@ -9,7 +9,8 @@
         placeholder="https://example.com"
         required
       />
-      <div class="form-hint">输入网址后将自动获取网站图标</div>
+      <div v-if="urlError" class="form-error" role="alert">{{ urlError }}</div>
+      <div v-else class="form-hint">输入网址后将自动获取网站图标</div>
     </div>
 
     <div class="form-group">
@@ -67,6 +68,8 @@
 
 <script setup>
 import { reactive, ref, computed, watch } from 'vue'
+import { isAllowedUrl } from '../../utils/url'
+import { faviconSrc } from '../../composables/useFavicon'
 
 const props = defineProps({
   bookmark: { type: Object, default: null },
@@ -80,8 +83,7 @@ const form = reactive({
   url: '',
   title: '',
   description: '',
-  category_id: null,
-  icon_url: ''
+  category_id: null
 })
 
 watch(() => props.bookmark, (val) => {
@@ -90,28 +92,32 @@ watch(() => props.bookmark, (val) => {
       url: val.url || '',
       title: val.title || '',
       description: val.description || '',
-      category_id: val.category_id || null,
-      icon_url: val.icon_url || ''
+      category_id: val.category_id || null
     })
   }
 }, { immediate: true })
 
-// 图标预览：icon_url 已有（编辑）优先，否则走 /api/favicon 图片代理；
-// 探测在保存后的渲染阶段由代理统一完成，表单期不做网络请求
+// 图标预览：走 /api/favicon 图片代理（带持证参数 k），与列表渲染同一管线；
+// 探测在保存后的渲染阶段由代理统一完成，表单期不做额外网络请求
 const iconPreviewFailed = ref(false)
 const iconPreview = computed(() => {
-  if (!form.url || !/^https?:\/\//i.test(form.url)) return ''
-  try {
-    const { hostname } = new URL(form.url)
-    return form.icon_url || `/api/favicon/${hostname.replace(/^www\./, '')}`
-  } catch {
-    return ''
-  }
+  if (!isAllowedUrl(form.url)) return ''
+  return faviconSrc(form.url)
 })
 
-watch(() => form.url, () => { iconPreviewFailed.value = false })
+// 协议级错误提示：原生 type="url" 不校验协议，javascript: 等可提交到后端，前端先拦
+const urlError = ref('')
+
+watch(() => form.url, () => {
+  iconPreviewFailed.value = false
+  urlError.value = ''
+})
 
 function handleSubmit() {
+  if (!isAllowedUrl(form.url)) {
+    urlError.value = '仅支持 http/https 链接'
+    return
+  }
   emit('submit', { ...form })
 }
 </script>

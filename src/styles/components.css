@@ -42,6 +42,8 @@
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-surface-muted);
   border-color: var(--color-border-strong);
+  /* 覆盖全局 a:hover 主色，按钮式链接（<a class="btn">）悬停保持文字色 */
+  color: var(--color-text);
 }
 
 .btn-ghost {
@@ -125,6 +127,12 @@
 .form-hint {
   font-size: var(--fs-card);
   color: var(--color-text-muted);
+}
+
+/* 字段级校验错误（如书签 URL 协议不符），对齐表单错误提示风格 */
+.form-error {
+  font-size: var(--fs-card);
+  color: var(--color-error);
 }
 
 .form-icon-preview-row {
@@ -308,14 +316,6 @@
   background-color: var(--color-error);
 }
 
-.toast.warning::before {
-  background-color: var(--color-warning);
-}
-
-.toast.info::before {
-  background-color: var(--color-primary);
-}
-
 .toast-enter-active,
 .toast-leave-active {
   transition: all var(--t-base);
@@ -389,11 +389,13 @@
 .settings-username {
   font-size: var(--fs-body-md);
   color: var(--color-text-secondary);
+  /* 用户名靠左，GitHub/退出登录按钮组靠右 */
+  margin-right: auto;
 }
 
-/* 账号行：用户名靠左、退出登录靠右 */
+/* 账号行：用户名靠左、操作按钮靠右 */
 .settings-account {
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 /* ── 图标选择器 ── */

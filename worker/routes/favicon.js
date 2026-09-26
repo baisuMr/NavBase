@@ -1,33 +1,28 @@
+import { isValidFaviconKey } from '../utils/faviconKey.js';
+import { acceptImageType } from '../utils/imageType.js';
+import { errorResponse, notConfiguredError } from '../utils/http.js';
+
 // GET /api/favicon/:domain - 代理并缓存网站图标
-// <img> 标签无法携带 Basic Auth 头，此端点在认证门中免认证放行；
+// <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行、由处理器自验 ?k= 持证（详见 auth.js）；
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
 const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
-const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件
+export const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件（导出供测试断言流式截断阈值）
 const CACHE_TTL = 604800; // 成功结果缓存 7 天（Cloudflare Cache API + 浏览器）
 const MISS_TTL = 600; // 失败结果缓存 10 分钟，避免对不可达站点反复探测
 const SOURCE_TIMEOUT = 3000; // 单源超时（毫秒）
+const TOTAL_BUDGET_MS = 5000; // 整个请求的硬预算（含 body 读取），到点统一取消
 const MAX_REDIRECTS = 3; // 手动跟随重定向上限
 const MAX_HTML_CANDIDATES = 3; // HTML 图标声明最多尝试的候选数
 const MAX_HTML_BYTES = 256 * 1024; // 首页 HTML 只读前 256KB（图标声明集中在 head 区）
 
+// 所有 favicon 响应统一带安全头（响应进缓存后一并生效）：
+// CSP sandbox 让响应即使被以文档方式打开也不透明源、脚本禁行；nosniff 防类型嗅探
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Content-Security-Policy': 'sandbox'
+};
+
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-
-// 图片魔数白名单：不信任上游 content-type，按字节头确认是图片
-const IMAGE_MAGIC = [
-  [0x89, 0x50, 0x4e, 0x47], // PNG
-  [0x47, 0x49, 0x46], // GIF
-  [0xff, 0xd8, 0xff], // JPEG
-  [0x42, 0x4d], // BMP
-  [0x00, 0x00, 0x01, 0x00], // ICO
-  [0x52, 0x49, 0x46, 0x46] // RIFF（WebP 容器头）
-];
-
-// 仅接受位图魔数；SVG 一律拒收（不看 content-type、不做文本探测）：
-// 用户直接访问本 URL 时恶意 SVG 会在站点源下执行脚本，favicon 场景 PNG/ICO 已足够
-function looksLikeImage(buffer) {
-  const head = new Uint8Array(buffer, 0, Math.min(12, buffer.byteLength));
-  return IMAGE_MAGIC.some(sig => sig.every((byte, i) => head[i] === byte));
-}
 
 /**
  * 手动跟随重定向的 fetch：
@@ -67,25 +62,45 @@ async function fetchWithRedirects(url, { signal, timeout, headers }) {
   }
 }
 
-// 流式读取响应体的前 maxBytes 字节并解码为文本（提前取消剩余流，避免超大页面整页读入）
-async function readHtmlPrefix(res, maxBytes) {
+// 把 abort 事件转成可与 reader.read() 竞速的 rejected promise（信号触发时让读取立即失败）
+function abortPromise(signal) {
+  return new Promise((_, reject) => {
+    if (!signal) return;
+    if (signal.aborted) return reject(new Error('已取消'));
+    signal.addEventListener('abort', () => reject(new Error('已取消')), { once: true });
+  });
+}
+
+// 流式读取响应体的前 maxBytes 字节（提前取消剩余流，不等整个响应下载完，
+// 防止恶意源慢慢滴流拖住内存）；返回已读字节的 Uint8Array，长度可能略超 maxBytes（最后一块整块计入）
+async function readBytes(res, maxBytes, signal) {
   const reader = res.body.getReader();
   const chunks = [];
   let received = 0;
-  while (received < maxBytes) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    received += value.byteLength;
+  try {
+    while (received <= maxBytes) {
+      const { done, value } = await Promise.race([reader.read(), abortPromise(signal)]);
+      if (done) break;
+      chunks.push(value);
+      received += value.byteLength;
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
   }
-  await reader.cancel().catch(() => {});
   const all = new Uint8Array(received);
   let offset = 0;
   for (const chunk of chunks) {
     all.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return new TextDecoder().decode(all);
+  return all;
+}
+
+// 流式读取图片体，超过 maxBytes 拒收（大小校验内聚在此，调用方只管定型）
+async function readImageBytes(res, maxBytes, signal) {
+  const all = await readBytes(res, maxBytes, signal);
+  if (all.byteLength === 0 || all.byteLength > maxBytes) throw new Error('图片大小越界');
+  return all.buffer;
 }
 
 // 从首页 HTML 提取 <link> 图标声明（rel 含 icon / apple-touch-icon）
@@ -122,7 +137,7 @@ async function probeHtmlIcon(domain, signal) {
   if (!page.ok) throw new Error(`首页 HTTP ${page.status}`);
   const contentType = (page.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   if (contentType && !contentType.includes('html')) throw new Error('首页不是 HTML');
-  const html = await readHtmlPrefix(page, MAX_HTML_BYTES);
+  const html = new TextDecoder().decode(await readBytes(page, MAX_HTML_BYTES, signal));
 
   const candidates = parseIconLinks(html).sort(candidateCompare).slice(0, MAX_HTML_CANDIDATES);
   for (const link of candidates) {
@@ -133,13 +148,8 @@ async function probeHtmlIcon(domain, signal) {
       continue;
     }
     try {
-      const res = await fetchWithRedirects(iconUrl, { signal, timeout: SOURCE_TIMEOUT, headers: { 'User-Agent': BROWSER_UA } });
-      if (!res.ok) continue;
-      const buffer = await res.arrayBuffer();
-      if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) continue;
-      const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
-      if (!looksLikeImage(buffer)) continue;
-      return { buffer, contentType: ct || 'image/x-icon', source: iconUrl };
+      // 与直链源同一探测管线（fetch → 大小校验 → 内容定型），候选失败换下一个
+      return await probeUrl(iconUrl, signal);
     } catch {
       continue;
     }
@@ -151,19 +161,36 @@ async function probeHtmlIcon(domain, signal) {
 async function probeUrl(url, signal) {
   const res = await fetchWithRedirects(url, { signal, timeout: SOURCE_TIMEOUT, headers: { 'User-Agent': BROWSER_UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const buffer = await res.arrayBuffer();
-  if (buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) throw new Error('图片大小越界');
-  const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
-  if (!looksLikeImage(buffer)) throw new Error('响应不是图片');
-  return { buffer, contentType: ct || 'image/x-icon', source: url };
+  // 大小校验内聚在 readImageBytes：流式读取，超限立即断开
+  const buffer = await readImageBytes(res, MAX_ICON_BYTES, signal);
+  const mime = acceptImageType(buffer);
+  if (!mime) throw new Error('响应不是合格图片');
+  return { buffer, contentType: mime, source: url };
 }
 
-// 并发竞速：所有源同时启动，第一个成功即 abort 其余在途请求（省出站请求与配额）
-function raceProbes(factories) {
+// 并发竞速：所有源同时启动，第一个成功即 abort 其余在途请求（省出站请求与配额）；
+// outerSignal 为总预算信号，触发时统一取消所有在途源并整体 reject
+function raceProbes(factories, outerSignal) {
   return new Promise((resolve, reject) => {
     let settled = false;
     let remaining = factories.length;
     const aborts = [];
+    // 统一的 settle 出口：先摘除外部 abort 监听，避免预算信号晚到再触发副作用
+    const detach = () => {
+      if (outerSignal) outerSignal.removeEventListener('abort', onOuterAbort);
+    };
+    const onOuterAbort = () => {
+      for (const abort of aborts) abort();
+      if (!settled) {
+        settled = true;
+        detach();
+        reject(new Error('总预算耗尽'));
+      }
+    };
+    if (outerSignal) {
+      if (outerSignal.aborted) return onOuterAbort();
+      outerSignal.addEventListener('abort', onOuterAbort, { once: true });
+    }
     for (const factory of factories) {
       const ctl = new AbortController();
       aborts.push(() => ctl.abort());
@@ -171,12 +198,17 @@ function raceProbes(factories) {
         result => {
           if (settled) return;
           settled = true;
+          detach();
           for (const abort of aborts) abort();
           resolve(result);
         },
         () => {
           remaining -= 1;
-          if (remaining === 0 && !settled) reject(new Error('全部源失败'));
+          if (remaining === 0 && !settled) {
+            settled = true;
+            detach();
+            reject(new Error('全部源失败'));
+          }
         }
       );
     }
@@ -187,21 +219,40 @@ export async function handle(request, env, params, ctx) {
   const domain = String(params.domain || '').toLowerCase();
 
   if (request.method !== 'GET') {
-    return Response.json({ error: '仅支持 GET' }, { status: 405 });
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405, SECURITY_HEADERS);
+  }
+
+  // 持证校验：k 由登录凭据派生（详见 src/utils/faviconKey.js），未持证不进入任何探测
+  if (!env.ADMIN_PASSWORD) {
+    return notConfiguredError(SECURITY_HEADERS);
+  }
+  // 来源校验（fail-closed）：只接受页面内 <img> 请求。
+  // Sec-Fetch-* 是 Fetch 规范 forbidden header，网页脚本无法伪造；
+  // image-only 意味着「新标签页打开图片」会 403（已接受的设计取舍）
+  const dest = request.headers.get('Sec-Fetch-Dest');
+  const site = request.headers.get('Sec-Fetch-Site');
+  if (dest !== 'image' || site !== 'same-origin') {
+    return errorResponse('仅允许页面内图片请求', 'FORBIDDEN_CONTEXT', 403, SECURITY_HEADERS);
+  }
+
+  const k = new URL(request.url).searchParams.get('k');
+  if (!(await isValidFaviconKey(k, env))) {
+    return errorResponse('未授权访问', 'UNAUTHORIZED', 401, SECURITY_HEADERS);
   }
 
   // 域名格式校验：只放行合法 hostname，杜绝把路径/凭据拼进上游 URL（SSRF）
   if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain)) {
-    return Response.json({ error: '域名格式不合法' }, { status: 400 });
+    return errorResponse('域名格式不合法', 'VALIDATION_ERROR', 400, SECURITY_HEADERS);
   }
 
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次
   const cache = caches.default;
-  const cacheKey = new Request(`https://favicon-cache.local/${domain}`);
+  // 键带版本号：响应头策略变更（类型强制/nosniff）时换版本即可让旧缓存条目整体失效
+  const cacheKey = new Request(`https://favicon-cache.local/v3/${domain}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
-  // 并发探测各源，取最先返回有效图片的一个（单源 3 秒超时，总耗时上限 3 秒）：
+  // 并发探测各源，取最先返回有效图片的一个（单源 3 秒超时，总耗时上限 5 秒，含 body 读取）：
   // 1. 目标站首页 HTML 图标声明（清晰度与覆盖率最优）
   // 2. 目标站 /favicon.ico 直连
   // 3-5. favicon.im / DuckDuckGo / Google s2（Cloudflare 边缘可达性好，兜底互补）
@@ -213,10 +264,14 @@ export async function handle(request, env, params, ctx) {
     signal => probeUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`, signal)
   ];
 
+  // 总预算定时器：到点 abort 全部在途探测（含 body 流式读取），防止该端点被滴流拖住
+  const budget = new AbortController();
+  const budgetTimer = setTimeout(() => budget.abort(), TOTAL_BUDGET_MS);
   try {
-    const result = await raceProbes(factories);
+    const result = await raceProbes(factories, budget.signal);
     const response = new Response(result.buffer, {
       headers: {
+        ...SECURITY_HEADERS,
         'Content-Type': result.contentType,
         'Cache-Control': `public, max-age=${CACHE_TTL}`,
         'X-Favicon-Source': result.source
@@ -225,12 +280,20 @@ export async function handle(request, env, params, ctx) {
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch {
-    // 全部源失败：负面缓存 10 分钟，浏览器端也缓存，避免反复探测拖慢页面
+    // 全部源失败（含总预算耗尽）：200 空体而非 404——
+    // 浏览器对失败子资源必打控制台日志且无法抑制，200 空体使 <img> 触发 error 事件、
+    // 前端回退首字头像且控制台干净（负面缓存 10 分钟，与前端 FAILED_TTL 对齐）
     const miss = new Response(null, {
-      status: 404,
-      headers: { 'Cache-Control': `public, max-age=${MISS_TTL}` }
+      status: 200,
+      headers: {
+        ...SECURITY_HEADERS,
+        'Content-Type': 'image/png',
+        'Cache-Control': `public, max-age=${MISS_TTL}`
+      }
     });
     ctx.waitUntil(cache.put(cacheKey, miss.clone()));
     return miss;
+  } finally {
+    clearTimeout(budgetTimer);
   }
 }

@@ -1,5 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { handle } from './favicon.js'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { setTimeout as realSetTimeout } from 'node:timers'
+import { handle, MAX_ICON_BYTES } from './favicon.js'
+import { expectedToken } from '../utils/token.js'
+import { deriveFaviconKey } from '../utils/faviconKey.js'
+
+const TEST_ENV = { ADMIN_PASSWORD: 'secret' }
+let TEST_K = ''
+
+beforeAll(async () => {
+  TEST_K = await deriveFaviconKey(expectedToken(TEST_ENV))
+})
 
 // 模拟 Cloudflare Cache API（node 环境没有 caches 全局，函数在调用期才访问它）
 const cacheStore = new Map()
@@ -16,17 +26,22 @@ function stubCaches() {
 const PNG_HEAD = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
 const ICO_HEAD = [0x00, 0x00, 0x01, 0x00, 0x01, 0x00]
 
-function makeFixture(domain, method = 'GET') {
+function makeFixture(domain, { method = 'GET', k = TEST_K, dest = 'image', site = 'same-origin' } = {}) {
   const waitUntil = []
+  const url = new URL(`https://site.example/api/favicon/${domain}`)
+  if (k !== null) url.searchParams.set('k', k)
+  const headers = {}
+  if (dest !== null) headers['Sec-Fetch-Dest'] = dest
+  if (site !== null) headers['Sec-Fetch-Site'] = site
   return {
-    request: new Request(`https://site.example/api/favicon/${domain}`, { method }),
+    request: new Request(url, { method, headers }),
     params: { domain },
     ctx: { waitUntil: promise => waitUntil.push(promise) },
     waitUntilQueue: waitUntil
   }
 }
 
-const invoke = (f) => handle(f.request, {}, f.params, f.ctx)
+const invoke = (f, env = TEST_ENV) => handle(f.request, env, f.params, f.ctx)
 
 function htmlResponse(html) {
   return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
@@ -65,6 +80,26 @@ beforeEach(() => {
 })
 
 describe('GET /api/favicon/:domain', () => {
+  it('k 缺失或错误返回 401 UNAUTHORIZED', async () => {
+    stubFetch({})
+    const noK = await invoke(makeFixture('example.com', { k: null }))
+    expect(noK.status).toBe(401)
+    expect((await noK.json()).code).toBe('UNAUTHORIZED')
+    expect(noK.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(noK.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    const badK = await invoke(makeFixture('example.com', { k: 'wrong' }))
+    expect(badK.status).toBe(401)
+  })
+
+  it('未配置 ADMIN_PASSWORD 返回 500 NOT_CONFIGURED', async () => {
+    stubFetch({})
+    const res = await invoke(makeFixture('example.com'), {})
+    expect(res.status).toBe(500)
+    expect((await res.json()).code).toBe('NOT_CONFIGURED')
+    expect(res.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
   it('域名格式不合法返回 400', async () => {
     stubFetch({})
     for (const bad of ['ev il.com', 'localhost', '192.168.1.1', 'evil.com/path', '..']) {
@@ -73,35 +108,97 @@ describe('GET /api/favicon/:domain', () => {
     }
   })
 
-  it('非 GET 请求（含 OPTIONS）返回 405', async () => {
+  it('非 GET 请求（含 OPTIONS）返回 405 METHOD_NOT_ALLOWED', async () => {
     stubFetch({})
-    expect((await invoke(makeFixture('example.com', 'POST'))).status).toBe(405)
-    expect((await invoke(makeFixture('example.com', 'OPTIONS'))).status).toBe(405)
+    const post = await invoke(makeFixture('example.com', { method: 'POST' }))
+    expect(post.status).toBe(405)
+    expect(await post.json()).toEqual({ error: '请求方法不支持', code: 'METHOD_NOT_ALLOWED' })
+    expect((await invoke(makeFixture('example.com', { method: 'OPTIONS' }))).status).toBe(405)
   })
 
-  it('SVG 一律拒收（防直接访问时在站点源下执行脚本）', async () => {
-    const svgBytes = new TextEncoder().encode('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>')
+  const BENIGN_SVG = new TextEncoder().encode(
+    '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M0 0h16v16H0z" fill="#2563EB"/></svg>'
+  )
+
+  it('良性 SVG 图标放行并强制 image/svg+xml', async () => {
     stubFetch({
       'https://example.com/': htmlResponse('<html></html>'),
-      // content-type 声称 svg 与伪装成 png 但内容是 svg 的两种形态都要拒
-      'https://example.com/favicon.ico': imageResponse(svgBytes, 'image/svg+xml'),
-      'https://favicon.im/example.com': imageResponse(svgBytes, 'image/png'),
-      'https://icons.duckduckgo.com/ip3/example.com.ico': imageResponse(svgBytes, ''),
-      'https://www.google.com/s2/favicons': imageResponse(svgBytes, 'image/svg+xml')
+      'https://example.com/favicon.ico': imageResponse(BENIGN_SVG, 'image/png') // 上游类型不作数
     })
     const res = await invoke(makeFixture('example.com'))
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/svg+xml')
+    expect(res.headers.get('Content-Security-Policy')).toBe('sandbox')
   })
 
-  it('全部源失败返回 404，并写入负面缓存', async () => {
+  it('危险 SVG（script/onload/DOCTYPE）整份拒绝，全部失败时回 200 空体', async () => {
+    for (const bad of [
+      '<svg><script>alert(1)</script></svg>',
+      '<svg onload="alert(1)"></svg>',
+      '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x "y">]><svg></svg>'
+    ]) {
+      cacheStore.clear()
+      const bytes = new TextEncoder().encode(bad)
+      stubFetch({
+        'https://example.com/': htmlResponse('<html></html>'),
+        'https://example.com/favicon.ico': imageResponse(bytes),
+        'https://favicon.im/example.com': imageResponse(bytes),
+        'https://icons.duckduckgo.com/ip3/example.com.ico': imageResponse(bytes),
+        'https://www.google.com/s2/favicons': imageResponse(bytes)
+      })
+      const res = await invoke(makeFixture('example.com'))
+      expect(res.status, bad).toBe(200)
+      expect((await res.arrayBuffer()).byteLength, bad).toBe(0)
+    }
+  })
+
+  it('危险 SVG 被跳过后取到下一源的安全图片', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html><link rel="icon" href="/evil.svg"></html>'),
+      'https://example.com/evil.svg': imageResponse(new TextEncoder().encode('<svg onload="alert(1)"></svg>')),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/favicon.ico')
+  })
+
+  it('上游声明 text/html 但内容是 GIF 时，响应 Content-Type 强制为 image/gif 并带 nosniff', async () => {
+    const gifBytes = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00]
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(gifBytes, 'text/html')
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/gif')
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
+  it('魔数命中 RIFF 时强制为 image/webp（不透传上游类型）', async () => {
+    const riffBytes = [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(riffBytes, 'text/plain')
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.headers.get('Content-Type')).toBe('image/webp')
+  })
+
+  it('全部源失败返回 200 空体，并写入负面缓存', async () => {
     stubFetch({})
     const fixture = makeFixture('example.com')
     const res = await invoke(fixture)
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
+    expect((await res.arrayBuffer()).byteLength).toBe(0)
+    expect(res.headers.get('Content-Type')).toBe('image/png')
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=600')
     await Promise.all(fixture.waitUntilQueue)
     const keys = [...cacheStore.keys()]
     expect(keys).toHaveLength(1)
-    expect(cacheStore.get(keys[0]).status).toBe(404)
+    // 缓存键带 v3 版本前缀：安全响应头策略变更时靠换键作废旧缓存
+    expect(keys[0]).toBe('https://favicon-cache.local/v3/example.com')
+    expect(cacheStore.get(keys[0]).status).toBe(200)
   })
 
   it('HTML 无图标声明时降级 favicon.ico 成功并带缓存头', async () => {
@@ -168,7 +265,8 @@ describe('GET /api/favicon/:domain', () => {
     })
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
-    expect(res.headers.get('Content-Type')).toBe('image/x-icon')
+    // 类型由魔数决定（PNG 字节 → image/png），与上游声明无关
+    expect(res.headers.get('Content-Type')).toBe('image/png')
   })
 
   it('超过大小上限的响应被拒绝', async () => {
@@ -177,7 +275,62 @@ describe('GET /api/favicon/:domain', () => {
       'https://example.com/favicon.ico': imageResponse(new Array(600 * 1024).fill(0x41))
     })
     const res = await invoke(makeFixture('example.com'))
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
+  })
+
+  it('图标体超过 512KB 时流式截断拒收，不读完整个响应', async () => {
+    // 流式 body 每 8KB 推一块、共 600KB；pull 中计数推给消费者的字节数：
+    // 流式实现读到 512KB 上限附近即 cancel（不再触发 pull），整读实现（arrayBuffer）会推满 600KB
+    const CHUNK = 8 * 1024
+    const TOTAL = 600 * 1024
+    const big = new Uint8Array(TOTAL)
+    big.set(ICO_HEAD, 0)
+    let sent = 0
+    const stream = new ReadableStream({
+      pull(controller) {
+        if (sent >= TOTAL) {
+          controller.close()
+          return
+        }
+        const end = Math.min(sent + CHUNK, TOTAL)
+        controller.enqueue(big.slice(sent, end))
+        sent = end
+      }
+    })
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': () => new Response(stream, { status: 200, headers: { 'Content-Type': 'image/x-icon' } })
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(200) // 该源被拒，其余源失败 → 整体失败返回 200 空体
+    // 交付字节数显著小于 600KB：阈值 = 512KB 上限 + 4 块 8KB 裕量
+    // （读满上限后边界再读 1 块、hwm 预取回填与取消时机的差额）；
+    // 整读实现推满 600KB，必然超出该阈值
+    expect(sent, `sent=${sent} 超出流式截断阈值`).toBeLessThanOrEqual(MAX_ICON_BYTES + 4 * CHUNK)
+    expect(sent, `sent=${sent} 推满整段 body`).toBeLessThan(TOTAL)
+  })
+
+  it('全部源挂起滴流时，总预算 5 秒内返回', async () => {
+    vi.useFakeTimers()
+    try {
+      // 挂起的响应头 + 永不结束的 body 流
+      stubFetch({
+        'https://example.com/favicon.ico': () => new Response(
+          new ReadableStream({ start() {} }),
+          { status: 200, headers: { 'Content-Type': 'image/x-icon' } }
+        )
+      })
+      const p = invoke(makeFixture('example.com'))
+      // k 校验含 crypto.subtle（真实事件循环异步），虚拟时间推进不等待它完成：
+      // 须先真实等待预算定时器入队（k 校验路径无 fake timer，getTimerCount 0→1 即预算定时器已创建），
+      // 否则定时器在推进完成后才创建、永不触发，handle 悬挂至测试超时
+      while (vi.getTimerCount() === 0) await new Promise(r => realSetTimeout(r, 1))
+      await vi.advanceTimersByTimeAsync(5100)
+      const res = await p
+      expect(res.status).toBe(200)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('首页 HTML 只读取前 256KB，超大页面不整页读入', async () => {
@@ -263,12 +416,53 @@ describe('GET /api/favicon/:domain', () => {
 
   it('缓存命中时不发起上游请求', async () => {
     const cached = imageResponse(PNG_HEAD)
-    const key = new Request('https://favicon-cache.local/example.com')
+    const key = new Request('https://favicon-cache.local/v3/example.com')
     cacheStore.set(key.url, cached)
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('所有响应带 CSP sandbox 与 nosniff 纵深安全头', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const ok = await invoke(makeFixture('example.com'))
+    expect(ok.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(ok.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    stubFetch({})
+    const miss = await invoke(makeFixture('example.org'))
+    expect(miss.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(miss.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    const bad = await invoke(makeFixture('evil.com/path'))
+    expect(bad.status).toBe(400)
+    expect(bad.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(bad.headers.get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
+  it('Sec-Fetch 非图片上下文或跨站请求返回 403 FORBIDDEN_CONTEXT', async () => {
+    stubFetch({})
+    // 地址栏/新标签页打开（document + none）——image-only 明确拒绝
+    const doc = await invoke(makeFixture('example.com', { dest: 'document', site: 'none' }))
+    expect(doc.status).toBe(403)
+    expect((await doc.json()).code).toBe('FORBIDDEN_CONTEXT')
+    expect(doc.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(doc.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    // 外站 iframe 嵌入
+    expect((await invoke(makeFixture('example.com', { dest: 'iframe', site: 'cross-site' }))).status).toBe(403)
+    // 缺头（curl 等非浏览器客户端）fail-closed
+    expect((await invoke(makeFixture('example.com', { dest: null, site: null }))).status).toBe(403)
+  })
+
+  it('同源图片请求放行（正常 <img> 渲染路径）', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const res = await invoke(makeFixture('example.com', { dest: 'image', site: 'same-origin' }))
+    expect(res.status).toBe(200)
   })
 })

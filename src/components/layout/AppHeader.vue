@@ -1,12 +1,23 @@
 <template>
   <header class="app-header">
     <div class="app-header-inner">
-      <!-- 文字 logo：品牌字体渲染站点名称（缺字回退正文字体） -->
-      <a class="app-header-brand" href="/">
-        <span class="app-header-name">{{ siteName }}</span>
-      </a>
+      <!-- 文字 logo：品牌字体渲染站点名称（缺字回退正文字体）；RouterLink 走 SPA 导航避免整页刷新 -->
+      <RouterLink to="/" class="app-header-brand">
+        <span class="app-header-name">{{ settings.displayName }}</span>
+      </RouterLink>
 
       <div class="app-header-actions">
+        <a
+          class="app-header-btn"
+          href="https://github.com/baisuMr/NavBase"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <i class="ri-github-fill"></i>
+        </a>
+
         <button
           type="button"
           class="app-header-btn"
@@ -29,7 +40,7 @@
 
         <!-- 头像仅作展示，退出登录在设置面板中 -->
         <div class="app-header-avatar" :title="username">
-          <img v-if="avatar" :src="avatar" alt="头像" />
+          <img v-if="settings.avatar" :src="settings.avatar" alt="头像" />
           <template v-else>{{ usernameInitial }}</template>
         </div>
       </div>
@@ -39,6 +50,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useSettingsStore } from '../../stores/settings'
 
 const props = defineProps({
@@ -51,7 +63,5 @@ const props = defineProps({
 defineEmits(['open-settings', 'open-shortcuts'])
 
 const settings = useSettingsStore()
-const siteName = computed(() => settings.displayName)
-const avatar = computed(() => settings.avatar)
 const usernameInitial = computed(() => (props.username || 'N').charAt(0).toUpperCase())
 </script>

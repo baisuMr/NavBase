@@ -1,25 +1,26 @@
 // 书签固定到首屏：is_pinned 字段校验、写入与上限 10
 import { describe, it, expect } from 'vitest'
-import { validateBookmark, item, batch } from './bookmarks.js'
+import { validateBookmarkPayload } from '../utils/validate.js'
+import { item, batch } from './bookmarks.js'
 import { createMockDB } from '../utils/mock-d1.js'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
 describe('validateBookmark is_pinned 字段校验', () => {
   it('is_pinned 缺省（undefined/null）或 0/1/布尔值时通过', () => {
-    expect(validateBookmark({ title: 't', url: 'https://a.com' })).toBeNull()
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: null })).toBeNull()
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: 0 })).toBeNull()
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: 1 })).toBeNull()
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: true })).toBeNull()
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: false })).toBeNull()
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com' })).toBeNull()
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: null })).toBeNull()
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: 0 })).toBeNull()
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: 1 })).toBeNull()
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: true })).toBeNull()
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: false })).toBeNull()
   })
 
   it('is_pinned 为非法类型时返回错误', () => {
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: 2 })).toMatch(/固定/)
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: 'yes' })).toMatch(/固定/)
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: {} })).toMatch(/固定/)
-    expect(validateBookmark({ title: 't', url: 'https://a.com', is_pinned: [] })).toMatch(/固定/)
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: 2 })).toMatch(/固定/)
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: 'yes' })).toMatch(/固定/)
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: {} })).toMatch(/固定/)
+    expect(validateBookmarkPayload({ title: 't', url: 'https://a.com', is_pinned: [] })).toMatch(/固定/)
   })
 })
 
@@ -86,6 +87,7 @@ describe('固定上限 10', () => {
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/最多固定/)
+    expect(body.code).toBe('VALIDATION_ERROR')
     // 超限时不得写库
     expect(db.calls.find(c => c.sql.includes('UPDATE bookmarks'))).toBeUndefined()
   })
@@ -132,7 +134,7 @@ describe('批量导入不固定', () => {
       })
     }), { DB: db })
     expect(res.status).toBe(200)
-    const insert = db.calls.find(c => c.sql.includes('INSERT INTO bookmarks'))
+    const insert = db.calls.find(c => /INSERT( OR IGNORE)? INTO bookmarks/.test(c.sql))
     expect(insert.sql).not.toMatch(/is_pinned/)
   })
 })

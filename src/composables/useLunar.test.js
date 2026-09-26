@@ -1,23 +1,13 @@
 // 日期问候 / 农历 / 周数计算单测
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { useDateInfo } from './useLunar'
 
-const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText, getGreeting } = useDateInfo()
-
-describe('getGreeting 时段问候', () => {
-  const cases = [
-    [3, '夜深了，注意休息与充电'],
-    [7, '早上好，迎接清晰而高效的一天'],
-    [12, '中午好，适度小憩片刻'],
-    [15, '下午好，保持专注与敏锐'],
-    [21, '晚上好，整理今日的收获与沉淀']
-  ]
-  for (const [h, expected] of cases) {
-    it(`${h}点 → ${expected.slice(0, 4)}`, () => {
-      expect(getGreeting(new Date(2026, 0, 1, h, 0))).toBe(expected)
-    })
-  }
+afterEach(() => {
+  vi.doUnmock('lunar-javascript')
+  vi.resetModules()
 })
+
+const { getLunarText, getWeekOfYear, getGregorianText, getWeekdayText } = useDateInfo()
 
 describe('getGregorianText 公历文案', () => {
   it('格式为 YYYY年M月D日', () => {
@@ -57,5 +47,18 @@ describe('getLunarText 农历（动态加载 lunar-javascript）', () => {
 
   it('异常输入返回空字符串而非抛错', async () => {
     expect(await getLunarText('not-a-date')).toBe('')
+  })
+
+  it('动态加载失败后下次调用重试（不永久缓存 rejected promise）', async () => {
+    // 动态 import 失败 mock：工厂抛错使 import('lunar-javascript') reject
+    vi.doMock('lunar-javascript', () => { throw new Error('chunk load fail') })
+    vi.resetModules()
+    const mod = await import('./useLunar')
+    const { getLunarText } = mod.useDateInfo()
+    // 首次加载失败 → 返回空字符串
+    await expect(getLunarText(new Date(2025, 0, 29))).resolves.toBe('')
+    // 恢复真实模块后，同一模块实例下次调用应重试成功（修复前 rejected promise 被永久缓存，仍返回 ''）
+    vi.doUnmock('lunar-javascript')
+    expect(await getLunarText(new Date(2025, 0, 29))).toBe('乙巳年 农历正月初一')
   })
 })

@@ -25,6 +25,13 @@ export function isOptionalPinFlag(v) {
   return v === undefined || v === null || v === 0 || v === 1 || v === true || v === false;
 }
 
+// 书签/分类字段长度上限：防止超长文本入库拖垮首页书签表体积
+const MAX_TITLE_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_URL_LENGTH = 2048;
+const MAX_ICON_URL_LENGTH = 500;
+const MAX_NAME_LENGTH = 50;
+
 // 书签载荷校验：返回错误消息，通过时返回 null
 export function validateBookmarkPayload(data) {
   if (!isNonEmptyString(data?.title)) return '标题不能为空';
@@ -45,6 +52,11 @@ export function validateBookmarkPayload(data) {
   if (!isOptionalPositiveInt(data.category_id)) return '分类ID类型不正确';
   if (!isOptionalNonNegInt(data.sort_order)) return '排序字段类型不正确';
   if (!isOptionalPinFlag(data.is_pinned)) return '固定标记类型不正确';
+  // 长度检查置于全部类型检查之后：类型不对先报类型错误；可选字段用 || '' 兜底
+  if (data.title.length > MAX_TITLE_LENGTH) return '标题不能超过 200 个字';
+  if ((data.description || '').length > MAX_DESCRIPTION_LENGTH) return '描述不能超过 2000 个字';
+  if (data.url.length > MAX_URL_LENGTH) return 'URL 不能超过 2048 个字符';
+  if ((data.icon_url || '').length > MAX_ICON_URL_LENGTH) return '图标地址不能超过 500 个字符';
   return null;
 }
 
@@ -55,6 +67,8 @@ export function validateCategoryPayload(data) {
     return '图标与颜色字段类型不正确';
   }
   if (!isOptionalNonNegInt(data?.sort_order)) return '排序字段类型不正确';
+  // 长度检查置于类型检查之后：类型不对先报类型错误
+  if (data.name.length > MAX_NAME_LENGTH) return '分类名称不能超过 50 个字';
   return null;
 }
 
@@ -73,7 +87,7 @@ export function validateSettingsPayload(data) {
   }
   if (data.site_name !== undefined) {
     const name = data.site_name;
-    if (name !== '' && !isNonEmptyString(name)) return '网站名称不能为空白';
+    if (name !== '' && !isNonEmptyString(name)) return '网站名称不能是空白';
     if (typeof name === 'string' && name.trim().length > MAX_SITE_NAME_LENGTH) {
       return `网站名称不能超过 ${MAX_SITE_NAME_LENGTH} 个字`;
     }

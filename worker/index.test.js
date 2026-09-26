@@ -2,6 +2,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import worker from './index.js'
 import { createMockDB } from './utils/mock-d1.js'
+import { expectedToken } from './utils/token.js'
+import { deriveFaviconKey } from './utils/faviconKey.js'
 
 const basic = (u, p) => 'Basic ' + btoa(`${u}:${p}`)
 const AUTH = { Authorization: basic('admin', 's3cret') }
@@ -41,7 +43,9 @@ describe('Worker 入口路由', () => {
       body: '{}'
     }), env, {})
     expect(res.status).toBe(400)
-    expect((await res.json()).error).toContain('bookmarks')
+    const batchBody = await res.json()
+    expect(batchBody.error).toContain('bookmarks')
+    expect(batchBody.code).toBe('VALIDATION_ERROR')
   })
 
   it('PUT /api/categories/sort 走 sort 字面量路由', async () => {
@@ -53,7 +57,9 @@ describe('Worker 入口路由', () => {
       body: JSON.stringify({ ids: 'x' })
     }), env, {})
     expect(res.status).toBe(400)
-    expect((await res.json()).error).toBe('排序字段不正确')
+    const sortBody = await res.json()
+    expect(sortBody.error).toBe('排序字段不正确')
+    expect(sortBody.code).toBe('VALIDATION_ERROR')
   })
 
   it('路径大小写不敏感（/API/Bookmarks 归一化后命中书签路由）', async () => {
@@ -62,9 +68,18 @@ describe('Worker 入口路由', () => {
     expect(res.status).toBe(200)
   })
 
-  it('favicon 免认证：非法域名返回 400 而非 401', async () => {
+  it('favicon 端点在认证门放行：持证请求非法域名返回 400 而非 401', async () => {
     const env = makeEnv()
-    const res = await worker.fetch(req('/api/favicon/localhost'), env, {})
+    // 携带合法 k（favicon 处理器校验）与 Sec-Fetch 头（Task 7 校验）：
+    // 到达 400 域名校验即证明请求穿过了认证门（门上被拦会是 401）
+    const k = await deriveFaviconKey(expectedToken(env))
+    const res = await worker.fetch(
+      req(`/api/favicon/localhost?k=${encodeURIComponent(k)}`, {
+        headers: { 'Sec-Fetch-Dest': 'image', 'Sec-Fetch-Site': 'same-origin' }
+      }),
+      env,
+      {}
+    )
     expect(res.status).toBe(400)
   })
 
@@ -74,6 +89,25 @@ describe('Worker 入口路由', () => {
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('asset-fallback')
     expect(env.ASSETS.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('未命中的 /api/* 路径返回 404 JSON 而非 SPA 页面', async () => {
+    const env = makeEnv()
+    const res = await worker.fetch(req('/api/bookmarkz', { headers: AUTH }), env, {})
+    expect(res.status).toBe(404)
+    expect(res.headers.get('Content-Type')).toContain('application/json')
+    const body = await res.json()
+    expect(body.error).toBe('接口不存在')
+    expect(body.code).toBe('NOT_FOUND')
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled()
+  })
+
+  it('未命中的 /API/* 大小写变体同样返回 404 JSON', async () => {
+    const env = makeEnv()
+    const res = await worker.fetch(req('/API/bookmarkz', { headers: AUTH }), env, {})
+    expect(res.status).toBe(404)
+    expect((await res.json()).code).toBe('NOT_FOUND')
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled()
   })
 
   it('尾斜杠与重复斜杠归一化后命中同一处理函数', async () => {
@@ -114,6 +148,54 @@ describe('schema 自动初始化集成', () => {
     }))
     const res = await w.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
     expect(res.status).toBe(500)
-    expect((await res.json()).error).toBe('DB_INIT_FAILED')
+    const body = await res.json()
+    expect(body.error).toBe('数据库初始化失败')
+    expect(body.code).toBe('DB_INIT_FAILED')
+  })
+})
+
+describe('API 错误契约统一（{ error, code }）', () => {
+  it('各路由 405 统一返回请求方法不支持 + METHOD_NOT_ALLOWED', async () => {
+    const env = makeEnv()
+    const cases = [
+      ['/api/bookmarks', 'DELETE'],
+      ['/api/bookmarks/batch', 'GET'],
+      ['/api/bookmarks/1', 'PATCH'],
+      ['/api/categories', 'DELETE'],
+      ['/api/categories/sort', 'GET'],
+      ['/api/categories/1', 'PATCH']
+    ]
+    for (const [path, method] of cases) {
+      const label = `${method} ${path}`
+      const res = await worker.fetch(req(path, { method, headers: AUTH }), env, {})
+      expect(res.status, label).toBe(405)
+      expect(await res.json(), label).toEqual({
+        error: '请求方法不支持',
+        code: 'METHOD_NOT_ALLOWED'
+      })
+    }
+  })
+
+  it('书签不存在返回 404 + NOT_FOUND', async () => {
+    const env = makeEnv() // first() 默认 null → 书签不存在
+    const res = await worker.fetch(req('/api/bookmarks/999', { headers: AUTH }), env, {})
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: '书签不存在', code: 'NOT_FOUND' })
+  })
+
+  it('分类不存在返回 404 + NOT_FOUND（写入校验的 400 仍为 CATEGORY_NOT_FOUND）', async () => {
+    const env = makeEnv()
+    const res = await worker.fetch(req('/api/categories/999', { headers: AUTH }), env, {})
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: '分类不存在', code: 'NOT_FOUND' })
+  })
+
+  it('路由内部异常的 500 兜底返回 INTERNAL_ERROR', async () => {
+    const env = makeEnv(createMockDB(({ method }) => {
+      if (method === 'all') throw new Error('boom')
+    }))
+    const res = await worker.fetch(req('/api/bookmarks', { headers: AUTH }), env, {})
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({ error: '服务器错误', code: 'INTERNAL_ERROR' })
   })
 })

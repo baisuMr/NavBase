@@ -11,13 +11,14 @@ export function useKeyboard(handlers) {
     // Alt + N: 添加书签
     // 注意：Ctrl+N / Ctrl+Shift+N 是浏览器保留快捷键（新建窗口/无痕窗口），
     // 网页无法拦截，因此使用 Alt 组合键；用 e.code 判定可兼容大小写锁定与输入法
-    if (e.altKey && !e.shiftKey && e.code === 'KeyN') {
+    // 排除 Ctrl：AltGr（欧洲键盘 Ctrl+Alt 组合）输入字符时误触发，且会吞掉输入
+    if (e.altKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyN') {
       e.preventDefault()
       handlers.addBookmark?.()
     }
 
-    // Alt + Shift + N: 添加分类
-    if (e.altKey && e.shiftKey && e.code === 'KeyN') {
+    // Alt + Shift + N: 添加分类（同样排除 Ctrl/AltGr）
+    if (e.altKey && !e.ctrlKey && e.shiftKey && e.code === 'KeyN') {
       e.preventDefault()
       handlers.addCategory?.()
     }

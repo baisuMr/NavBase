@@ -17,10 +17,36 @@ describe('ensureSchema', () => {
     expect(db.calls.some(c => c.method === 'run' && c.sql.startsWith('INSERT INTO categories'))).toBe(true)
   })
 
-  it('三张关键表齐全时跳过初始化', async () => {
+  it('三张关键表齐全且关键列齐时跳过初始化', async () => {
     const ensureSchema = await load()
     const db = createMockDB(({ sql, method }) => {
       if (method === 'first' && sql.includes('sqlite_master')) return { cnt: 3 }
+      // 新语义：表齐后仍走列探测（PRAGMA 用 all 查询，非 run），列齐则不执行任何写操作
+      if (method === 'all' && sql.includes('PRAGMA table_info')) {
+        return { results: [{ name: 'id' }, { name: 'is_pinned' }] }
+      }
+    })
+    await ensureSchema({ DB: db })
+    expect(db.calls.some(c => c.method === 'run')).toBe(false)
+  })
+
+  it('bookmarks 缺 is_pinned 列时自动补列（幂等）', async () => {
+    const ensureSchema = await load()
+    const alters = []
+    const db = createMockDB(({ sql, method }) => {
+      if (method === 'first' && sql.includes('sqlite_master')) return { cnt: 3 }
+      if (method === 'all' && sql.includes('PRAGMA table_info')) return { results: [{ name: 'id' }, { name: 'title' }] }
+      if (method === 'run' && sql.includes('ALTER TABLE')) alters.push(sql)
+    })
+    await ensureSchema({ DB: db })
+    expect(alters.some(s => s.includes('ADD COLUMN is_pinned'))).toBe(true)
+  })
+
+  it('列齐全时不执行 ALTER', async () => {
+    const ensureSchema = await load()
+    const db = createMockDB(({ sql, method }) => {
+      if (method === 'first' && sql.includes('sqlite_master')) return { cnt: 3 }
+      if (method === 'all' && sql.includes('PRAGMA table_info')) return { results: [{ name: 'id' }, { name: 'is_pinned' }] }
     })
     await ensureSchema({ DB: db })
     expect(db.calls.some(c => c.method === 'run')).toBe(false)

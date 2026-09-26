@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { initFaviconKey, clearFaviconKey } from '../utils/faviconKey'
 
 const TOKEN_KEY = 'auth_token'
 const USERNAME_KEY = 'auth_username'
@@ -13,30 +14,22 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: '',
     username: '',
-    expiresAt: 0,
-    isAuthenticated: false
+    expiresAt: 0
   }),
 
   getters: {
-    // 检查是否已过期
-    isExpired: (state) => {
-      if (!state.expiresAt) return true
-      return Date.now() > state.expiresAt
-    },
-
-    // 剩余天数
-    remainingDays: (state) => {
-      if (!state.expiresAt) return 0
-      const remaining = state.expiresAt - Date.now()
-      return Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)))
-    }
+    // 由 token 推导登录标记，避免与凭据双写不同步
+    isAuthenticated: (state) => !!state.token
   },
 
   actions: {
     // 初始化时检查登录状态（localStorage 优先，其次 sessionStorage）
     init() {
-      if (this.restoreFrom(localStorage)) return
-      if (this.restoreFrom(sessionStorage)) return
+      if (this.restoreFrom(localStorage) || this.restoreFrom(sessionStorage)) {
+        // fire-and-forget 派生 favicon key（init 保持同步，k 就绪后由 ref 触发重渲染）
+        initFaviconKey(this.token).catch(() => {})
+        return
+      }
       this.clearAuth()
     },
 
@@ -49,7 +42,6 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         this.username = storage.getItem(USERNAME_KEY) || ''
         this.expiresAt = expiresAt
-        this.isAuthenticated = true
         return true
       }
 
@@ -82,7 +74,9 @@ export const useAuthStore = defineStore('auth', {
         this.token = data.token
         this.username = data.username
         this.expiresAt = data.expiresAt
-        this.isAuthenticated = true
+
+        // 派生 favicon 持证 URL 的 k（与登录态同步就绪）
+        await initFaviconKey(data.token)
 
         // 写入所选存储并清理另一处，避免两处残留不同凭据
         const target = authStorage(rememberMe)
@@ -115,13 +109,15 @@ export const useAuthStore = defineStore('auth', {
       this.token = ''
       this.username = ''
       this.expiresAt = 0
-      this.isAuthenticated = false
 
       for (const storage of [localStorage, sessionStorage]) {
         storage.removeItem(TOKEN_KEY)
         storage.removeItem(USERNAME_KEY)
         storage.removeItem(EXPIRES_KEY)
       }
+
+      // 登出/清理时同步清空 favicon key
+      clearFaviconKey()
     },
 
     // 获取认证头

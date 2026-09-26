@@ -4,29 +4,30 @@ import { categoriesApi } from '../api/categories'
 export const useCategoriesStore = defineStore('categories', {
   state: () => ({
     categories: [],
-    loading: false,
-    error: null
+    error: null,
+    fetchSeq: 0 // 请求序号：并发拉取时只认最后一次请求的结果
   }),
 
   actions: {
     // 获取所有分类
     async fetchCategories() {
-      this.loading = true
+      const seq = ++this.fetchSeq
       this.error = null
       try {
-        this.categories = await categoriesApi.getAll()
+        const data = await categoriesApi.getAll()
+        if (seq !== this.fetchSeq) return // 已有更新的请求，丢弃过期响应
+        this.categories = data
       } catch (error) {
+        if (seq !== this.fetchSeq) return // 过期请求的失败不影响当前状态
         this.error = error.message
         console.error('Failed to fetch categories:', error)
-      } finally {
-        this.loading = false
       }
     },
 
-    // 创建分类
-    async createCategory(data) {
+    // 创建分类；refresh=false 供批量场景循环调用（结束后由调用方统一 fetchCategories）
+    async createCategory(data, refresh = true) {
       const { id } = await categoriesApi.create(data)
-      await this.fetchCategories()
+      if (refresh) await this.fetchCategories()
       return id
     },
 
