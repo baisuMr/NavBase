@@ -1,6 +1,6 @@
 // POST /api/auth/login - 用户登录
 import { secureCompare } from '../auth.js';
-import { utf8ToBase64 } from '../utils/base64.js';
+import { expectedToken } from '../utils/token.js';
 
 // 解析登录时长环境变量：非法（NaN）或非正数时回退默认，
 // 避免 expiresAt 变成 null/NaN 被前端误判为已过期、登录后立刻被踢回登录页
@@ -55,7 +55,7 @@ export async function handle(request, env) {
     const passOk = await secureCompare(password, env.ADMIN_PASSWORD);
     if (userOk && passOk) {
       // 生成 Basic Auth token（UTF-8 安全，支持中文等非 Latin-1 字符）
-      const token = utf8ToBase64(`${username}:${password}`);
+      const token = expectedToken(env);
 
       // 勾选记住设备 → REMEMBER_DURATION_DAYS（默认30天）；否则 LOGIN_DURATION_DAYS（默认7天）
       const rememberMe = remember === true;
