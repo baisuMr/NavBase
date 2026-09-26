@@ -412,4 +412,27 @@ describe('GET /api/favicon/:domain', () => {
     expect(bad.headers.get('Content-Security-Policy')).toBe('sandbox')
     expect(bad.headers.get('X-Content-Type-Options')).toBe('nosniff')
   })
+
+  it('Sec-Fetch 非图片上下文或跨站请求返回 403 FORBIDDEN_CONTEXT', async () => {
+    stubFetch({})
+    // 地址栏/新标签页打开（document + none）——image-only 明确拒绝
+    const doc = await invoke(makeFixture('example.com', { dest: 'document', site: 'none' }))
+    expect(doc.status).toBe(403)
+    expect((await doc.json()).code).toBe('FORBIDDEN_CONTEXT')
+    expect(doc.headers.get('Content-Security-Policy')).toBe('sandbox')
+    expect(doc.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    // 外站 iframe 嵌入
+    expect((await invoke(makeFixture('example.com', { dest: 'iframe', site: 'cross-site' }))).status).toBe(403)
+    // 缺头（curl 等非浏览器客户端）fail-closed
+    expect((await invoke(makeFixture('example.com', { dest: null, site: null }))).status).toBe(403)
+  })
+
+  it('同源图片请求放行（正常 <img> 渲染路径）', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const res = await invoke(makeFixture('example.com', { dest: 'image', site: 'same-origin' }))
+    expect(res.status).toBe(200)
+  })
 })

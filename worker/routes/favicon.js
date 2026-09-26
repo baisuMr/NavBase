@@ -267,6 +267,18 @@ export async function handle(request, env, params, ctx) {
       { status: 500, headers: SECURITY_HEADERS }
     );
   }
+  // 来源校验（fail-closed）：只接受页面内 <img> 请求。
+  // Sec-Fetch-* 是 Fetch 规范 forbidden header，网页脚本无法伪造；
+  // image-only 意味着「新标签页打开图片」会 403（已接受的设计取舍）
+  const dest = request.headers.get('Sec-Fetch-Dest');
+  const site = request.headers.get('Sec-Fetch-Site');
+  if (dest !== 'image' || site !== 'same-origin') {
+    return Response.json(
+      { error: '仅允许页面内图片请求', code: 'FORBIDDEN_CONTEXT' },
+      { status: 403, headers: SECURITY_HEADERS }
+    );
+  }
+
   const k = new URL(request.url).searchParams.get('k');
   if (!(await isValidFaviconKey(k, env))) {
     return Response.json(
