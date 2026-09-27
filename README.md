@@ -203,6 +203,10 @@ NavBase/
 
 详见 [CHANGELOG.md](./CHANGELOG.md)
 
+## 友好社区
+
+[LINUX DO 社区](https://linux.do/)
+
 ## 许可证
 
 MIT License，详见 [LICENSE](./LICENSE)
