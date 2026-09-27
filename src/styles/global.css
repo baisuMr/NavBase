@@ -152,7 +152,7 @@ input, textarea, select {
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: var(--fs-card);
+  font-size: var(--fs-body-md);
   font-weight: var(--fw-semibold);
   color: var(--color-text-secondary);
   background-color: var(--color-surface-muted);
