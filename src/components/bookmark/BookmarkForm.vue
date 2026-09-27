@@ -36,12 +36,26 @@
 
     <div class="form-group">
       <label class="form-label">所属分类</label>
-      <select v-model="form.category_id" class="select">
-        <option :value="null">未分类</option>
-        <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-          {{ cat.name }}
-        </option>
-      </select>
+      <div class="category-picker" role="group" aria-label="所属分类">
+        <button
+          type="button"
+          class="category-option"
+          :class="{ active: form.category_id === null }"
+          :aria-pressed="form.category_id === null"
+          @click="form.category_id = null"
+        >未分类</button>
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          type="button"
+          class="category-option"
+          :class="{ active: form.category_id === cat.id }"
+          :style="{ '--cat-color': cat.color }"
+          :title="cat.name"
+          :aria-pressed="form.category_id === cat.id"
+          @click="form.category_id = cat.id"
+        >{{ cat.name }}</button>
+      </div>
     </div>
 
     <div v-if="iconPreview && !iconPreviewFailed" class="form-group">

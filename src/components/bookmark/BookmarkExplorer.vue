@@ -18,16 +18,12 @@
           type="button"
           class="category-tab category-tab-cat"
           :class="{ active: activeCat === cat.id }"
-          :style="activeCat === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : { borderColor: cat.color }"
+          :style="{ '--cat-color': cat.color }"
           @click="$emit('select-category', cat.id)"
           @contextmenu.prevent="$emit('category-menu', $event, cat)"
         >
-          <!-- 分类图标：未激活用分类色，激活继承白色文字色；非 ri- 前缀（旧数据 emoji 等）回退默认图标 -->
-          <i
-            v-if="cat.icon"
-            :class="resolveCategoryIcon(cat.icon)"
-            :style="activeCat !== cat.id ? { color: cat.color } : null"
-          ></i>
+          <!-- 分类图标：颜色由样式表按 --cat-color 统一消费；非 ri- 前缀（旧数据 emoji 等）回退默认图标 -->
+          <i v-if="cat.icon" :class="resolveCategoryIcon(cat.icon)"></i>
           <span>{{ cat.name }}</span>
           <span class="category-tab-count">{{ cat.count }}</span>
         </button>

@@ -455,6 +455,40 @@
   box-shadow: 0 0 0 2px var(--color-surface-card) inset;
 }
 
+/* ── 分类选择器（书签表单平铺按钮，纯文字紧凑样式） ──
+   分类色经内联 --cat-color 下发、此处统一消费（选中/描边单一来源），
+   「未分类」无该变量走回退色 */
+.category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.category-option {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px var(--space-sm);
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--cat-color, var(--color-border));
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-card);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.category-option:hover,
+.category-option.active {
+  /* hover 即预览选中样式（与点击选中一致）：「未分类」深色实底，分类按钮分类色实底 */
+  background-color: var(--cat-color, var(--color-text));
+  border-color: var(--cat-color, var(--color-text));
+  color: var(--color-on-primary);
+}
+
 /* ── 快捷键帮助 ── */
 .shortcut-help {
   display: flex;
