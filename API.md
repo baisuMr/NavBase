@@ -213,6 +213,28 @@ GET /api/favicon/:domain?k=<key>
 
 ---
 
+### 网页元数据 API
+
+#### 获取网页标题与描述
+```
+GET /api/page-meta?url=<encoded>
+Authorization: Basic base64(admin:password)
+```
+
+**响应示例**：
+```json
+{ "title": "页面标题", "description": "站点描述" }
+```
+
+**说明**：
+- 添加/编辑书签表单自动回填用：URL 失焦后前端调用，仅填空字段（不覆盖已输入内容）
+- 普通 Basic Auth 认证（非 Favicon 那样的持证 URL）；`url` 参数仅允许 http/https 协议（与书签入库校验同规则），缺失返回 `400 URL不能为空`、非法返回 `400 URL格式不正确`、协议不符返回 `400 仅支持 http/https 链接`、超长（>2048）返回 `400 URL 不能超过 2048 个字符`；非 GET 返回 `405`
+- 抓取目标页 HTML 只读前 256KB、硬超时 5 秒；标题取 `<title>`，缺失/空白退 `og:title`；描述取 `meta name="description"`，缺失/空白退 `og:description`；文本做 HTML 实体解码与空白折叠
+- 字符编码按 Content-Type charset → HTML `<meta charset>` 嗅探 → utf-8 逐级回退（GBK 中文站不乱码）；标题/描述按码点截断到 200/2000 字符（与入库上限一致）
+- 失败语义与 Favicon API 同一哲学：抓取异常/超时/非 2xx/非 HTML 一律返回 `200` + 空字段 `{ "title": "", "description": "" }`，不用 4xx/5xx
+
+---
+
 ### 站点设置 API
 
 #### 读取站点设置

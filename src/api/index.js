@@ -52,7 +52,7 @@ async function request(url, options = {}) {
 
 // API 对象
 export const api = {
-  get: (url) => request(url),
+  get: (url, options) => request(url, options),
   post: (url, data) => request(url, { method: 'POST', body: JSON.stringify(data) }),
   put: (url, data) => request(url, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (url) => request(url, { method: 'DELETE' })

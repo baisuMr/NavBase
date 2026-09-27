@@ -8,9 +8,10 @@
         class="input"
         placeholder="https://example.com"
         required
+        @blur="fetchMeta"
       />
       <div v-if="urlError" class="form-error" role="alert">{{ urlError }}</div>
-      <div v-else class="form-hint">输入网址后将自动获取网站图标</div>
+      <div v-else class="form-hint">{{ metaHint || '输入网址后将自动获取网站图标、标题与描述' }}</div>
     </div>
 
     <div class="form-group">
@@ -21,6 +22,7 @@
         class="input"
         placeholder="例如：GitHub 开源社区"
         required
+        :disabled="metaFetching"
       />
     </div>
 
@@ -31,6 +33,7 @@
         class="textarea"
         placeholder="一句话描述这个站点..."
         rows="2"
+        :disabled="metaFetching"
       ></textarea>
     </div>
 
@@ -84,6 +87,7 @@
 import { reactive, ref, computed, watch } from 'vue'
 import { isAllowedUrl } from '../../utils/url'
 import { faviconSrc } from '../../composables/useFavicon'
+import { pageMetaApi } from '../../api/pageMeta'
 
 const props = defineProps({
   bookmark: { type: Object, default: null },
@@ -122,9 +126,75 @@ const iconPreview = computed(() => {
 // 协议级错误提示：原生 type="url" 不校验协议，javascript: 等可提交到后端，前端先拦
 const urlError = ref('')
 
+// 自动获取标题/描述：URL 失焦触发，获取中禁用名称/描述输入，只填空字段
+const metaFetching = ref(false)
+const metaHint = ref('')
+const metaDoneUrl = ref('') // 成功获取过标题的 URL，再次失焦不重复请求（失败可重试）
+let metaAbort = null
+let metaFetchUrl = '' // 在途获取对应的 URL（中止判断用）
+let metaTimedOut = false
+const META_TIMEOUT_MS = 15000 // 与 api 层默认请求超时一致，防弱网下获取状态永久悬挂
+
+// 中止在途获取并复位状态（获取中 URL 变更时调用）
+function resetMetaFetch() {
+  if (metaAbort) {
+    metaAbort.abort()
+    metaAbort = null
+  }
+  metaFetchUrl = ''
+  if (metaFetching.value) {
+    metaFetching.value = false
+    metaHint.value = ''
+  }
+}
+
+async function fetchMeta() {
+  if (!isAllowedUrl(form.url)) return
+  if (form.url === metaDoneUrl.value) return
+  // 只填空字段：名称与描述都已有内容时无事可做，也不必发起请求
+  if (form.title && form.description) return
+  resetMetaFetch()
+  const ctl = new AbortController()
+  metaAbort = ctl
+  metaFetchUrl = form.url
+  metaTimedOut = false
+  const timer = setTimeout(() => {
+    metaTimedOut = true
+    ctl.abort()
+  }, META_TIMEOUT_MS)
+  metaFetching.value = true
+  metaHint.value = '正在获取网站信息…'
+  try {
+    const data = await pageMetaApi.get(form.url, ctl.signal)
+    if (ctl.signal.aborted) return
+    if (!form.title && data.title) form.title = data.title
+    if (!form.description && data.description) form.description = data.description
+    if (data.title) {
+      metaDoneUrl.value = form.url
+      metaHint.value = ''
+    } else {
+      metaHint.value = '未能识别标题，请手动填写'
+    }
+  } catch {
+    // 主动中止（URL 变更）静默；超时/网络失败提示手动填写
+    if (ctl.signal.aborted && !metaTimedOut) return
+    metaHint.value = '自动获取失败，请手动填写'
+  } finally {
+    clearTimeout(timer)
+    if (metaAbort === ctl) {
+      metaAbort = null
+      metaFetchUrl = ''
+      metaFetching.value = false
+    }
+  }
+}
+
 watch(() => form.url, () => {
   iconPreviewFailed.value = false
   urlError.value = ''
+  // 仅当 URL 相对在途获取已变化才中止解禁；
+  // watcher 在下个 tick 冲刷，「同一刻输入→失焦」发起的获取不能被误杀
+  if (metaFetching.value && form.url !== metaFetchUrl) resetMetaFetch()
 })
 
 function handleSubmit() {
