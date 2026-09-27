@@ -1,6 +1,6 @@
 # NavBase
 
-自用的网址导航管理平台，替代浏览器书签功能。前端 SPA 与 API 统一运行在 [Cloudflare Workers](https://workers.cloudflare.com/) 上，数据存于 [Cloudflare D1](https://developers.cloudflare.com/d1/)——**零成本部署**（免费计划额度远超个人书签站用量）、无服务器运维、部署即接入全球边缘网络。
+自用开源的网址书签导航管理平台，替代浏览器书签和主页功能；基于 [Cloudflare Workers](https://workers.cloudflare.com/) 和 [Cloudflare D1数据库](https://developers.cloudflare.com/d1/)开发，实现**零成本部署**，免费计划额度远超个人书签站用量。
 
 > **部署流程**：先 [Fork](https://github.com/baisuMr/NavBase/fork) 本仓库 → 在你 Fork 后的仓库里点击下方按钮一键部署 → 向导中选择你 Fork 的仓库。详细步骤见 [部署步骤](#部署步骤)。
 
@@ -8,13 +8,9 @@
 
 ## 界面预览
 
-**导航首页** - 大字时钟 / 日期农历周数 / 多引擎搜索 / 常用站点快捷卡片
-
-![导航首页](./docs/01.png)
-
-**书签库** - 分类筛选 / 书签卡片 / 右键菜单管理
-
-![书签库](./docs/02.png)
+| **导航首页**               | 书签库                   |
+| -------------------------- | ------------------------ |
+| ![导航首页](./docs/01.png) | ![书签库](./docs/02.png) |
 
 ## 功能特性
 
@@ -202,6 +198,10 @@ NavBase/
 ## API 文档
 
 详见 [API.md](./API.md)
+
+## 更新日志
+
+详见 [CHANGELOG.md](./CHANGELOG.md)
 
 ## 许可证
 
