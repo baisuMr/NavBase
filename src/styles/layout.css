@@ -566,15 +566,32 @@
   transition: all var(--t-fast);
 }
 
-.category-tab:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
+.category-tab:hover,
 .category-tab.active {
-  /* 「全部」tab 激活态：深色实底；分类 tab 边框恒为分类色，激活背景亦由内联样式按分类色覆盖 */
+  /* hover 即预览选中态：深色实底（分类 tab 由下方规则覆盖为分类色实底） */
   background-color: var(--color-text);
   border-color: var(--color-text);
+  color: var(--color-on-primary);
+}
+
+/* 分类 tab：边框恒为分类色（内联 --cat-color 下发、此处统一消费），hover/激活为分类色实底 */
+.category-tab-cat {
+  border-color: var(--cat-color);
+}
+
+.category-tab-cat i {
+  color: var(--cat-color);
+}
+
+.category-tab-cat:hover,
+.category-tab-cat.active {
+  background-color: var(--cat-color);
+  border-color: var(--cat-color);
+  color: var(--color-on-primary);
+}
+
+.category-tab-cat:hover i,
+.category-tab-cat.active i {
   color: var(--color-on-primary);
 }
 
@@ -591,6 +608,7 @@
   top: 1px;
 }
 
+.category-tab:hover .category-tab-count,
 .category-tab.active .category-tab-count {
   /* 白色半透明底 + 白字，保证在深色/彩色实底上均协调 */
   background-color: var(--color-on-primary-soft);
@@ -1049,6 +1067,11 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
+}
+
+/* 数据就绪并完成一次性窗口高度调整前隐藏（保布局可测量），避免多轮跳动 */
+.quick-add-hidden {
+  visibility: hidden;
 }
 
 .quick-add-card {

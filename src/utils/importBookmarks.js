@@ -5,7 +5,7 @@ import { isAllowedUrl } from './url'
  * 返回 { categories: [{ name, links: [{title, url}] }], roots: [{title, url}] }
  * - 各层文件夹名作为分类名，同名文件夹自动合并
  * - 非法协议（javascript: 等）与非 http(s) 链接直接跳过（协议口径与表单共用 isAllowedUrl）
- * // <ICON> 属性已弃用式收编：不再解析，图标统一走 /api/favicon 代理
+ * - 不解析 <ICON> 属性（icon_url 已弃用），图标统一走 /api/favicon 代理
  */
 export function parseNetscapeBookmarks(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html')

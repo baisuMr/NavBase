@@ -31,9 +31,9 @@ export function faviconSrc(url) {
 }
 
 // 站点图标统一解析（BookmarkCard / 首屏搜索 / 常用站点 / 表单预览共用）：
-// 1. 一律走 /api/favicon/:domain 图片代理并携带持证参数 k（img 无法带认证头，改持证 URL）
+// 1. 一律走 /api/favicon/:domain 图片代理并携带持证参数 k（img 无法带认证头，只能走持证 URL）
 // 2. k 未就绪或加载失败 → src 置空，调用方渲染「首字头像」兜底（v-else 分支）
-// 3. 历史 icon_url 直链已弃用式收编：不再读取，统一由代理探测
+// 3. icon_url 已弃用（兼容位）：不读取直链，站点图标统一由代理探测
 export function useFavicon() {
   // 加载失败的图标 key → 失败时间戳（id 优先，无 id 用 url 兜底），整体替换以触发重渲染
   const failedAt = ref(new Map())

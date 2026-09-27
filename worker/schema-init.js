@@ -2,9 +2,9 @@
 // （经 wrangler.toml [[rules]] Text loader 以文本 import，单一数据源，勿在 worker 内复制 SQL）
 import schemaSql from '../schema.sql';
 
-// 关键表全齐才视为已初始化：旧库缺任何一张都会触发幂等补齐（CREATE TABLE IF NOT EXISTS）
+// 关键表全齐才视为已初始化：缺任何一张都会触发幂等补齐（CREATE TABLE IF NOT EXISTS）
 const REQUIRED_TABLE_COUNT = 3; // categories / bookmarks / settings
-// 关键列探测：表齐不代表列齐（列级迁移漏跑时幂等补列），ALTER 定义与 schema.sql 保持一致
+// 关键列探测：表齐不代表列齐（缺列时幂等补列），ALTER 定义与 schema.sql 保持一致
 const REQUIRED_COLUMNS = { bookmarks: ['is_pinned'] };
 
 let readyPromise = null;
@@ -16,7 +16,7 @@ async function init(env) {
   const tablesReady = row && row.cnt === REQUIRED_TABLE_COUNT;
   if (!tablesReady) {
     // 本地 miniflare 的 D1 exec 对注释段与多行语句均报错（did not contain a statement /
-    // incomplete input），不可依赖；改为剥离整行注释后按分号拆分、batch 顺序执行，
+    // incomplete input），不可依赖；故剥离整行注释后按分号拆分、batch 顺序执行，
     // batch 为常规 API，本地与线上行为一致。schema.sql 注释均为独立行且字符串值不含
     // 分号，拆分安全；语句本身全部为 IF NOT EXISTS / 条件插入，并发 isolate 重复执行安全
     const statements = schemaSql
@@ -29,7 +29,7 @@ async function init(env) {
     try {
       await env.DB.batch(statements.map((statement) => env.DB.prepare(statement)));
     } catch (err) {
-      // 已知边缘（Task 13 索引 UNIQUE 化）：存量库含重复 url 且恰好缺表时，全量
+      // 已知边缘情况：存量库含重复 url 且恰好缺表时，全量
       // schema.sql 中 CREATE UNIQUE INDEX idx_bookmarks_url 会因唯一约束失败。
       // 不静默半初始化：此处带上下文上抛（index.js 统一转 500 DB_INIT_FAILED），
       // 失败已清 readyPromise 可重试；修复前提是先跑

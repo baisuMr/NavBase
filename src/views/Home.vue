@@ -233,7 +233,7 @@
       @close="settingsModal.visible = false"
     />
 
-    <!-- 快捷键帮助 -->
+    <!-- 快捷操作弹窗 -->
     <ShortcutHelp
       v-if="shortcutModal.visible"
       @close="shortcutModal.visible = false"

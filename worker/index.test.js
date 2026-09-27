@@ -48,6 +48,14 @@ describe('Worker 入口路由', () => {
     expect(batchBody.code).toBe('VALIDATION_ERROR')
   })
 
+  it('GET /api/page-meta 分发到网页元数据处理函数', async () => {
+    const env = makeEnv()
+    // 缺 url 参数返回 400 VALIDATION_ERROR；若路由未注册会落到 404 JSON
+    const res = await worker.fetch(req('/api/page-meta', { headers: AUTH }), env, {})
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('VALIDATION_ERROR')
+  })
+
   it('PUT /api/categories/sort 走 sort 字面量路由', async () => {
     const env = makeEnv()
     // sort 对非法形态返回固定文案；若误入 :id 路由会先做载荷校验（文案不同）

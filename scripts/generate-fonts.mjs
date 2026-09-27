@@ -1,6 +1,6 @@
 // 字体本地化生成脚本：请求 Google Fonts 子集 CSS，下载 woff2，重写 src/styles/fonts.css
 // 用法：node scripts/generate-fonts.mjs（需可访问 fonts.googleapis.com）
-// 图标已改用 remixicon npm 包（见 src/main.js 引入），本脚本仅负责正文字体
+// 图标使用 remixicon npm 包（见 src/main.js 引入），本脚本仅负责正文字体
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
