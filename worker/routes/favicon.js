@@ -3,7 +3,7 @@ import { acceptImageType } from '../utils/imageType.js';
 import { errorResponse, notConfiguredError } from '../utils/http.js';
 
 // GET /api/favicon/:domain - 代理并缓存网站图标
-// <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行、由处理器自验 ?k= 持证（详见 auth.js）；
+// <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行（详见 auth.js）、由处理器自验 ?k= 持证；
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
 const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 export const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件（导出供测试断言流式截断阈值）
@@ -222,7 +222,6 @@ export async function handle(request, env, params, ctx) {
     return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405, SECURITY_HEADERS);
   }
 
-  // 持证校验：k 由登录凭据派生（详见 src/utils/faviconKey.js），未持证不进入任何探测
   if (!env.ADMIN_PASSWORD) {
     return notConfiguredError(SECURITY_HEADERS);
   }
@@ -235,6 +234,7 @@ export async function handle(request, env, params, ctx) {
     return errorResponse('仅允许页面内图片请求', 'FORBIDDEN_CONTEXT', 403, SECURITY_HEADERS);
   }
 
+  // 持证校验：k 由登录凭据派生（详见 src/utils/faviconKey.js），未持证不进入任何探测
   const k = new URL(request.url).searchParams.get('k');
   if (!(await isValidFaviconKey(k, env))) {
     return errorResponse('未授权访问', 'UNAUTHORIZED', 401, SECURITY_HEADERS);

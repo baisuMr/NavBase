@@ -98,7 +98,7 @@ watch(() => props.bookmark, (val) => {
 }, { immediate: true })
 
 // 图标预览：走 /api/favicon 图片代理（带持证参数 k），与列表渲染同一管线；
-// 探测在保存后的渲染阶段由代理统一完成，表单期不做额外网络请求
+// 探测由代理统一完成并缓存，保存后列表渲染直接复用
 const iconPreviewFailed = ref(false)
 const iconPreview = computed(() => {
   if (!isAllowedUrl(form.url)) return ''

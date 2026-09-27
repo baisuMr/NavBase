@@ -1,4 +1,4 @@
-// Basic Auth 认证门（原 Pages _middleware.js 平移）
+// Basic Auth 认证门
 // 契约：返回 null 表示放行，返回 Response 表示拒绝
 import { base64ToUtf8 } from './utils/base64.js';
 import { adminUsername } from './utils/token.js';
@@ -50,7 +50,7 @@ export async function authGate(request, env) {
   }
 
   // favicon 图片代理在认证门放行（<img> 无法携带 Basic Auth 头），
-  // 但不再免认证：由 favicon 处理器自验 ?k= 持证与 Sec-Fetch 来源（见 routes/favicon.js）
+  // 由 favicon 处理器自验 ?k= 持证与 Sec-Fetch 来源（见 routes/favicon.js）
   if (request.method === 'GET' && isFaviconPath(normalized)) {
     return null;
   }

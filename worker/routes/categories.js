@@ -1,6 +1,6 @@
 // /api/categories* 分类端点
 // 集合 GET/POST、详情 GET/PUT/DELETE、重排 PUT /api/categories/sort
-// 字面量 sort 路由先于 :id 匹配（见 index.js 路由表顺序），与历史 Pages Functions 优先级一致
+// 字面量 sort 路由先于 :id 匹配（见 index.js 路由表顺序）
 import { validateCategoryPayload } from '../utils/validate.js';
 import { errorResponse } from '../utils/http.js';
 

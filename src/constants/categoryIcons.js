@@ -1,5 +1,5 @@
 // 分类预设图标（Remix Icon 名称，https://remixicon.com/）
-// 顺序与语义对应旧版 emoji 预设（📁🏠💻📱🔧📚🎵…），供 IconPicker 与迁移参考
+// 供 IconPicker 选择（顺序即展示顺序）
 export const CATEGORY_ICONS = [
   'ri-folder-line', 'ri-home-line', 'ri-computer-line', 'ri-smartphone-line',
   'ri-tools-line', 'ri-book-2-line', 'ri-music-2-line', 'ri-palette-line',

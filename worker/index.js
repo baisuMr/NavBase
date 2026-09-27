@@ -17,7 +17,7 @@ import { handle as handleSettings } from './routes/settings.js';
 import { handle as handleFavicon } from './routes/favicon.js';
 
 // 路由表：顺序即优先级，字面量段先于 :param 段（batch/sort 不会与 :id 冲突）
-// 匹配对路径大小写不敏感（与历史 Pages Functions 路由行为对齐）；params 值保留原始大小写
+// 匹配对路径大小写不敏感；params 值保留原始大小写
 // skipSchema：不依赖 DB 的路由（favicon 自验 k 持证）跳过惰性建表
 const routes = [
   { pattern: '/api/auth/login', handler: handleLogin },

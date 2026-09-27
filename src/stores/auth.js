@@ -5,7 +5,7 @@ const TOKEN_KEY = 'auth_token'
 const USERNAME_KEY = 'auth_username'
 const EXPIRES_KEY = 'auth_expires_at'
 
-// 记住设备：勾选 → localStorage（30 天）；不勾选 → sessionStorage（关浏览器即失效）
+// 记住设备：勾选 → localStorage（默认 30 天）；不勾选 → sessionStorage（关浏览器即失效）
 function authStorage(remember) {
   return remember ? localStorage : sessionStorage
 }
