@@ -24,6 +24,9 @@ body {
   font-size: var(--fs-body-md);
   color: var(--color-text);
   background-color: var(--color-surface);
+  /* 点阵底：全站统一（首屏/书签库/登录页/快捷添加页同底） */
+  background-image: radial-gradient(var(--color-border-strong) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
