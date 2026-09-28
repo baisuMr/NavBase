@@ -1,0 +1,88 @@
+/* remixicon 图标子集（由 scripts/generate-icon-subset.mjs 生成，勿手改）
+   新增图标后需重跑：node scripts/generate-icon-subset.mjs */
+@font-face {
+  font-family: 'remixicon';
+  src: url(../assets/fonts/remixicon-subset.woff2) format('woff2');
+  font-display: swap;
+}
+[class^="ri-"], [class*=" ri-"] { font-family: 'remixicon' !important;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+.ri-lg { font-size: 1.3333em; line-height: 0.75em; vertical-align: -.0667em; }
+.ri-xl { font-size: 1.5em; line-height: 0.6666em; vertical-align: -.075em; }
+.ri-xxs { font-size: .5em; }
+.ri-xs { font-size: .75em; }
+.ri-sm { font-size: .875em }
+.ri-1x { font-size: 1em; }
+.ri-2x { font-size: 2em; }
+.ri-3x { font-size: 3em; }
+.ri-4x { font-size: 4em; }
+.ri-5x { font-size: 5em; }
+.ri-6x { font-size: 6em; }
+.ri-7x { font-size: 7em; }
+.ri-8x { font-size: 8em; }
+.ri-9x { font-size: 9em; }
+.ri-10x { font-size: 10em; }
+.ri-fw { text-align: center; width: 1.25em; }
+.ri-add-line:before { content: "\ea13"; }
+.ri-alarm-line:before { content: "\ea1b"; }
+.ri-arrow-down-line:before { content: "\ea4c"; }
+.ri-arrow-down-s-line:before { content: "\ea4e"; }
+.ri-arrow-right-line:before { content: "\ea6c"; }
+.ri-baidu-fill:before { content: "\ea8b"; }
+.ri-bar-chart-box-line:before { content: "\ea98"; }
+.ri-book-2-line:before { content: "\ead3"; }
+.ri-book-line:before { content: "\ead7"; }
+.ri-bookmark-line:before { content: "\eae5"; }
+.ri-building-2-line:before { content: "\eb09"; }
+.ri-camera-line:before { content: "\eb31"; }
+.ri-chat-3-line:before { content: "\eb51"; }
+.ri-check-line:before { content: "\eb7b"; }
+.ri-close-line:before { content: "\eb99"; }
+.ri-cloud-line:before { content: "\eb9d"; }
+.ri-code-line:before { content: "\eba9"; }
+.ri-computer-line:before { content: "\ebca"; }
+.ri-deepseek-line:before { content: "\f612"; }
+.ri-delete-bin-line:before { content: "\ec2a"; }
+.ri-download-line:before { content: "\ec5a"; }
+.ri-earth-line:before { content: "\ec7a"; }
+.ri-edit-line:before { content: "\ec86"; }
+.ri-external-link-line:before { content: "\ecaf"; }
+.ri-eye-line:before { content: "\ecb5"; }
+.ri-eye-off-line:before { content: "\ecb7"; }
+.ri-file-copy-line:before { content: "\ecd5"; }
+.ri-file-text-line:before { content: "\ed0f"; }
+.ri-fire-line:before { content: "\ed33"; }
+.ri-focus-3-line:before { content: "\ed4c"; }
+.ri-folder-line:before { content: "\ed6a"; }
+.ri-gamepad-line:before { content: "\edab"; }
+.ri-github-fill:before { content: "\edca"; }
+.ri-global-line:before { content: "\edcf"; }
+.ri-google-fill:before { content: "\edd4"; }
+.ri-heart-line:before { content: "\ee0f"; }
+.ri-home-line:before { content: "\ee2b"; }
+.ri-image-add-line:before { content: "\ee47"; }
+.ri-inbox-line:before { content: "\ee4f"; }
+.ri-lightbulb-line:before { content: "\eea9"; }
+.ri-link:before { content: "\eeb2"; }
+.ri-lock-line:before { content: "\eece"; }
+.ri-logout-box-r-line:before { content: "\eeda"; }
+.ri-mail-line:before { content: "\eef6"; }
+.ri-music-2-line:before { content: "\ef83"; }
+.ri-palette-line:before { content: "\efc5"; }
+.ri-pushpin-line:before { content: "\f039"; }
+.ri-question-line:before { content: "\f045"; }
+.ri-rocket-line:before { content: "\f096"; }
+.ri-search-line:before { content: "\f0d1"; }
+.ri-settings-line:before { content: "\f0ee"; }
+.ri-shopping-cart-line:before { content: "\f120"; }
+.ri-smartphone-line:before { content: "\f15a"; }
+.ri-star-fill:before { content: "\f186"; }
+.ri-star-line:before { content: "\f18b"; }
+.ri-team-line:before { content: "\f1ee"; }
+.ri-tools-line:before { content: "\f21b"; }
+.ri-unpin-line:before { content: "\f377"; }
+.ri-upload-line:before { content: "\f250"; }
+.ri-user-line:before { content: "\f264"; }
+.ri-wallet-3-line:before { content: "\f2ac"; }

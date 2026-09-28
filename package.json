@@ -1,6 +1,6 @@
 {
   "name": "navbase",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0",
   "private": true,
   "description": "自用的网址导航管理平台，替代浏览器书签功能（Cloudflare Workers + D1）",
   "license": "MIT",
@@ -35,6 +35,7 @@
     "concurrently": "^10.0.5",
     "happy-dom": "^20.14.5",
     "jsdom": "^30.1.0",
+    "subset-font": "^2.9.0",
     "vite": "^8.3.0",
     "vitest": "^5.0.1",
     "wrangler": "^4.136.3"

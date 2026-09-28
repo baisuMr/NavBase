@@ -47,7 +47,10 @@ async function refreshLunar() {
 }
 
 onMounted(() => {
-  refreshLunar()
+  // 农历库是独立大 chunk：推迟到空闲时再加载，让书签数据与首屏图标优先占用带宽
+  // （不支持 requestIdleCallback 的环境退化为延时加载，行为一致）
+  const idle = typeof requestIdleCallback === 'function' ? requestIdleCallback : (cb) => setTimeout(cb, 300)
+  idle(refreshLunar)
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
   // 农历一天才变一次，每分钟刷新足够
   lunarTimer = setInterval(refreshLunar, 60000)

@@ -1,10 +1,10 @@
 <template>
   <header class="app-header">
     <div class="app-header-inner">
-      <!-- 文字 logo：品牌字体渲染站点名称（缺字回退正文字体）；RouterLink 走 SPA 导航避免整页刷新 -->
-      <RouterLink to="/" class="app-header-brand">
+      <!-- 文字 logo：品牌字体渲染站点名称（缺字回退正文字体）；原生 a 整页刷新并回顶部 -->
+      <a href="/" class="app-header-brand">
         <span class="app-header-name">{{ settings.displayName }}</span>
-      </RouterLink>
+      </a>
 
       <div class="app-header-actions">
         <a
@@ -50,7 +50,6 @@
 
 <script setup>
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import { useSettingsStore } from '../../stores/settings'
 
 const props = defineProps({

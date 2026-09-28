@@ -134,11 +134,11 @@
           </div>
         </div>
 
-        <!-- 滚动提示 -->
-        <a class="hero-scroll-hint" href="#explorer-section">
+        <!-- 滚动提示：JS 滚动不走锚点，避免 URL 写入 #explorer-section -->
+        <button type="button" class="hero-scroll-hint" @click="scrollToExplorer">
           <span>向下滚动查看书签库</span>
           <i class="ri-arrow-down-line"></i>
-        </a>
+        </button>
       </section>
 
       <!-- 数据加载失败横幅：可见的失败态 + 重试入口（成功/加载中不显示） -->
@@ -460,6 +460,11 @@ function onSearchKeydown(e) {
 function focusSearch() {
   searchInput.value?.focus()
   searchInput.value?.select()
+}
+
+// 滚动到书签库：不用锚点导航，URL 不产生 #explorer-section（html 已设 scroll-behavior: smooth）
+function scrollToExplorer() {
+  document.getElementById('explorer-section')?.scrollIntoView()
 }
 
 // ── 常用站点：手动固定的书签（上限 10，宽屏一行 5 个最多两行） ──

@@ -203,9 +203,9 @@ NavBase/
 
 详见 [CHANGELOG.md](./CHANGELOG.md)
 
-## 友好社区
+## 友情链接
 
-[LINUX DO 社区](https://linux.do/)
+[Linux DO](https://linux.do/)
 
 ## 许可证
 
