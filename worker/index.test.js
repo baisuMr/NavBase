@@ -99,6 +99,38 @@ describe('Worker 入口路由', () => {
     expect(env.ASSETS.fetch).toHaveBeenCalledTimes(1)
   })
 
+  it('Vite 哈希产物（/assets/* 非 HTML）附加 immutable 长缓存', async () => {
+    const env = makeEnv()
+    env.ASSETS.fetch = vi.fn(async () => new Response('body', {
+      headers: { 'Content-Type': 'application/javascript' }
+    }))
+    const res = await worker.fetch(req('/assets/index-abc123.js'), env, {})
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable')
+    expect(res.headers.get('Content-Type')).toBe('application/javascript')
+    expect(await res.text()).toBe('body')
+  })
+
+  it('HTML 响应（含 /assets/ 路径的 SPA 回退）保持原缓存头不被长缓存', async () => {
+    // 发版瞬间旧哈希文件缺失时 SPA 回退返回 index.html（text/html），
+    // 若误加 immutable 会把回退页当作旧 JS/CSS 缓存一年
+    const env = makeEnv()
+    env.ASSETS.fetch = vi.fn(async () => new Response('<html></html>', {
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=0, must-revalidate' }
+    }))
+    const res = await worker.fetch(req('/assets/gone-oldd1hash.js'), env, {})
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate')
+  })
+
+  it('非 /assets/ 的静态文件（无内容哈希）不加 immutable', async () => {
+    const env = makeEnv()
+    env.ASSETS.fetch = vi.fn(async () => new Response('<svg></svg>', {
+      headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=0, must-revalidate' }
+    }))
+    const res = await worker.fetch(req('/logo.svg'), env, {})
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate')
+  })
+
   it('未命中的 /api/* 路径返回 404 JSON 而非 SPA 页面', async () => {
     const env = makeEnv()
     const res = await worker.fetch(req('/api/bookmarkz', { headers: AUTH }), env, {})

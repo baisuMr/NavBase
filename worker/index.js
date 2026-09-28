@@ -84,6 +84,26 @@ export default {
     }
 
     // 未命中路由：交回静态资源服务（not_found_handling 的 SPA 回退在此生效）
-    return env.ASSETS.fetch(request);
+    return serveAsset(request, env);
   }
 };
+
+// Vite 产物文件名带内容哈希，改写为 immutable 长缓存：回头访问浏览器直接命中本地缓存，
+// 免去默认 must-revalidate 逐文件的 304 再验证往返
+// 仅限 /assets/* 且响应非 HTML：发版瞬间旧哈希文件缺失时 SPA 回退返回 index.html，
+// 若误加长缓存会把回退页当作旧 JS/CSS 缓存一年，故按 content-type fail-closed 判别
+async function serveAsset(request, env) {
+  const response = await env.ASSETS.fetch(request);
+  const contentType = response.headers.get('content-type') || '';
+  const pathname = normalizePath(new URL(request.url).pathname).toLowerCase();
+  const isHashedAsset = pathname.startsWith('/assets/') && !contentType.includes('text/html');
+  if (!isHashedAsset) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
