@@ -8,7 +8,7 @@ export const CATEGORY_ICONS = [
   'ri-pushpin-line', 'ri-search-line', 'ri-file-text-line', 'ri-alarm-line',
   'ri-global-line', 'ri-cloud-line', 'ri-lock-line', 'ri-mail-line',
   'ri-chat-3-line', 'ri-team-line', 'ri-building-2-line', 'ri-earth-line',
-  'ri-gamepad-line', 'ri-heart-line', 'ri-fire-line', 'ri-lightbulb-line'
+  'ri-gamepad-line', 'ri-heart-line', 'ri-fire-line', 'ri-lightbulb-line','ri-deepseek-line'
 ]
 
 export const CATEGORY_ICON_DEFAULT = 'ri-folder-line'

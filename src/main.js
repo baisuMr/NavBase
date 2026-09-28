@@ -2,8 +2,8 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-// Remix Icon 图标字体（woff2 由 Vite 自动本地化打包）
-import 'remixicon/fonts/remixicon.css'
+// Remix Icon 图标子集（scripts/generate-icon-subset.mjs 生成，新增图标后需重跑）
+import './styles/remixicon-subset.css'
 import './styles/fonts.css'
 import './styles/global.css'
 const app = createApp(App)

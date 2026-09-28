@@ -3,7 +3,7 @@ import { CATEGORY_ICONS, CATEGORY_ICON_DEFAULT, resolveCategoryIcon } from './ca
 
 describe('categoryIcons', () => {
   it('预设清单全部为 ri- 开头且含默认图标', () => {
-    expect(CATEGORY_ICONS.length).toBe(32)
+    expect(CATEGORY_ICONS.length).toBe(33)
     CATEGORY_ICONS.forEach(name => expect(name.startsWith('ri-')).toBe(true))
     expect(CATEGORY_ICONS).toContain(CATEGORY_ICON_DEFAULT)
   })
