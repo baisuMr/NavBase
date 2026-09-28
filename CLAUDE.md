@@ -20,6 +20,7 @@ NavBase 是个人自用的开源网址导航管理平台（MIT），用于替代
 - `pnpm dev:full` 本地同时启动前端（5173）与 API（8788）；首次需先 `pnpm build` 生成 dist/
 - `pnpm test` 全量测试；`pnpm test <file>` 直接透传运行单个测试文件，无需 `--`
 - `node scripts/generate-fonts.mjs` 正文字体子集再生成（需可访问 fonts.googleapis.com）
+- `node scripts/generate-icon-subset.mjs` 图标子集再生成（新增图标类后必须重跑，否则图标不显示）
 - 向本地库灌入测试数据（可重复执行）：`pnpm exec wrangler d1 execute navbase-db --file=scripts/seed-test-data.sql`
 - wrangler d1 默认操作本地库，**操作线上库必须追加 `--remote`**
 
@@ -56,7 +57,7 @@ NavBase 是个人自用的开源网址导航管理平台（MIT），用于替代
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（后端强制校验，逻辑在 `worker/utils/validate.js`；前端手动表单提交前经 `src/utils/url.js` 的 `isAllowedUrl` 拦截，导入解析器过滤非 http/https 链接）
 - **预设数据**: 分类支持预设的 Remix Icon 图标（`src/constants/categoryIcons.js`）和 10 种常用颜色
 - **Basic Auth 认证**: 密码存于 `.dev.vars`（本地）与 Workers Secret（线上），未配置时需认证 API 返回 500 `NOT_CONFIGURED`（登录接口同样 500）；token 为 Basic 凭据 Base64 存储——登录页勾选「记住此设备」存 localStorage（30 天，`REMEMBER_DURATION_DAYS`），不勾选存 sessionStorage（关浏览器失效，后端按 `LOGIN_DURATION_DAYS` 默认 7 天兜底）；过期时间仅由前端存储控制，服务端不校验 token 过期（凭据在修改密码前始终有效）
-- **字体/图标本地化**: 正文字体（Inter + JetBrains Mono）子集本地化于 `src/assets/fonts/`（`scripts/generate-fonts.mjs` 生成）；图标使用 remixicon npm 包（Apache 2.0），全量字体经 Vite 本地打包，无外部 CDN。新增图标直接写 `ri-xxx-line` class（对照 https://remixicon.com/），无需重跑脚本
+- **字体/图标本地化**: 正文字体（Inter + JetBrains Mono）与图标字体子集均本地化于 `src/assets/fonts/`（分别由 `scripts/generate-fonts.mjs`、`scripts/generate-icon-subset.mjs` 生成），无外部 CDN。图标使用 remixicon npm 包（Apache 2.0）子集：新增图标先写 `ri-xxx-line` class（对照 https://remixicon.com/），再重跑 `node scripts/generate-icon-subset.mjs`，否则新图标不显示
 - **快捷键支持**: Alt+K 搜索、Alt+N 添加书签、Alt+Shift+N 添加分类、Escape 关闭（Ctrl+N / Ctrl+Shift+N 是浏览器保留快捷键，网页无法拦截，故用 Alt 组合键；Alt+K 曾为 Ctrl+K，因与输入法/扩展冲突改为 Alt 系）
 - **书签栏快捷添加**: 「快捷操作」弹窗（原键盘快捷键弹窗）提供可拖拽的 bookmarklet 按钮（`src/utils/bookmarklet.js` 生成，嵌入当前站点 origin）；在任意网页点击书签栏按钮即弹窗打开 `/quick-add`（`views/QuickAdd.vue` 预填 url/title/desc，复用 BookmarkForm），登录回跳经 `src/utils/redirect.js` 的 `safeRedirectPath` 防开放重定向
 
