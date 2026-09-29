@@ -667,6 +667,47 @@
   }
 }
 
+/* 「全部」视图分类块：白底块 = 标题行 + 该分类书签网格，块间露出点阵底 */
+.bookmark-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.category-block {
+  background-color: var(--color-surface-card);
+  border-radius: var(--radius-icon);
+  padding: var(--space-lg);
+}
+
+/* 标题行：纯展示，发丝分隔线呼应 Tabular 表格感 */
+.category-block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text);
+}
+
+/* 分类图标着分类色（同 tab 约定）；未分类块无 --cat-color，回退次级文字色 */
+.category-block-title i {
+  color: var(--cat-color, var(--color-text-secondary));
+}
+
+.category-block .bookmark-grid {
+  margin-top: var(--space-md);
+}
+
+/* 块内卡片底色 #eff4f8（复用 --color-surface）；hover 底色同样不变（现状 hover 不改底色，仅描边/阴影/上浮） */
+.category-block .bookmark-card,
+.category-block .bookmark-card:hover {
+  background-color: var(--color-surface);
+}
+
 .bookmark-card {
   display: flex;
   align-items: center;

@@ -54,17 +54,37 @@
       </div>
     </div>
 
-    <!-- 网格 -->
-    <div class="bookmark-grid">
-      <template v-if="visibleBookmarks.length > 0">
-        <BookmarkCard
-          v-for="bm in visibleBookmarks"
-          :key="bm.id"
-          :bookmark="bm"
-          @menu="$emit('menu', $event, bm)"
-        />
-      </template>
-      <div v-else-if="!loading && !error" class="bookmark-empty">
+    <!-- 书签列表：统一分类块（「全部」= 多块；单分类/未分类 = 单块），块内无书签时出空态 -->
+    <div v-if="displayGroups.length > 0" class="bookmark-blocks">
+      <div
+        v-for="group in displayGroups"
+        :key="group.type === 'category' ? group.category.id : 'uncategorized'"
+        class="category-block"
+        :style="group.category ? { '--cat-color': group.category.color } : null"
+      >
+        <!-- 标题行：纯展示（分类操作仍走 tab pill 右键），图标着分类色与 tab 一致 -->
+        <h3 class="category-block-title">
+          <i v-if="group.category" :class="resolveCategoryIcon(group.category.icon)"></i>
+          <i v-else class="ri-inbox-line"></i>
+          <span>{{ group.category ? group.category.name : '未分类' }}</span>
+        </h3>
+        <div class="bookmark-grid">
+          <BookmarkCard
+            v-for="bm in group.bookmarks"
+            :key="bm.id"
+            :bookmark="bm"
+            @menu="$emit('menu', $event, bm)"
+          />
+          <div v-if="group.bookmarks.length === 0 && !loading && !error" class="bookmark-empty">
+            <i class="ri-bookmark-line"></i>
+            <div>{{ emptyText }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 无块可渲染（「全部」一个书签都没有 / 未知分类）：无块空态 -->
+    <div v-else class="bookmark-grid">
+      <div v-if="!loading && !error" class="bookmark-empty">
         <i class="ri-bookmark-line"></i>
         <div>{{ emptyText }}</div>
       </div>
@@ -76,7 +96,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import BookmarkCard from './BookmarkCard.vue'
 import { moveInArray } from '../../utils/reorder'
-import { filterBookmarks } from '../../utils/filterBookmarks'
+import { groupsForView } from '../../utils/groupBookmarks'
 import { resolveCategoryIcon } from '../../constants/categoryIcons'
 
 const props = defineProps({
@@ -153,7 +173,8 @@ onBeforeUnmount(() => {
 
 const uncategorizedCount = computed(() => props.bookmarks.filter(b => !b.category_id).length)
 
-const visibleBookmarks = computed(() => filterBookmarks(props.bookmarks, props.activeCat))
+// 列表分块数据：「全部」多块（分类序在前、未分类垫后、空分类跳过）；单分类/未分类单块（空也出块）
+const displayGroups = computed(() => groupsForView(props.bookmarks, props.categories, props.activeCat))
 
 const emptyText = computed(() => {
   if (props.activeCat === 'uncategorized') return '暂无未分类书签'
