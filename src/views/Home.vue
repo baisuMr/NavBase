@@ -160,6 +160,7 @@
         @category-menu="showCategoryMenu"
         @menu="showBookmarkMenu"
         @reorder="onCategoryReorder"
+        @bookmark-reorder="onBookmarkReorder"
       />
 
       <!-- 加载状态 -->
@@ -284,11 +285,13 @@ import { useToast } from '../composables/useToast'
 import { useSearchEngines } from '../composables/useSearchEngines'
 import { useFavicon } from '../composables/useFavicon'
 import { useSettingsStore } from '../stores/settings'
+import { useBookmarksStore } from '../stores/bookmarks'
 import { CATEGORY_ICONS } from '../constants/categoryIcons'
 import { selectPinnedBookmarks } from '../utils/pinned'
 import pkg from '../../package.json'
 
 const settingsStore = useSettingsStore()
+const bookmarksStore = useBookmarksStore()
 const appVersion = pkg.version
 
 // ── 预设数据 ──
@@ -506,6 +509,12 @@ function selectCategory(id) {
 // ── 分类拖动排序 ──
 async function onCategoryReorder(ids) {
   const ok = await reorderCategories(ids)
+  if (!ok) showError('排序保存失败，已恢复原顺序')
+}
+
+// ── 书签拖动排序（分类内） ──
+async function onBookmarkReorder(ids) {
+  const ok = await bookmarksStore.reorderBookmarks(ids)
   if (!ok) showError('排序保存失败，已恢复原顺序')
 }
 

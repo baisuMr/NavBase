@@ -1,6 +1,6 @@
 // /api/bookmarks* 书签端点
-// 集合 GET/POST、详情 GET/PUT/DELETE、批量导入 POST /api/bookmarks/batch
-// 字面量 batch 路由先于 :id 匹配（见 index.js 路由表顺序）
+// 集合 GET/POST、详情 GET/PUT/DELETE、批量导入 POST /api/bookmarks/batch、重排 PUT /api/bookmarks/sort
+// 字面量 batch/sort 路由先于 :id 匹配（见 index.js 路由表顺序）
 import { validateBookmarkPayload } from '../utils/validate.js';
 import { errorResponse } from '../utils/http.js';
 
@@ -301,6 +301,62 @@ export async function batch(request, env) {
     return Response.json({ success: true, count, skipped: items.length - count });
   } catch (error) {
     console.error('Batch import error:', error);
+    return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
+  }
+}
+
+// PUT /api/bookmarks/sort - 分类内重排书签（按 ids 顺序换位 sort_order，数值集合不变）
+// 与 PUT /api/bookmarks/:id 分工：编辑书签不改排序，重排只走本端点
+// 仅限同一分类内（category_id 全相等，null 为未分类组）；保值换位而非重编 1..n，避免打乱首屏常用站点的跨分类顺序
+export async function sort(request, env) {
+  if (request.method !== 'PUT') {
+    return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
+  }
+
+  try {
+    const data = await request.json();
+    const ids = data?.ids;
+
+    // 形态校验：非空数组、均为正整数、无重复（同 categories/sort）
+    if (
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      !ids.every((id) => Number.isInteger(id) && id > 0) ||
+      new Set(ids).size !== ids.length
+    ) {
+      return errorResponse('排序字段不正确', 'VALIDATION_ERROR', 400);
+    }
+
+    // 存在性 + 同分类校验（IN 查询按 bind 上限分块）
+    const rows = [];
+    for (let i = 0; i < ids.length; i += QUERY_CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + QUERY_CHUNK_SIZE);
+      const placeholders = chunk.map(() => '?').join(', ');
+      const { results } = await env.DB.prepare(
+        `SELECT id, category_id, sort_order FROM bookmarks WHERE id IN (${placeholders})`
+      ).bind(...chunk).all();
+      rows.push(...results);
+    }
+    if (rows.length !== ids.length) {
+      return errorResponse('排序列表包含不存在的书签', 'VALIDATION_ERROR', 400);
+    }
+    if (new Set(rows.map((r) => r.category_id)).size !== 1) {
+      return errorResponse('仅支持同一分类内重排', 'VALIDATION_ERROR', 400);
+    }
+
+    // 换位赋值：原有 sort_order 值按新顺序重新分配（数值集合不变）
+    const values = rows.map((r) => r.sort_order).sort((a, b) => a - b);
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      const stmts = ids.slice(i, i + CHUNK_SIZE).map((id, j) =>
+        env.DB.prepare('UPDATE bookmarks SET sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .bind(values[i + j], id)
+      );
+      await env.DB.batch(stmts);
+    }
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error('Bookmark sort API error:', error);
     return errorResponse('服务器错误', 'INTERNAL_ERROR', 500);
   }
 }

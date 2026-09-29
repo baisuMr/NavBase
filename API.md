@@ -183,6 +183,19 @@ Content-Type: application/json
 - 导入的书签默认未固定（即使携带 `is_pinned` 也不写入）
 - 返回 `{ "success": true, "count": 3, "skipped": 2 }`，count 为实际导入数量，skipped 为去重跳过数量
 
+#### 重排书签（分类内）
+```
+PUT /api/bookmarks/sort
+Authorization: Basic base64(admin:password)
+Content-Type: application/json
+
+{
+  "ids": [3, 1, 2]
+}
+```
+
+**说明**：按 `ids` 顺序重排**同一分类内**的书签。`ids` 非空、无重复、均为正整数，且必须同属一个分类（`category_id` 全为 `null` 时即未分类组），跨分类或包含不存在的 id 返回 400。重排为 `sort_order` **换位赋值**（原有数值集合不变，非重编 1..n）——首屏常用站点按全局 `sort_order` 跨分类排序，换位保证其顺序不受影响。与 `PUT /api/bookmarks/:id` 分工：编辑书签不改排序，重排只走本端点。
+
 ---
 
 ### Favicon API

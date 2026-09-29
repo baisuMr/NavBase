@@ -6,7 +6,8 @@ import { handle as handleLogin } from './routes/login.js';
 import {
   collection as bookmarksCollection,
   item as bookmarksItem,
-  batch as bookmarksBatch
+  batch as bookmarksBatch,
+  sort as bookmarksSort
 } from './routes/bookmarks.js';
 import {
   collection as categoriesCollection,
@@ -24,6 +25,7 @@ const routes = [
   { pattern: '/api/auth/login', handler: handleLogin },
   { pattern: '/api/bookmarks', handler: bookmarksCollection },
   { pattern: '/api/bookmarks/batch', handler: bookmarksBatch },
+  { pattern: '/api/bookmarks/sort', handler: bookmarksSort },
   { pattern: '/api/bookmarks/:id', handler: bookmarksItem },
   { pattern: '/api/categories', handler: categoriesCollection },
   { pattern: '/api/categories/sort', handler: categoriesSort },

@@ -51,6 +51,10 @@ vi.mock('../stores/settings', () => ({
   useSettingsStore: () => ({ displayName: 'NavBase', avatar: '', fetchSettings: vi.fn(async () => {}) })
 }))
 
+vi.mock('../stores/bookmarks', () => ({
+  useBookmarksStore: () => ({ reorderBookmarks: vi.fn(async () => true) })
+}))
+
 // AppHeader 依赖 RouterLink（需 router 实例）、BookmarkExplorer 依赖 sortablejs：均与守卫无关，渲染桩替代
 vi.mock('../components/layout/AppHeader.vue', () => ({
   default: { name: 'AppHeaderStub', render: () => null }

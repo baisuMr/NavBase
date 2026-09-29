@@ -617,6 +617,10 @@
   opacity: 0.4;
 }
 
+.bookmark-card-ghost {
+  opacity: 0.4;
+}
+
 .explorer-add-btn {
   display: inline-flex;
   align-items: center;

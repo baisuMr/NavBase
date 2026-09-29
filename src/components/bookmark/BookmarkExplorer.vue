@@ -55,7 +55,7 @@
     </div>
 
     <!-- 书签列表：统一分类块（「全部」= 多块；单分类/未分类 = 单块），块内无书签时出空态 -->
-    <div v-if="displayGroups.length > 0" class="bookmark-blocks">
+    <div v-if="displayGroups.length > 0" ref="blocksRef" class="bookmark-blocks">
       <div
         v-for="group in displayGroups"
         :key="group.type === 'category' ? group.category.id : 'uncategorized'"
@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import BookmarkCard from './BookmarkCard.vue'
 import { moveInArray } from '../../utils/reorder'
 import { groupsForView } from '../../utils/groupBookmarks'
@@ -123,16 +123,65 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu', 'reorder'])
+const emit = defineEmits(['add-bookmark', 'add-category', 'select-category', 'category-menu', 'menu', 'reorder', 'bookmark-reorder'])
 
 // ── 分类 tab 拖动排序（仅分类 tab 可拖；「全部」钉首位、操作按钮钉末尾） ──
 const tabsRef = ref(null)
 let sortable = null
 let dragStartNext = null
 
+// ── 书签拖动排序（仅限所属分类内）：每个块的书签网格各挂一个 Sortable ──
+const blocksRef = ref(null)
+let SortableCtor = null
+const gridSortables = []
+
+// 拖完松手会误触发 click 打开链接：吞掉拖拽结束后短暂窗口内的点击
+function swallowClick(e) {
+  e.preventDefault()
+  e.stopPropagation()
+}
+function armClickSwallow() {
+  document.addEventListener('click', swallowClick, { capture: true, once: true })
+  setTimeout(() => document.removeEventListener('click', swallowClick, { capture: true }), 300)
+}
+
+function bindGridSortables() {
+  gridSortables.forEach((s) => s.destroy())
+  gridSortables.length = 0
+  if (!SortableCtor || !blocksRef.value) return
+  for (const grid of blocksRef.value.querySelectorAll('.bookmark-grid')) {
+    gridSortables.push(
+      SortableCtor.create(grid, {
+        animation: 150,
+        draggable: '.bookmark-card',
+        ghostClass: 'bookmark-card-ghost',
+        // 各块独立列表（pull/put 关闭）：跨块拖不动，只在所属分类内重排
+        group: { name: 'bookmark-grid', pull: false, put: false },
+        // 触屏长按再拖，避免与页面滚动冲突
+        delay: 150,
+        delayOnTouchOnly: true,
+        onStart(evt) {
+          dragStartNext = evt.item.nextSibling
+        },
+        onEnd(evt) {
+          // 新顺序在还原 DOM 前取出（此时节点已被 Sortable 搬到新位置）
+          const ids = [...evt.from.querySelectorAll(':scope > .bookmark-card')].map((el) => Number(el.dataset.id))
+          // 还原 DOM：SortableJS 直接搬动了节点，交回 Vue 按数据渲染，避免虚拟 DOM 对不齐
+          evt.from.insertBefore(evt.item, dragStartNext)
+          dragStartNext = null
+          const { oldDraggableIndex, newDraggableIndex } = evt
+          if (oldDraggableIndex !== newDraggableIndex) emit('bookmark-reorder', ids)
+          armClickSwallow()
+        }
+      })
+    )
+  }
+}
+
 onMounted(async () => {
   // sortablejs 体积较大且登录后才可能用到，动态加载移出首屏主包
   const { default: Sortable } = await import('sortablejs')
+  SortableCtor = Sortable
   // 动态加载期间组件可能已卸载（模板引用会被置空）
   if (!tabsRef.value) return
   sortable = Sortable.create(tabsRef.value, {
@@ -164,17 +213,24 @@ onMounted(async () => {
       emit('reorder', moveInArray(ids, oldDraggableIndex, newDraggableIndex))
     }
   })
+  bindGridSortables()
 })
 
 onBeforeUnmount(() => {
   sortable?.destroy()
   sortable = null
+  gridSortables.forEach((s) => s.destroy())
+  gridSortables.length = 0
+  document.removeEventListener('click', swallowClick, { capture: true })
 })
 
 const uncategorizedCount = computed(() => props.bookmarks.filter(b => !b.category_id).length)
 
 // 列表分块数据：「全部」多块（分类序在前、未分类垫后、空分类跳过）；单分类/未分类单块（空也出块）
 const displayGroups = computed(() => groupsForView(props.bookmarks, props.categories, props.activeCat))
+
+// 块随 tab 切换/增删变化后重建书签网格 Sortable（flush post：等 DOM 更新完）
+watch(displayGroups, bindGridSortables, { flush: 'post' })
 
 const emptyText = computed(() => {
   if (props.activeCat === 'uncategorized') return '暂无未分类书签'

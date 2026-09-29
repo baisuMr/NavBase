@@ -14,5 +14,8 @@ export const bookmarksApi = {
   delete: (id) => api.delete(`/bookmarks/${id}`),
 
   // 批量导入书签
-  importMany: (bookmarks) => api.post('/bookmarks/batch', { bookmarks })
+  importMany: (bookmarks) => api.post('/bookmarks/batch', { bookmarks }),
+
+  // 分类内重排书签（按传入顺序换位 sort_order）
+  sort: (ids) => api.put('/bookmarks/sort', { ids })
 }
