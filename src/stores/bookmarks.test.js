@@ -6,7 +6,8 @@ import { setActivePinia, createPinia } from 'pinia'
 vi.mock('../api/bookmarks', () => ({
   bookmarksApi: {
     getAll: vi.fn(),
-    update: vi.fn()
+    update: vi.fn(),
+    sort: vi.fn()
   }
 }))
 
@@ -121,5 +122,47 @@ describe('bookmarks store fetchBookmarks 请求序号', () => {
     expect(store.error).toBeNull()
     expect(store.bookmarks.map(b => b.id)).toEqual([2])
     expect(store.loading).toBe(false)
+  })
+})
+
+describe('bookmarks store reorderBookmarks', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    bookmarksApi.sort.mockResolvedValue({ success: true })
+  })
+
+  it('重排成功返回 true，本地顺序按 ids 更新且 sort_order 换位保值（与服务端同语义）', async () => {
+    bookmarksApi.getAll.mockResolvedValue([
+      { id: 1, category_id: 1, sort_order: 4 },
+      { id: 2, category_id: 1, sort_order: 8 },
+      { id: 3, category_id: 1, sort_order: 6 }
+    ])
+    const store = useBookmarksStore()
+    await store.fetchBookmarks()
+
+    const ok = await store.reorderBookmarks([3, 1, 2])
+
+    expect(ok).toBe(true)
+    expect(store.bookmarks.map((b) => b.id)).toEqual([3, 1, 2])
+    // 原值 [4,6,8] 按新顺序换位 → [3→4, 1→6, 2→8]
+    expect(store.bookmarks.map((b) => b.sort_order)).toEqual([4, 6, 8])
+    expect(bookmarksApi.sort).toHaveBeenCalledWith([3, 1, 2])
+  })
+
+  it('重排失败返回 false 并回滚重新拉取服务端顺序', async () => {
+    bookmarksApi.getAll.mockResolvedValue([
+      { id: 1, category_id: 1, sort_order: 4 },
+      { id: 2, category_id: 1, sort_order: 8 }
+    ])
+    bookmarksApi.sort.mockRejectedValue(new Error('网络错误'))
+    const store = useBookmarksStore()
+    await store.fetchBookmarks()
+
+    const ok = await store.reorderBookmarks([2, 1])
+
+    expect(ok).toBe(false)
+    expect(bookmarksApi.getAll).toHaveBeenCalledTimes(2) // 初始加载 + 失败回滚
+    expect(store.bookmarks.map((b) => b.id)).toEqual([1, 2])
   })
 })

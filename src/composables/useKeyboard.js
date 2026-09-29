@@ -24,7 +24,8 @@ export function useKeyboard(handlers) {
     }
 
     // Escape: 关闭模态框/菜单
-    if (e.key === 'Escape') {
+    // isComposing 守卫：中文输入法按 Esc 取消候选词时照常冒泡 keydown，不能误触关闭（对齐搜索框守卫）
+    if (e.key === 'Escape' && !e.isComposing) {
       handlers.close?.()
     }
   }

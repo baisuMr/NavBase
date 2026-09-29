@@ -26,10 +26,11 @@ function stubCaches() {
 const PNG_HEAD = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
 const ICO_HEAD = [0x00, 0x00, 0x01, 0x00, 0x01, 0x00]
 
-function makeFixture(domain, { method = 'GET', k = TEST_K, dest = 'image', site = 'same-origin' } = {}) {
+function makeFixture(domain, { method = 'GET', k = TEST_K, dest = 'image', site = 'same-origin', v } = {}) {
   const waitUntil = []
   const url = new URL(`https://site.example/api/favicon/${domain}`)
   if (k !== null) url.searchParams.set('k', k)
+  if (v !== undefined) url.searchParams.set('v', v)
   const headers = {}
   if (dest !== null) headers['Sec-Fetch-Dest'] = dest
   if (site !== null) headers['Sec-Fetch-Site'] = site
@@ -197,7 +198,7 @@ describe('GET /api/favicon/:domain', () => {
     const keys = [...cacheStore.keys()]
     expect(keys).toHaveLength(1)
     // 缓存键带 v3 版本前缀：安全响应头策略变更时靠换键作废旧缓存
-    expect(keys[0]).toBe('https://favicon-cache.local/v3/example.com')
+    expect(keys[0]).toBe('https://favicon-cache.local/v4/1/example.com')
     expect(cacheStore.get(keys[0]).status).toBe(200)
   })
 
@@ -210,7 +211,7 @@ describe('GET /api/favicon/:domain', () => {
     const res = await invoke(fixture)
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('image/x-icon')
-    expect(res.headers.get('Cache-Control')).toBe('public, max-age=604800')
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=2592000')
     const buf = new Uint8Array(await res.arrayBuffer())
     expect([...buf.slice(0, 4)]).toEqual(ICO_HEAD.slice(0, 4))
     await Promise.all(fixture.waitUntilQueue)
@@ -220,6 +221,17 @@ describe('GET /api/favicon/:domain', () => {
   it('从首页 HTML 解析 <link rel="icon"> 并请求声明的图标', async () => {
     const calls = stubFetch({
       'https://example.com/': htmlResponse('<html><head><link rel="icon" href="/icon.png" sizes="32x32"></head></html>'),
+      'https://example.com/icon.png': imageResponse(PNG_HEAD)
+    })
+    const res = await invoke(makeFixture('example.com'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Favicon-Source')).toBe('https://example.com/icon.png')
+    expect(calls.some(c => c.url === 'https://example.com/icon.png')).toBe(true)
+  })
+
+  it('rel="shortcut icon" 多令牌声明同样识别（老式站点，不在空白处截断）', async () => {
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse('<html><head><link rel="shortcut icon" href="/icon.png"></head></html>'),
       'https://example.com/icon.png': imageResponse(PNG_HEAD)
     })
     const res = await invoke(makeFixture('example.com'))
@@ -416,13 +428,98 @@ describe('GET /api/favicon/:domain', () => {
 
   it('缓存命中时不发起上游请求', async () => {
     const cached = imageResponse(PNG_HEAD)
-    const key = new Request('https://favicon-cache.local/v3/example.com')
+    const key = new Request('https://favicon-cache.local/v4/1/example.com')
     cacheStore.set(key.url, cached)
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
     const res = await invoke(makeFixture('example.com'))
     expect(res.status).toBe(200)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('新鲜缓存命中不触发后台重探', async () => {
+    const cached = imageResponse(PNG_HEAD)
+    cached.headers.set('X-Fetched-At', String(Date.now()))
+    cacheStore.set('https://favicon-cache.local/v4/1/example.com', cached)
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    const fixture = makeFixture('example.com')
+    const res = await invoke(fixture)
+    expect(res.status).toBe(200)
+    await Promise.all(fixture.waitUntilQueue)
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(fixture.waitUntilQueue.length).toBe(0)
+  })
+
+  it('过期命中立即返回旧图并后台重探覆盖（SWR）', async () => {
+    const staleBytes = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0b]
+    const cached = imageResponse(staleBytes)
+    cached.headers.set('X-Fetched-At', String(Date.now() - 8 * 24 * 3600 * 1000))
+    const key = 'https://favicon-cache.local/v4/1/example.com'
+    cacheStore.set(key, cached)
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse('<html><head><link rel="icon" href="/new.png"></head></html>'),
+      'https://example.com/new.png': imageResponse(PNG_HEAD)
+    })
+    const fixture = makeFixture('example.com')
+    const res = await invoke(fixture)
+    // 立即返回旧图，不等待重探
+    expect([...new Uint8Array(await res.arrayBuffer())]).toEqual(staleBytes)
+    expect(fixture.waitUntilQueue.length).toBe(1)
+    await Promise.all(fixture.waitUntilQueue)
+    // 后台重探完成并覆盖缓存（X-Fetched-At 重置）
+    expect(calls.some(c => c.url === 'https://example.com/new.png')).toBe(true)
+    const replaced = cacheStore.get(key)
+    expect(Number(replaced.headers.get('X-Fetched-At'))).toBeGreaterThan(Date.now() - 5000)
+  })
+
+  it('后台重探失败保留旧图不覆盖', async () => {
+    const cached = imageResponse(PNG_HEAD)
+    cached.headers.set('X-Fetched-At', String(Date.now() - 8 * 24 * 3600 * 1000))
+    const key = 'https://favicon-cache.local/v4/1/example.com'
+    cacheStore.set(key, cached)
+    stubFetch({}) // 全部源失败
+    const fixture = makeFixture('example.com')
+    const res = await invoke(fixture)
+    expect(res.status).toBe(200)
+    await Promise.all(fixture.waitUntilQueue)
+    expect(cacheStore.get(key)).toBe(cached)
+  })
+
+  it('图标缓存键随 v 世代变化，非法值归一默认（清除图标缓存机制）', async () => {
+    stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const f1 = makeFixture('example.com', { v: '42' })
+    await invoke(f1)
+    await Promise.all(f1.waitUntilQueue)
+    expect([...cacheStore.keys()][0]).toContain('/v4/42/')
+
+    cacheStore.clear()
+    const f2 = makeFixture('example.com', { v: 'abc' })
+    await invoke(f2)
+    await Promise.all(f2.waitUntilQueue)
+    expect([...cacheStore.keys()][0]).toContain('/v4/1/')
+  })
+
+  it('v 换代即缓存作废并重新探测', async () => {
+    const calls = stubFetch({
+      'https://example.com/': htmlResponse('<html></html>'),
+      'https://example.com/favicon.ico': imageResponse(PNG_HEAD)
+    })
+    const f1 = makeFixture('example.com', { v: '1' })
+    await invoke(f1)
+    await Promise.all(f1.waitUntilQueue)
+    const n1 = calls.length
+    // 同世代命中不重探
+    await invoke(makeFixture('example.com', { v: '1' }))
+    expect(calls.length).toBe(n1)
+    // 换代后旧条目作废，重新探测
+    const f3 = makeFixture('example.com', { v: '2' })
+    await invoke(f3)
+    await Promise.all(f3.waitUntilQueue)
+    expect(calls.length).toBeGreaterThan(n1)
   })
 
   it('所有响应带 CSP sandbox 与 nosniff 纵深安全头', async () => {

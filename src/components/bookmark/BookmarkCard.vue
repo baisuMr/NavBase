@@ -1,6 +1,7 @@
 <template>
   <a
     class="bookmark-card"
+    :data-id="bookmark.id"
     :href="bookmark.url"
     target="_blank"
     rel="noopener noreferrer"

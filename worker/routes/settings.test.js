@@ -86,12 +86,40 @@ describe('validateSettingsPayload', () => {
   })
 })
 
+describe('favicon_cache_ver 图标缓存世代', () => {
+  it('校验：正整数与空字符串合法，0/负数/小数/字符串非法', () => {
+    expect(validateSettingsPayload({ favicon_cache_ver: 1 })).toBeNull()
+    expect(validateSettingsPayload({ favicon_cache_ver: 1759100000000 })).toBeNull()
+    expect(validateSettingsPayload({ favicon_cache_ver: '' })).toBeNull()
+    expect(validateSettingsPayload({ favicon_cache_ver: 0 })).toBeTruthy()
+    expect(validateSettingsPayload({ favicon_cache_ver: -3 })).toBeTruthy()
+    expect(validateSettingsPayload({ favicon_cache_ver: 1.5 })).toBeTruthy()
+    expect(validateSettingsPayload({ favicon_cache_ver: 'x' })).toBeTruthy()
+  })
+
+  it('PUT 写入 favicon_cache_ver 并在响应中回读', async () => {
+    const { request, env } = makeFixture({ favicon_cache_ver: 1759100000000 })
+    const { status, data } = await readJson(await handle(request, env))
+    expect(status).toBe(200)
+    expect(data.favicon_cache_ver).toBe('1759100000000')
+  })
+
+  it('未写入时默认 1，空字符串恢复默认', async () => {
+    const first = makeFixture({ favicon_cache_ver: 99 })
+    await handle(first.request, first.env)
+    const second = makeFixture({ favicon_cache_ver: '' })
+    second.rows.push(...first.rows)
+    const { data } = await readJson(await handle(second.request, second.env))
+    expect(data.favicon_cache_ver).toBe('1')
+  })
+})
+
 describe('GET /api/settings', () => {
   it('空库返回默认空值', async () => {
     const { request, env } = makeFixture(undefined, 'GET')
     const { status, data } = await readJson(await handle(request, env))
     expect(status).toBe(200)
-    expect(data).toEqual({ site_name: '', avatar: '' })
+    expect(data).toEqual({ site_name: '', avatar: '', favicon_cache_ver: '1' })
   })
 })
 

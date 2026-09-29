@@ -183,13 +183,26 @@ Content-Type: application/json
 - 导入的书签默认未固定（即使携带 `is_pinned` 也不写入）
 - 返回 `{ "success": true, "count": 3, "skipped": 2 }`，count 为实际导入数量，skipped 为去重跳过数量
 
+#### 重排书签（分类内）
+```
+PUT /api/bookmarks/sort
+Authorization: Basic base64(admin:password)
+Content-Type: application/json
+
+{
+  "ids": [3, 1, 2]
+}
+```
+
+**说明**：按 `ids` 顺序重排**同一分类内**的书签。`ids` 非空、无重复、均为正整数，且必须同属一个分类（`category_id` 全为 `null` 时即未分类组），跨分类或包含不存在的 id 返回 400。重排为 `sort_order` **换位赋值**（原有数值集合不变，非重编 1..n）——首屏常用站点按全局 `sort_order` 跨分类排序，换位保证其顺序不受影响。与 `PUT /api/bookmarks/:id` 分工：编辑书签不改排序，重排只走本端点。
+
 ---
 
 ### Favicon API
 
 #### 获取网站图标（图片代理）
 ```
-GET /api/favicon/:domain?k=<key>
+GET /api/favicon/:domain?k=<key>&v=<ver>
 ```
 
 **来源校验（先于鉴权）**：仅接受页面内图片请求（`Sec-Fetch-Dest: image` 且 `Sec-Fetch-Site: same-origin`，fail-closed），其余（地址栏直接打开、iframe 嵌入、curl 等）返回 `403 FORBIDDEN_CONTEXT`。
@@ -209,7 +222,7 @@ GET /api/favicon/:domain?k=<key>
 - 结果经 Cache API 缓存：成功 7 天，失败 10 分钟
 - 域名格式校验：仅接受合法 hostname，防止拼接路径/内网地址（SSRF）；重定向最多跟随 3 跳，且每跳目标同样必须是合法域名（杜绝跳转到内网 IP/localhost）
 
-**前端约定**：图标一律由 `useFavicon` 组合式函数拼 `/api/favicon/{域名}?k={key}` 渲染（k 由登录凭据派生，登录/启动时初始化），加载失败回退「标题首字头像」；书签 `icon_url` 字段已弃用（前端不再读写，历史直链不再使用）。
+**前端约定**：图标一律由 `useFavicon` 组合式函数拼 `/api/favicon/{域名}?k={key}&v={ver}` 渲染（k 由登录凭据派生，登录/启动时初始化；v 为图标缓存世代，随站点设置下发，换代即缓存作废），加载失败回退「标题首字头像」；书签 `icon_url` 字段已弃用（前端不再读写，历史直链不再使用）。
 
 ---
 
@@ -246,7 +259,8 @@ GET /api/settings
 ```json
 {
   "site_name": "NavBase",
-  "avatar": "data:image/webp;base64,..."
+  "avatar": "data:image/webp;base64,...",
+  "favicon_cache_ver": "1"
 }
 ```
 
@@ -263,9 +277,10 @@ Content-Type: application/json
 ```
 
 **说明**：
-- 仅支持 `site_name` 与 `avatar` 两个键（服务端白名单）
+- 仅支持 `site_name`、`avatar`、`favicon_cache_ver` 三个键（服务端白名单）
 - 字段值为**空字符串**表示清除并恢复默认；**缺省**（不传）表示不修改
 - `site_name` 不超过 30 字；`avatar` 为前端压缩后的 128×128 png/jpeg/webp dataURL（上限 200KB）
+- `favicon_cache_ver` 为图标缓存世代（正整数，如时间戳）：换代即各端图标缓存整体作废并重新探测（设置面板「清除图标缓存」按钮），随图标代理 URL 的 `v` 参数下发，默认 `1`
 
 ---
 

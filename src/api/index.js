@@ -21,13 +21,13 @@ async function request(url, options = {}) {
   try {
     response = await fetch(`${BASE_URL}${url}`, {
       ...rest,
-      // headers 放在最后合并：调用方传入的自定义头不会覆盖认证与 Content-Type；
+      // 调用方自定义头先展开、认证与 Content-Type 后展开：后者不会被覆盖；
       // signal 兜底 15 秒超时，调用方自带 signal 时以调用方为准
       signal: rest.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       headers: {
+        ...headers,
         'Content-Type': 'application/json',
-        ...useAuthStore().getAuthHeaders(),
-        ...headers
+        ...useAuthStore().getAuthHeaders()
       }
     })
   } catch (error) {

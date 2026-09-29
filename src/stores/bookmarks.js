@@ -58,6 +58,27 @@ export const useBookmarksStore = defineStore('bookmarks', {
       await this.fetchBookmarks()
     },
 
+    // 重排书签（分类内）：乐观本地换位（与服务端同语义：sort_order 数值集合不变），失败回滚并重新拉取
+    // 返回 true/false 供视图层提示用户
+    async reorderBookmarks(ids) {
+      const prev = this.bookmarks
+      const items = ids.map((id) => prev.find((b) => b.id === id)).filter(Boolean)
+      const values = items.map((b) => b.sort_order).sort((a, b) => a - b)
+      const valueById = new Map(items.map((b, i) => [b.id, values[i]]))
+      // 排序键与服务端一致（sort_order, id），保证乐观顺序与重拉后一致
+      this.bookmarks = prev
+        .map((b) => (valueById.has(b.id) ? { ...b, sort_order: valueById.get(b.id) } : b))
+        .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+      try {
+        await bookmarksApi.sort(ids)
+        return true
+      } catch (error) {
+        console.error('Failed to reorder bookmarks:', error)
+        await this.fetchBookmarks()
+        return false
+      }
+    },
+
     // 批量导入书签，返回 { count, skipped }（skipped 为重复跳过数）
     // refresh=false 供分块导入循环调用（全部提交完由调用方统一 fetchBookmarks）
     async importBookmarks(items, refresh = true) {

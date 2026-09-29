@@ -4,14 +4,17 @@ import { validateSettingsPayload } from '../utils/validate.js';
 import { errorResponse } from '../utils/http.js';
 
 // 允许写入的键白名单，防止任意 KV 写入
-const ALLOWED_KEYS = ['site_name', 'avatar'];
+const ALLOWED_KEYS = ['site_name', 'avatar', 'favicon_cache_ver'];
 
 async function readSettings(env) {
   const { results } = await env.DB.prepare('SELECT key, value FROM settings').all();
   const map = Object.fromEntries(results.map(row => [row.key, row.value]));
   return {
     site_name: map.site_name || '',
-    avatar: map.avatar || ''
+    avatar: map.avatar || '',
+    // 图标缓存世代：默认 1；换代即各端图标缓存整体作废（清除图标缓存按钮）
+    // 归一为字符串：settings.value 是 TEXT 列，与 site_name/avatar 口径一致
+    favicon_cache_ver: String(map.favicon_cache_ver || '1')
   };
 }
 

@@ -7,7 +7,8 @@ import { errorResponse, notConfiguredError } from '../utils/http.js';
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
 const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 export const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件（导出供测试断言流式截断阈值）
-const CACHE_TTL = 604800; // 成功结果缓存 7 天（Cloudflare Cache API + 浏览器）
+const CACHE_TTL = 2592000; // 成功结果缓存 30 天（Cloudflare Cache API + 浏览器）
+const REFRESH_AFTER = 604800; // SWR 后台重探周期 7 天：过期即回旧图、后台刷新，用户永不为重探等待
 const MISS_TTL = 600; // 失败结果缓存 10 分钟，避免对不可达站点反复探测
 const SOURCE_TIMEOUT = 3000; // 单源超时（毫秒）
 const TOTAL_BUDGET_MS = 5000; // 整个请求的硬预算（含 body 读取），到点统一取消
@@ -110,7 +111,9 @@ function parseIconLinks(html) {
   let m;
   while ((m = tagRe.exec(html))) {
     const tag = m[0];
-    const rel = (tag.match(/\brel\s*=\s*["']?([^"'\s>]+)/i) || [])[1] || '';
+    // rel 取完整属性值（含引号内空格）：多令牌如 "shortcut icon" 不在空白处截断
+    const relMatch = tag.match(/\brel\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i) || [];
+    const rel = relMatch[2] ?? relMatch[3] ?? relMatch[4] ?? '';
     if (!/(^|\s)(shortcut\s+)?icon(\s|$)|apple-touch-icon/i.test(rel)) continue;
     const href = (tag.match(/\bhref\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
     if (!href) continue;
@@ -247,15 +250,63 @@ export async function handle(request, env, params, ctx) {
 
   // Cache API：本地 wrangler dev 与线上均可用，同一图标只探测一次
   const cache = caches.default;
-  // 键带版本号：响应头策略变更（类型强制/nosniff）时换版本即可让旧缓存条目整体失效
-  const cacheKey = new Request(`https://favicon-cache.local/v3/${domain}`);
+  // 键含缓存世代 v（前端随站点设置下发拼进图标 URL）：换代即缓存键整体变化、旧条目作废，
+  // 服务端无需每次读库；v4 前缀为响应头策略版本（类型强制/nosniff + X-Fetched-At）
+  const rawVer = new URL(request.url).searchParams.get('v') || '1';
+  const ver = /^\d{1,12}$/.test(rawVer) ? rawVer : '1';
+  const cacheKey = new Request(`https://favicon-cache.local/v4/${ver}/${domain}`);
   const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    // SWR：带 X-Fetched-At 且已到重探周期的条目，立即返回旧图并后台重探覆盖——
+    // 图标是装饰性资产，旧图完全可用，用户永不为重探等待；重探失败保留旧图。
+    // 无时间戳的旧条目不刷新，沿用其自身 max-age 自然过期
+    const fetchedAt = Number(cached.headers.get('X-Fetched-At') || 0);
+    if (fetchedAt && Date.now() - fetchedAt >= REFRESH_AFTER * 1000) {
+      ctx.waitUntil(refreshIcon(domain, cache, cacheKey));
+    }
+    return cached;
+  }
 
-  // 并发探测各源，取最先返回有效图片的一个（单源 3 秒超时，总耗时上限 5 秒，含 body 读取）：
-  // 1. 目标站首页 HTML 图标声明（清晰度与覆盖率最优）
-  // 2. 目标站 /favicon.ico 直连
-  // 3-5. favicon.im / DuckDuckGo / Google s2（Cloudflare 边缘可达性好，兜底互补）
+  const result = await probeIcon(domain);
+  if (!result) {
+    // 全部源失败（含总预算耗尽）：200 空体而非 404——
+    // 浏览器对失败子资源必打控制台日志且无法抑制，200 空体使 <img> 触发 error 事件、
+    // 前端回退首字头像且控制台干净（负面缓存 10 分钟，与前端 FAILED_TTL 对齐）
+    const miss = new Response(null, {
+      status: 200,
+      headers: {
+        ...SECURITY_HEADERS,
+        'Content-Type': 'image/png',
+        'Cache-Control': `public, max-age=${MISS_TTL}`,
+        'X-Fetched-At': String(Date.now())
+      }
+    });
+    ctx.waitUntil(cache.put(cacheKey, miss.clone()));
+    return miss;
+  }
+  const response = iconResponse(result);
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
+}
+
+// 成功结果响应：30 天缓存 + 探测时间戳（SWR 判断重探周期用）
+function iconResponse(result) {
+  return new Response(result.buffer, {
+    headers: {
+      ...SECURITY_HEADERS,
+      'Content-Type': result.contentType,
+      'Cache-Control': `public, max-age=${CACHE_TTL}`,
+      'X-Favicon-Source': result.source,
+      'X-Fetched-At': String(Date.now())
+    }
+  });
+}
+
+// 并发探测各源，取最先返回有效图片的一个（单源 3 秒超时，总耗时上限 5 秒，含 body 读取）：
+// 1. 目标站首页 HTML 图标声明（清晰度与覆盖率最优）
+// 2. 目标站 /favicon.ico 直连
+// 3-5. favicon.im / DuckDuckGo / Google s2（Cloudflare 边缘可达性好，兜底互补）
+async function probeIcon(domain) {
   const factories = [
     signal => probeHtmlIcon(domain, signal),
     signal => probeUrl(`https://${domain}/favicon.ico`, signal),
@@ -268,32 +319,17 @@ export async function handle(request, env, params, ctx) {
   const budget = new AbortController();
   const budgetTimer = setTimeout(() => budget.abort(), TOTAL_BUDGET_MS);
   try {
-    const result = await raceProbes(factories, budget.signal);
-    const response = new Response(result.buffer, {
-      headers: {
-        ...SECURITY_HEADERS,
-        'Content-Type': result.contentType,
-        'Cache-Control': `public, max-age=${CACHE_TTL}`,
-        'X-Favicon-Source': result.source
-      }
-    });
-    ctx.waitUntil(cache.put(cacheKey, response.clone()));
-    return response;
+    return await raceProbes(factories, budget.signal);
   } catch {
-    // 全部源失败（含总预算耗尽）：200 空体而非 404——
-    // 浏览器对失败子资源必打控制台日志且无法抑制，200 空体使 <img> 触发 error 事件、
-    // 前端回退首字头像且控制台干净（负面缓存 10 分钟，与前端 FAILED_TTL 对齐）
-    const miss = new Response(null, {
-      status: 200,
-      headers: {
-        ...SECURITY_HEADERS,
-        'Content-Type': 'image/png',
-        'Cache-Control': `public, max-age=${MISS_TTL}`
-      }
-    });
-    ctx.waitUntil(cache.put(cacheKey, miss.clone()));
-    return miss;
+    return null;
   } finally {
     clearTimeout(budgetTimer);
   }
+}
+
+// SWR 后台重探：成功覆盖缓存（X-Fetched-At 重置），失败保留旧图不覆盖
+async function refreshIcon(domain, cache, cacheKey) {
+  const result = await probeIcon(domain);
+  if (!result) return;
+  await cache.put(cacheKey, iconResponse(result));
 }

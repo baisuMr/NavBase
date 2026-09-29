@@ -1,9 +1,23 @@
 // @vitest-environment happy-dom
 // 认证状态 store 单测（含记住设备分流）
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './auth'
 import { getFaviconKey, clearFaviconKey } from '../utils/faviconKey'
+
+// faviconKey 部分替换：默认透传真实实现（派生 k 的用例不受影响），
+// failInitFaviconKey 打开时模拟非安全上下文（crypto.subtle 缺失）抛错
+const hoisted = vi.hoisted(() => ({ failInitFaviconKey: false }))
+vi.mock('../utils/faviconKey', async (importOriginal) => {
+  const original = await importOriginal()
+  return {
+    ...original,
+    initFaviconKey: (...args) => {
+      if (hoisted.failInitFaviconKey) return Promise.reject(new TypeError('crypto.subtle 不可用'))
+      return original.initFaviconKey(...args)
+    }
+  }
+})
 
 const TOKEN = 'YWRtaW46c2VjcmV0'
 const K = '8cpjAAtxx2rvatP2WcPbyZJvRIdWpIZ0OyT5SqVOmlU'
@@ -13,6 +27,10 @@ describe('auth store', () => {
     setActivePinia(createPinia())
     localStorage.clear()
     sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    hoisted.failInitFaviconKey = false
   })
 
   it('无 token 时未认证，init 不改变状态', () => {
@@ -159,6 +177,10 @@ describe('auth store 与 faviconKey 接线', () => {
     clearFaviconKey()
   })
 
+  afterEach(() => {
+    hoisted.failInitFaviconKey = false
+  })
+
   it('登录成功后派生 k', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
       token: TOKEN, username: 'admin', expiresAt: Date.now() + 60000, durationDays: 7, remember: false, success: true
@@ -175,6 +197,37 @@ describe('auth store 与 faviconKey 接线', () => {
     const store = useAuthStore()
     store.init()
     await vi.waitFor(() => expect(getFaviconKey()).toBe(K))
+  })
+
+  it('initFaviconKey 失败（如非安全上下文）不阻断登录，token 仍落盘', async () => {
+    hoisted.failInitFaviconKey = true
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      token: 'tok', username: 'admin', expiresAt: Date.now() + 60000, durationDays: 7, remember: false, success: true
+    }), { status: 200 })))
+    const store = useAuthStore()
+    const r = await store.login('admin', 'pw', false)
+    expect(r.success).toBe(true)
+    expect(store.isAuthenticated).toBe(true)
+    expect(sessionStorage.getItem('auth_token')).toBe('tok')
+    vi.unstubAllGlobals()
+  })
+
+  it('登录请求 15 秒超时兜底，弱网不永久悬挂', async () => {
+    const controller = new AbortController()
+    const timeoutSpy = vi.fn(() => controller.signal)
+    vi.stubGlobal('AbortSignal', { ...AbortSignal, timeout: timeoutSpy })
+    // fetch 遵守中止信号；无 signal 时永久挂起（旧实现缺超时的弱网场景）
+    vi.stubGlobal('fetch', (_url, init) => new Promise((_resolve, reject) => {
+      if (!init?.signal) return
+      init.signal.addEventListener('abort', () => reject(init.signal.reason))
+      queueMicrotask(() => controller.abort(
+        new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+      ))
+    }))
+    const store = useAuthStore()
+    await expect(store.login('admin', 'pw')).rejects.toThrow(/超时/)
+    expect(timeoutSpy).toHaveBeenCalledWith(15000)
+    vi.unstubAllGlobals()
   })
 
   it('登出清空 k', async () => {

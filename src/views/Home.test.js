@@ -19,7 +19,9 @@ vi.mock('../composables/useBookmarks', async () => {
       createBookmark: v.fn(pending),
       updateBookmark: v.fn(pending),
       togglePin: v.fn(async () => {}),
-      deleteBookmark: v.fn(pending)
+      deleteBookmark: v.fn(pending),
+      // 永不 resolve：导入中 busy 保持 true（设置面板关闭守卫用例）
+      importBookmarks: v.fn(pending)
     })
   }
 })
@@ -48,7 +50,17 @@ vi.mock('../composables/useAuth', async () => {
 })
 
 vi.mock('../stores/settings', () => ({
-  useSettingsStore: () => ({ displayName: 'NavBase', avatar: '', fetchSettings: vi.fn(async () => {}) })
+  useSettingsStore: () => ({
+    displayName: 'NavBase',
+    siteName: '',
+    avatar: '',
+    fetchSettings: vi.fn(async () => {}),
+    updateSettings: vi.fn(async () => {})
+  })
+}))
+
+vi.mock('../stores/bookmarks', () => ({
+  useBookmarksStore: () => ({ reorderBookmarks: vi.fn(async () => true) })
 }))
 
 // AppHeader 依赖 RouterLink（需 router 实例）、BookmarkExplorer 依赖 sortablejs：均与守卫无关，渲染桩替代
@@ -57,6 +69,14 @@ vi.mock('../components/layout/AppHeader.vue', () => ({
 }))
 vi.mock('../components/bookmark/BookmarkExplorer.vue', () => ({
   default: { name: 'BookmarkExplorerStub', render: () => null }
+}))
+
+// 设置面板依赖 router 与书签 HTML 解析：与关闭守卫无关，解析桩返回一个可建的分类
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: () => {} })
+}))
+vi.mock('../utils/importBookmarks', () => ({
+  parseNetscapeBookmarks: () => ({ categories: [{ name: '待建分类', links: [] }], roots: [] })
 }))
 
 const apps = []
@@ -91,6 +111,22 @@ async function openCategoryModal() {
   press('KeyN', { altKey: true, shiftKey: true })
   await nextTick()
   expect(document.querySelector('.modal')).not.toBeNull()
+}
+
+async function openSettings() {
+  const btn = [...document.querySelectorAll('.app-footer button')]
+    .find((b) => b.textContent.includes('导入与导出'))
+  btn.click()
+  await nextTick()
+  expect(document.querySelector('.modal')).not.toBeNull()
+}
+
+// 触发设置面板的隐藏文件导入：createCategory/importBookmarks 永挂起 → busy 保持 true
+function triggerSettingsImport() {
+  const input = document.querySelector('input[accept=".html,text/html"]')
+  const file = new File(['<DL></DL>'], 'bookmarks.html', { type: 'text/html' })
+  Object.defineProperty(input, 'files', { value: [file], configurable: true })
+  input.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
 // 填表并提交：createBookmark/createCategory 永挂起 → loading 保持 true
@@ -164,6 +200,41 @@ describe('Home 表单弹窗 loading 关闭守卫', () => {
   it('回归：未 loading 时 ESC 正常关闭弹窗', async () => {
     await mountHome()
     await openBookmarkModal()
+
+    press('Escape', { key: 'Escape' })
+    await nextTick()
+    expect(document.querySelector('.modal')).toBeNull()
+  })
+})
+
+describe('Home 设置面板导入中关闭守卫', () => {
+  it('导入中按 ESC 面板不关', async () => {
+    await mountHome()
+    await openSettings()
+    triggerSettingsImport()
+    await nextTick()
+    await nextTick()
+
+    press('Escape', { key: 'Escape' })
+    await nextTick()
+    expect(document.querySelector('.modal')).not.toBeNull()
+  })
+
+  it('导入中点关闭按钮面板不关', async () => {
+    await mountHome()
+    await openSettings()
+    triggerSettingsImport()
+    await nextTick()
+    await nextTick()
+
+    document.querySelector('.modal-close').click()
+    await nextTick()
+    expect(document.querySelector('.modal')).not.toBeNull()
+  })
+
+  it('回归：空闲时 ESC 正常关闭设置面板', async () => {
+    await mountHome()
+    await openSettings()
 
     press('Escape', { key: 'Escape' })
     await nextTick()

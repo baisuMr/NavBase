@@ -100,5 +100,12 @@ export function validateSettingsPayload(data) {
       if (avatar.length > MAX_AVATAR_LENGTH) return '头像图片过大，请更换图片后重试';
     }
   }
+  if (data.favicon_cache_ver !== undefined) {
+    // 图标缓存世代：正整数（如时间戳）；空字符串表示恢复默认
+    const ver = data.favicon_cache_ver;
+    if (ver !== '' && !(Number.isInteger(ver) && ver > 0)) {
+      return '图标缓存版本号不正确';
+    }
+  }
   return null;
 }
