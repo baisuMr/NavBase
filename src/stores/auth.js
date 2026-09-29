@@ -5,6 +5,10 @@ const TOKEN_KEY = 'auth_token'
 const USERNAME_KEY = 'auth_username'
 const EXPIRES_KEY = 'auth_expires_at'
 
+// 与 src/api/index.js 的 REQUEST_TIMEOUT_MS 对齐：登录是关键路径，
+// 弱网兜底 15 秒中止，避免「正在登录...」永久悬挂
+const REQUEST_TIMEOUT_MS = 15000
+
 // 记住设备：勾选 → localStorage（默认 30 天）；不勾选 → sessionStorage（关浏览器即失效）
 function authStorage(remember) {
   return remember ? localStorage : sessionStorage
@@ -59,7 +63,8 @@ export const useAuthStore = defineStore('auth', {
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, remember })
+          body: JSON.stringify({ username, password, remember }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
         })
 
         if (!response.ok) {
@@ -75,8 +80,9 @@ export const useAuthStore = defineStore('auth', {
         this.username = data.username
         this.expiresAt = data.expiresAt
 
-        // 派生 favicon 持证 URL 的 k（与登录态同步就绪）
-        await initFaviconKey(data.token)
+        // 派生 favicon 持证 URL 的 k（与登录态同步就绪）；
+        // 失败不阻断登录（如非安全上下文无 crypto.subtle），登录可用性优先
+        await initFaviconKey(data.token).catch(() => {})
 
         // 写入所选存储并清理另一处，避免两处残留不同凭据
         const target = authStorage(rememberMe)
@@ -94,6 +100,10 @@ export const useAuthStore = defineStore('auth', {
           remember: rememberMe
         }
       } catch (error) {
+        // AbortSignal.timeout 中止时抛 TimeoutError，转成用户可读文案
+        if (error && error.name === 'TimeoutError') {
+          throw new Error('登录超时，请检查网络后重试')
+        }
         console.error('Login error:', error)
         throw error
       }

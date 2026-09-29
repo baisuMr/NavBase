@@ -617,6 +617,15 @@
   opacity: 0.4;
 }
 
+/* 拖拽排序：tab 拖起浮起（幅度略小于书签卡）；仅拖动中变抓手光标 */
+.category-tab-cat.sortable-drag {
+  cursor: grabbing;
+  scale: 1.02;
+  box-shadow: var(--shadow-pop);
+  z-index: 10;
+  transition: scale var(--t-fast), box-shadow var(--t-fast);
+}
+
 .bookmark-card-ghost {
   opacity: 0.4;
 }
@@ -731,6 +740,23 @@
   box-shadow: var(--shadow-card);
   transform: translateY(-2px);
   color: inherit;
+}
+
+/* 拖拽排序（fallback 拖拽，见 BookmarkExplorer 的 Sortable 配置）：
+   拖起中的拖影浮起，落点处真实卡片作占位；悬停保持链接手型，仅拖动中变抓手 */
+.bookmark-card.sortable-drag {
+  cursor: grabbing;
+  scale: 1.03;
+  box-shadow: var(--shadow-pop);
+  z-index: 10;
+  /* 只过渡浮起属性：拖影位置由 Sortable 逐帧改写，不能被 transition 拖出拖尾 */
+  transition: scale var(--t-fast), box-shadow var(--t-fast);
+}
+
+.bookmark-card-ghost {
+  opacity: 0.45;
+  border-style: dashed;
+  border-color: var(--color-border-active);
 }
 
 .bookmark-card-favicon {

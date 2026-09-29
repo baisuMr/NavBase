@@ -3,9 +3,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // 拦截认证 store：401 需走 clearAuth 既有语义，但测试里不依赖 Pinia 上下文与真实存储
-const { clearAuth } = vi.hoisted(() => ({ clearAuth: vi.fn() }))
+const { clearAuth, getAuthHeaders } = vi.hoisted(() => ({
+  clearAuth: vi.fn(),
+  getAuthHeaders: vi.fn(() => ({ Authorization: 'Basic real-cred' }))
+}))
 vi.mock('../stores/auth', () => ({
-  useAuthStore: () => ({ clearAuth, getAuthHeaders: () => ({}) })
+  useAuthStore: () => ({ clearAuth, getAuthHeaders })
 }))
 
 import { api } from './index'
@@ -52,5 +55,26 @@ describe('api 请求收尾', () => {
   it('正常响应返回解析后的 JSON', async () => {
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
     await expect(api.get('/settings')).resolves.toEqual({ ok: true })
+  })
+
+  it('调用方自定义头不能覆盖认证与 Content-Type（与注释契约一致）', async () => {
+    let captured
+    vi.stubGlobal('fetch', async (_url, init) => {
+      captured = init
+      return new Response('{}', { status: 200 })
+    })
+
+    await api.get('/bookmarks', {
+      headers: {
+        Authorization: 'Basic fake-cred',
+        'Content-Type': 'text/plain',
+        'X-Custom': 'keep-me'
+      }
+    })
+
+    expect(captured.headers.Authorization).toBe('Basic real-cred')
+    expect(captured.headers['Content-Type']).toBe('application/json')
+    // 其余自定义头正常透传
+    expect(captured.headers['X-Custom']).toBe('keep-me')
   })
 })

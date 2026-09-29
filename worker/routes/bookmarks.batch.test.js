@@ -182,3 +182,77 @@ describe('导入去重下推唯一索引', () => {
     expect(body.error).toContain('已存在')
   })
 })
+
+describe('batch 分类存在性校验按 D1 绑定上限分块', () => {
+  it('超过 90 个不同分类 id 拆多条 IN 查询，单条绑定不超上限', async () => {
+    const items = Array.from({ length: 95 }, (_, i) => ({
+      title: `t${i}`, url: `https://ex.com/${i}`, category_id: i + 1
+    }))
+    const db = createMockDB(({ sql, args, method }) => {
+      if (method === 'all' && sql.includes('FROM categories')) return { results: args.map(id => ({ id })) }
+      if (method === 'first' && sql.includes('MAX(sort_order)')) return { max: 0 }
+    })
+    const res = await postBatch(db, items)
+    expect(res.status).toBe(200)
+    const catQueries = db.calls.filter(c => c.method === 'all' && c.sql.includes('FROM categories'))
+    expect(catQueries.length).toBe(2) // 90 + 5
+    for (const q of catQueries) expect(q.args.length).toBeLessThanOrEqual(90)
+  })
+
+  it('分块内不存在的分类仍整体返回 400', async () => {
+    const items = Array.from({ length: 95 }, (_, i) => ({
+      title: `t${i}`, url: `https://ex.com/${i}`, category_id: i + 1
+    }))
+    const db = createMockDB(({ sql, args, method }) => {
+      if (method === 'all' && sql.includes('FROM categories')) {
+        // 第二块的 5 个 id 全部不存在
+        return { results: args.length === 90 ? args.map(id => ({ id })) : [] }
+      }
+    })
+    const res = await postBatch(db, items)
+    expect(res.status).toBe(400)
+  })
+})
+
+describe('URL 入库前去首尾空白', () => {
+  it('batch 批内去重与入库均按 trim 后的 URL', async () => {
+    const db = createMockDB(({ sql, method }) => {
+      if (method === 'all' && sql.includes('WHERE url IN')) return { results: [] }
+      if (method === 'first' && sql.includes('MAX(sort_order)')) return { max: 0 }
+    })
+    const res = await postBatch(db, [
+      { title: 'a', url: '  https://a.com  ' },
+      { title: 'a2', url: 'https://a.com' }
+    ])
+    expect(res.status).toBe(200)
+    const inserts = db.calls.filter(c => c.sql.includes('INTO bookmarks'))
+    expect(inserts.length).toBe(1) // trim 后同 URL 批内去重
+    expect(inserts[0].args[1]).toBe('https://a.com')
+  })
+
+  it('单条创建 trim 后入库', async () => {
+    const db = createMockDB()
+    const res = await collection(new Request('http://test/api/bookmarks', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ title: 't', url: '  https://a.com  ' })
+    }), { DB: db })
+    expect(res.status).toBe(201)
+    const insert = db.calls.find(c => c.sql.includes('INTO bookmarks'))
+    expect(insert.args[1]).toBe('https://a.com')
+  })
+
+  it('单条编辑 trim 后入库', async () => {
+    const db = createMockDB(({ sql, method }) => {
+      if (method === 'first' && sql.includes('SELECT id FROM bookmarks')) return { id: 1 }
+    })
+    const res = await item(new Request('http://test/api/bookmarks/1', {
+      method: 'PUT',
+      headers: jsonHeaders,
+      body: JSON.stringify({ title: 't', url: '  https://a.com  ' })
+    }), { DB: db }, { id: '1' })
+    expect(res.status).toBe(200)
+    const update = db.calls.find(c => c.sql.includes('UPDATE bookmarks'))
+    expect(update.args[1]).toBe('https://a.com')
+  })
+})

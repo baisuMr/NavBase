@@ -1,5 +1,7 @@
 <template>
-  <section id="explorer-section" class="explorer">
+  <!-- dragstart.prevent：书签卡是 a[href]，原生链接拖拽会与 Sortable fallback 抢占导致拖动偶发失效，
+       区域内一律取消原生拖拽（本区域拖拽统一由 Sortable fallback 接管） -->
+  <section id="explorer-section" class="explorer" @dragstart.prevent>
     <!-- 工具栏：分类 tabs + 添加 -->
     <div class="explorer-toolbar">
       <div ref="tabsRef" class="category-tabs">
@@ -135,14 +137,21 @@ const blocksRef = ref(null)
 let SortableCtor = null
 const gridSortables = []
 
-// 拖完松手会误触发 click 打开链接：吞掉拖拽结束后短暂窗口内的点击
+// 拖完松手会误触发 click 打开链接：吞掉拖拽结束后短暂窗口内、命中被拖卡片的点击；
+// 其他按钮/链接的点击不吞，避免拖完即点任何地方都失灵一次
+let swallowEl = null
 function swallowClick(e) {
+  if (!swallowEl?.contains(e.target)) return
   e.preventDefault()
   e.stopPropagation()
 }
-function armClickSwallow() {
+function armClickSwallow(el) {
+  swallowEl = el
   document.addEventListener('click', swallowClick, { capture: true, once: true })
-  setTimeout(() => document.removeEventListener('click', swallowClick, { capture: true }), 300)
+  setTimeout(() => {
+    document.removeEventListener('click', swallowClick, { capture: true })
+    swallowEl = null
+  }, 300)
 }
 
 function bindGridSortables() {
@@ -152,7 +161,12 @@ function bindGridSortables() {
   for (const grid of blocksRef.value.querySelectorAll('.bookmark-grid')) {
     gridSortables.push(
       SortableCtor.create(grid, {
-        animation: 150,
+        animation: 250,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        // 强制 fallback 拖拽：桌面不再用 HTML5 原生拖影，浮起/光标样式可由 CSS 控制；
+        // 拖影挂到 body 下，避免被网格容器裁切
+        forceFallback: true,
+        fallbackOnBody: true,
         draggable: '.bookmark-card',
         ghostClass: 'bookmark-card-ghost',
         // 各块独立列表（pull/put 关闭）：跨块拖不动，只在所属分类内重排
@@ -171,7 +185,7 @@ function bindGridSortables() {
           dragStartNext = null
           const { oldDraggableIndex, newDraggableIndex } = evt
           if (oldDraggableIndex !== newDraggableIndex) emit('bookmark-reorder', ids)
-          armClickSwallow()
+          armClickSwallow(evt.item)
         }
       })
     )
@@ -185,7 +199,10 @@ onMounted(async () => {
   // 动态加载期间组件可能已卸载（模板引用会被置空）
   if (!tabsRef.value) return
   sortable = Sortable.create(tabsRef.value, {
-    animation: 150,
+    animation: 250,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    forceFallback: true,
+    fallbackOnBody: true,
     draggable: '.category-tab-cat',
     ghostClass: 'category-tab-ghost',
     onMove(evt) {
@@ -208,9 +225,12 @@ onMounted(async () => {
       evt.from.insertBefore(evt.item, dragStartNext)
       dragStartNext = null
       const { oldDraggableIndex, newDraggableIndex } = evt
-      if (oldDraggableIndex === newDraggableIndex) return
-      const ids = props.categories.map(c => c.id)
-      emit('reorder', moveInArray(ids, oldDraggableIndex, newDraggableIndex))
+      if (oldDraggableIndex !== newDraggableIndex) {
+        const ids = props.categories.map(c => c.id)
+        emit('reorder', moveInArray(ids, oldDraggableIndex, newDraggableIndex))
+      }
+      // 拖完松手会误触发 click 切换分类：与网格拖拽同款，吞被拖 tab 上的点击
+      armClickSwallow(evt.item)
     }
   })
   bindGridSortables()

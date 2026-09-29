@@ -67,7 +67,7 @@ export async function collection(request, env) {
         'INSERT INTO bookmarks (title, url, description, category_id, icon_url, sort_order) VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM bookmarks))'
       ).bind(
         title.trim(),
-        url,
+        url.trim(),
         description || '',
         category_id || null,
         icon_url || ''
@@ -151,7 +151,7 @@ export async function item(request, env, params) {
       ).bind(
         ...[
           title.trim(),
-          url,
+          url.trim(),
           description || '',
           category_id || null,
           icon_url || '',
@@ -251,18 +251,26 @@ export async function batch(request, env) {
     }
 
     // 分类存在性校验（对齐单条 POST/PUT）：不存在的 id 会撞 D1 外键被兜底成 500，提前拦截返回 400
-    // 去重后的 id 合成一条 IN 查询；缺省/null 视为未分类合法（0 等非法类型已被字段校验拦下）
+    // 去重后的 id 按 QUERY_CHUNK_SIZE 分块 IN 查询（D1 单条语句 bind 上限 100）后合并命中集；
+    // 缺省/null 视为未分类合法（0 等非法类型已被字段校验拦下）
     const catIds = [...new Set(items.map(i => i.category_id).filter(id => id !== undefined && id !== null))];
     if (catIds.length > 0) {
-      const placeholders = catIds.map(() => '?').join(',');
-      const { results } = await env.DB.prepare(
-        `SELECT id FROM categories WHERE id IN (${placeholders})`
-      ).bind(...catIds).all();
-      const found = new Set(results.map(r => r.id));
+      const found = new Set();
+      for (let i = 0; i < catIds.length; i += QUERY_CHUNK_SIZE) {
+        const slice = catIds.slice(i, i + QUERY_CHUNK_SIZE);
+        const placeholders = slice.map(() => '?').join(',');
+        const { results } = await env.DB.prepare(
+          `SELECT id FROM categories WHERE id IN (${placeholders})`
+        ).bind(...slice).all();
+        for (const r of results) found.add(r.id);
+      }
       if (catIds.some(id => !found.has(id))) {
         return errorResponse('分类不存在', 'CATEGORY_NOT_FOUND', 400);
       }
     }
+
+    // URL 去首尾空白再入库（校验链对空白不敏感）：字面值归一，唯一索引与去重口径一致
+    for (const item of items) item.url = item.url.trim();
 
     // 批内 + 库内双重去重，避免重复导入产生冗余书签
     const toInsert = await dedupe(env, items);

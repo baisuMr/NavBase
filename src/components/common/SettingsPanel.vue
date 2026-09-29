@@ -70,6 +70,10 @@
             <i class="ri-download-line" style="font-size:var(--icon-size-md);"></i>
             <span>导出书签</span>
           </button>
+          <button type="button" class="btn btn-secondary" @click="clearIconCache">
+            <i class="ri-refresh-line" style="font-size:var(--icon-size-md);"></i>
+            <span>清除图标缓存</span>
+          </button>
         </div>
         <p class="form-hint">
           导入支持 Chrome、Edge、Firefox 等浏览器书签管理器导出的 HTML 文件
@@ -110,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import Modal from './Modal.vue'
@@ -122,7 +126,7 @@ import { useToast } from '../../composables/useToast'
 import { parseNetscapeBookmarks } from '../../utils/importBookmarks'
 import { chunkArray } from '../../utils/chunk'
 
-defineEmits(['close'])
+const emit = defineEmits(['close', 'busy'])
 
 const router = useRouter()
 const settings = useSettingsStore()
@@ -214,6 +218,10 @@ async function removeAvatar() {
 
 // ── 导入书签 ──
 const importInputRef = ref(null)
+// 导入进行中标记：与头像上传一起上报 busy，供 Home 关闭守卫在慢操作期间忽略关闭
+const importing = ref(false)
+const busy = computed(() => importing.value || avatarSaving.value)
+watch(busy, (b) => emit('busy', b))
 
 function triggerImport() {
   importInputRef.value?.click()
@@ -224,6 +232,7 @@ async function handleImportFile(event) {
   event.target.value = ''
   if (!file) return
 
+  importing.value = true
   try {
     const html = await file.text()
     const { categories: importCats, roots } = parseNetscapeBookmarks(html)
@@ -279,7 +288,22 @@ async function handleImportFile(event) {
       (newCatCount ? `、新建 ${newCatCount} 个分类` : '')
     )
   } catch (err) {
+    // 创建分类/提交中途失败时同步分类 store：避免重试同文件时按过期数据重复建分类
+    await fetchCategories().catch(() => {})
     showError('导入失败: ' + err.message)
+  } finally {
+    importing.value = false
+  }
+}
+
+// ── 清除图标缓存 ──
+// 换代 favicon_cache_ver：浏览器与服务端图标缓存整体作废，各端下次加载重新探测
+async function clearIconCache() {
+  try {
+    await settings.updateSettings({ favicon_cache_ver: Date.now() })
+    success('图标缓存已清除，各设备将在下次加载时重新获取')
+  } catch (err) {
+    showError('清除失败: ' + err.message)
   }
 }
 

@@ -6,7 +6,7 @@
       aria-modal="true"
       :aria-label="title"
       ref="dialogEl"
-      @keydown.esc.stop="$emit('close')"
+      @keydown.esc.stop="onEsc"
     >
       <div class="modal-header">
         <h3>{{ title }}</h3>
@@ -42,7 +42,13 @@ defineProps({
   }
 })
 
-defineEmits(['close'])
+const emit = defineEmits(['close'])
+
+// Esc 关闭：输入法组合态（Esc 取消候选词）不关闭弹窗，防止表单内容误丢（对齐 useKeyboard 全局守卫）
+function onEsc(e) {
+  if (e.isComposing) return
+  emit('close')
+}
 
 const dialogEl = ref(null)
 const closeBtn = ref(null)

@@ -49,9 +49,9 @@ NavBase 是个人自用的开源网址导航管理平台（MIT），用于替代
 - **常用站点固定**: 首屏快捷卡片展示手动固定的书签（`bookmarks.is_pinned` 0/1，按 `sort_order` 排序，上限 10 个、宽屏一行 5 个最多两行）；右键书签卡片「固定到首屏/取消固定」，上限校验在服务端（转固定超限返回 400）；`is_pinned` 缺省不修改（编辑书签保留固定状态），创建与批量导入默认未固定；一个都没固定时显示引导提示
 - **右键菜单操作**: 分类（分类 pill）和书签（书签卡片）的编辑、删除等操作通过右键菜单触发
 - **设置面板**: 顶栏齿轮打开，集中网站名称、头像（前端压缩 128×128）、导入导出、退出登录
-- **站点设置持久化**: 存于 D1 `settings` 表（KV），经 `GET/PUT /api/settings` 读写；字段空字符串表示恢复默认，缺省表示不修改；服务端按键白名单（site_name / avatar）校验
+- **站点设置持久化**: 存于 D1 `settings` 表（KV），经 `GET/PUT /api/settings` 读写；字段空字符串表示恢复默认，缺省表示不修改；服务端按键白名单（site_name / avatar / favicon_cache_ver）校验；favicon_cache_ver 为图标缓存世代（设置面板「清除图标缓存」按钮换代，随图标 URL 的 v 参数下发，浏览器与服务端图标缓存即整体作废）
 - **主题**: 仅浅色主题（Tabular Minimalist：Slate 中性色 + 皇家蓝 `#2563EB`，扁平无阴影、紧凑圆角），无深色模式。组件样式禁止硬编码颜色，一律引用 `src/styles/variables.css` 的 token
-- **站点图标代理**: `/api/favicon/:domain?k=<key>` 为图片代理（认证门放行但端点自验：`?k=` 持证 URL（由登录凭据派生，改密码自动失效）+ `Sec-Fetch-Dest: image`/`Sec-Fetch-Site: same-origin` 来源校验（fail-closed）；并发探测目标站首页 HTML 图标声明（只读前 256KB）、favicon.ico、favicon.im、DuckDuckGo、Google s2，内容定型（魔数 + SVG 嗅探）+ Cache API 缓存 7 天，全失败返回 200 空体（负面缓存 10 分钟，**不用 404**，避免控制台报错）；SVG 支持但危险构造（script/事件属性/foreignObject/javascript:/DOCTYPE）整份拒绝）。书签图标一律经 `useFavicon` 拼该代理地址渲染（含持证参数 k），加载失败回退「标题首字头像」；`icon_url` 字段已弃用（兼容位，前端与导入不再读写）
+- **站点图标代理**: `/api/favicon/:domain?k=<key>` 为图片代理（认证门放行但端点自验：`?k=` 持证 URL（由登录凭据派生，改密码自动失效）+ `Sec-Fetch-Dest: image`/`Sec-Fetch-Site: same-origin` 来源校验（fail-closed）；并发探测目标站首页 HTML 图标声明（只读前 256KB）、favicon.ico、favicon.im、DuckDuckGo、Google s2，内容定型（魔数 + SVG 嗅探）+ Cache API 缓存 30 天（SWR：7 天后命中即回旧图、后台重探覆盖，用户永不等待），全失败返回 200 空体（负面缓存 10 分钟，**不用 404**，避免控制台报错）；SVG 支持但危险构造（script/事件属性/foreignObject/javascript:/DOCTYPE）整份拒绝）。书签图标一律经 `useFavicon` 拼该代理地址渲染（含持证参数 k），加载失败回退「标题首字头像」；`icon_url` 字段已弃用（兼容位，前端与导入不再读写）
 - **导入导出**: 在设置面板中进行，支持浏览器书签 HTML 批量导入（`POST /api/bookmarks/batch`，上限 500 条、批内与库内双重去重）与 JSON 导出；批量导入忽略书签 HTML 的 `<ICON>` 属性（`icon_url` 已弃用）
 - **Schema 自动初始化**: worker 首次 API 请求探测关键表（favicon 路由除外），缺失时幂等执行根目录 `schema.sql`（经 wrangler `[[rules]]` Text 以文本 import，单一数据源，勿在 worker 内复制 SQL）；`wrangler d1 execute` 手动建表仅作备用
 - **URL 安全校验**: 书签 URL 仅允许 http/https 协议（后端强制校验，逻辑在 `worker/utils/validate.js`；前端手动表单提交前经 `src/utils/url.js` 的 `isAllowedUrl` 拦截，导入解析器过滤非 http/https 链接）

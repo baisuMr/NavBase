@@ -202,7 +202,7 @@ Content-Type: application/json
 
 #### 获取网站图标（图片代理）
 ```
-GET /api/favicon/:domain?k=<key>
+GET /api/favicon/:domain?k=<key>&v=<ver>
 ```
 
 **来源校验（先于鉴权）**：仅接受页面内图片请求（`Sec-Fetch-Dest: image` 且 `Sec-Fetch-Site: same-origin`，fail-closed），其余（地址栏直接打开、iframe 嵌入、curl 等）返回 `403 FORBIDDEN_CONTEXT`。
@@ -222,7 +222,7 @@ GET /api/favicon/:domain?k=<key>
 - 结果经 Cache API 缓存：成功 7 天，失败 10 分钟
 - 域名格式校验：仅接受合法 hostname，防止拼接路径/内网地址（SSRF）；重定向最多跟随 3 跳，且每跳目标同样必须是合法域名（杜绝跳转到内网 IP/localhost）
 
-**前端约定**：图标一律由 `useFavicon` 组合式函数拼 `/api/favicon/{域名}?k={key}` 渲染（k 由登录凭据派生，登录/启动时初始化），加载失败回退「标题首字头像」；书签 `icon_url` 字段已弃用（前端不再读写，历史直链不再使用）。
+**前端约定**：图标一律由 `useFavicon` 组合式函数拼 `/api/favicon/{域名}?k={key}&v={ver}` 渲染（k 由登录凭据派生，登录/启动时初始化；v 为图标缓存世代，随站点设置下发，换代即缓存作废），加载失败回退「标题首字头像」；书签 `icon_url` 字段已弃用（前端不再读写，历史直链不再使用）。
 
 ---
 
@@ -259,7 +259,8 @@ GET /api/settings
 ```json
 {
   "site_name": "NavBase",
-  "avatar": "data:image/webp;base64,..."
+  "avatar": "data:image/webp;base64,...",
+  "favicon_cache_ver": "1"
 }
 ```
 
@@ -276,9 +277,10 @@ Content-Type: application/json
 ```
 
 **说明**：
-- 仅支持 `site_name` 与 `avatar` 两个键（服务端白名单）
+- 仅支持 `site_name`、`avatar`、`favicon_cache_ver` 三个键（服务端白名单）
 - 字段值为**空字符串**表示清除并恢复默认；**缺省**（不传）表示不修改
 - `site_name` 不超过 30 字；`avatar` 为前端压缩后的 128×128 png/jpeg/webp dataURL（上限 200KB）
+- `favicon_cache_ver` 为图标缓存世代（正整数，如时间戳）：换代即各端图标缓存整体作废并重新探测（设置面板「清除图标缓存」按钮），随图标代理 URL 的 `v` 参数下发，默认 `1`
 
 ---
 

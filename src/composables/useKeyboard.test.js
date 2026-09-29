@@ -81,4 +81,14 @@ describe('useKeyboard', () => {
     press({ code: 'KeyN', altKey: true, ctrlKey: true, shiftKey: true })
     expect(addCategory).not.toHaveBeenCalled()
   })
+
+  it('输入法组合态按 Esc 取消候选词不触发关闭', () => {
+    const close = vi.fn()
+    mount({ close })
+    // KeyboardEvent 构造器对 isComposing 支持不一，defineProperty 保证事件携带组合态标记
+    const e = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true })
+    Object.defineProperty(e, 'isComposing', { value: true })
+    window.dispatchEvent(e)
+    expect(close).not.toHaveBeenCalled()
+  })
 })

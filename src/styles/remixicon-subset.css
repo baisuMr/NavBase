@@ -73,6 +73,7 @@
 .ri-palette-line:before { content: "\efc5"; }
 .ri-pushpin-line:before { content: "\f039"; }
 .ri-question-line:before { content: "\f045"; }
+.ri-refresh-line:before { content: "\f064"; }
 .ri-rocket-line:before { content: "\f096"; }
 .ri-search-line:before { content: "\f0d1"; }
 .ri-settings-line:before { content: "\f0ee"; }

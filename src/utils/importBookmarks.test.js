@@ -99,3 +99,35 @@ describe('parseNetscapeBookmarks', () => {
     }
   })
 })
+
+// 与 worker/utils/validate.js 入库上限对齐：解析期截断/过滤，
+// 避免单条超长触发服务端全有全无校验、整批导入 400
+describe('按入库上限截断/过滤', () => {
+  it('标题超 200 字截断（含无锚文本回退 URL 的场景）', () => {
+    const longUrl = 'https://a.com/' + 'x'.repeat(300)
+    const html = `<DL><p><DT><A HREF="${longUrl}"></A></DL><p>`
+    const r = parseNetscapeBookmarks(html)
+    expect(r.roots[0].title).toHaveLength(200)
+    expect(r.roots[0].url).toBe(longUrl)
+  })
+
+  it('URL 超 2048 字符直接跳过（截断会破坏链接目标）', () => {
+    const longUrl = 'https://a.com/' + 'x'.repeat(2100)
+    const html = `<DL><p><DT><A HREF="${longUrl}">超长</A><DT><A HREF="https://b.com/">B 站</A></DL><p>`
+    const r = parseNetscapeBookmarks(html)
+    expect(r.roots.map(l => l.title)).toEqual(['B 站'])
+  })
+
+  it('文件夹名超 50 字截断（对齐分类名校验上限）', () => {
+    const name = '分类' + 'x'.repeat(60)
+    const html = `<DL><p><DT><H3>${name}</H3><DL><p><DT><A HREF="https://a.com/">A</A></DL><p></DL><p>`
+    const r = parseNetscapeBookmarks(html)
+    expect(r.categories[0].name).toHaveLength(50)
+  })
+
+  it('href 首尾空白去除后再校验入库', () => {
+    const html = '<DL><p><DT><A HREF="  https://a.com/  ">A 站</A></DL><p>'
+    const r = parseNetscapeBookmarks(html)
+    expect(r.roots[0].url).toBe('https://a.com/')
+  })
+})

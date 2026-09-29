@@ -231,7 +231,8 @@
     <!-- 设置面板 -->
     <SettingsPanel
       v-if="settingsModal.visible"
-      @close="settingsModal.visible = false"
+      @close="closeSettingsModal"
+      @busy="settingsModal.busy = $event"
     />
 
     <!-- 快捷操作弹窗 -->
@@ -321,7 +322,7 @@ const activeCategory = ref('all')
 
 const categoryModal = ref({ visible: false, data: null, loading: false })
 const bookmarkModal = ref({ visible: false, data: null, loading: false })
-const settingsModal = ref({ visible: false })
+const settingsModal = ref({ visible: false, busy: false })
 const shortcutModal = ref({ visible: false })
 const confirmModal = ref({ visible: false, title: '', message: '', loading: false, onConfirm: null })
 
@@ -527,7 +528,7 @@ useKeyboard({
     // 表单弹窗 loading 中不响应 ESC（焦点在弹窗外时由这里兜底，与 @close 守卫对齐）
     closeCategoryModal()
     closeBookmarkModal()
-    settingsModal.value.visible = false
+    closeSettingsModal()
     shortcutModal.value.visible = false
     // 确认弹窗 loading 中不响应 ESC（焦点在弹窗外时由这里兜底）
     if (!confirmModal.value.visible || !confirmModal.value.loading) {
@@ -646,6 +647,11 @@ function closeCategoryModal() {
 }
 function closeBookmarkModal() {
   if (!bookmarkModal.value.loading) bookmarkModal.value.visible = false
+}
+// 设置面板导入/头像上传中忽略关闭（遮罩/ESC/关闭按钮均汇入此处，对齐表单弹窗守卫语义），
+// 避免慢操作在后台继续却被误以为已取消
+function closeSettingsModal() {
+  if (!settingsModal.value.busy) settingsModal.value.visible = false
 }
 
 async function handleCategorySubmit(formData) {
