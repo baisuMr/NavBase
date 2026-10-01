@@ -1,6 +1,14 @@
 # NavBase
 
-自用开源的网址书签导航管理平台，替代浏览器书签和主页功能。基于 [Cloudflare Workers](https://workers.cloudflare.com/) 与 [Cloudflare D1](https://developers.cloudflare.com/d1/) 开发，**零服务器、零运维、零成本部署**，免费计划额度远超个人书签站用量。
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Release](https://img.shields.io/github/v/tag/baisuMr/NavBase)](https://github.com/baisuMr/NavBase/tags)
+[![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![Cloudflare D1](https://img.shields.io/badge/Cloudflare-D1-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/d1/)
+
+**零服务器、零运维、零成本的自托管书签导航站** —— 开源自用，5 分钟上线。
+
+自用开源的网址书签导航管理平台，替代浏览器书签和主页功能。基于 [Cloudflare Workers](https://workers.cloudflare.com/) 与 [Cloudflare D1](https://developers.cloudflare.com/d1/) 开发，免费计划额度远超个人书签站用量。
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/baisuMr/NavBase)
 
@@ -261,6 +269,8 @@ NavBase/
 ## 友情链接
 
 [Linux DO](https://linux.do/)
+
+> 如果 NavBase 对你有用，欢迎点个 ⭐ **Star** 支持一下，这能帮助更多人发现它。
 
 ## 许可证
 
