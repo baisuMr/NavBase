@@ -32,6 +32,7 @@ pnpm-debug.log*
 
 # Cache
 .cache/
+.vitest/
 
 # Playwright MCP 测试产物
 .playwright-mcp/

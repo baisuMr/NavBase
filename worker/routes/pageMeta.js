@@ -1,4 +1,10 @@
 import { errorResponse, jsonResponse } from '../utils/http.js';
+// 流式读取（与 favicon 共用）：只读前 MAX_HTML_BYTES 字节、提前取消剩余流，防异常大响应拖内存
+import { readBytes } from '../utils/readBytes.js';
+// 抓取（与 favicon 共用）：手动跟随重定向（≤3 跳）且跳转目标同样校验域名，防被目标站带到内网
+import { fetchWithRedirects } from '../utils/fetch.js';
+// 域名白名单（与 favicon 共用）：内网 IP / localhost / 单段主机名等一律不发起抓取
+import { isAllowedDomain } from '../utils/domain.js';
 
 // GET /api/page-meta?url=... - 抓取目标页 HTML 提取标题/描述（添加书签表单自动回填用）
 // 普通 Basic Auth 认证门内端点（JSON 接口，非图片代理，无需 k 持证）
@@ -12,30 +18,6 @@ const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 // 失败语义：抓取失败/非 HTML/超时统一 200 空字段（与 favicon 端点「失败不用 4xx」同一哲学）
 function emptyResult() {
   return jsonResponse({ title: '', description: '' }, 200);
-}
-
-// 流式读取响应体前 maxBytes 字节（与 favicon 同款做法，防异常大响应拖内存）
-async function readBytes(res, maxBytes) {
-  const reader = res.body.getReader();
-  const chunks = [];
-  let received = 0;
-  try {
-    while (received <= maxBytes) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.byteLength;
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-  }
-  const all = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    all.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return all;
 }
 
 // 解码 HTML 字节：charset 取 Content-Type → meta 嗅探 → utf-8 逐级回退（GBK 中文站不乱码）
@@ -126,7 +108,12 @@ export async function handle(request) {
     return errorResponse('请求方法不支持', 'METHOD_NOT_ALLOWED', 405);
   }
 
-  const rawUrl = new URL(request.url).searchParams.get('url');
+  let rawUrl;
+  try {
+    rawUrl = new URL(request.url).searchParams.get('url');
+  } catch {
+    return errorResponse('URL格式不正确', 'VALIDATION_ERROR', 400);
+  }
   if (!rawUrl || !rawUrl.trim()) {
     return errorResponse('URL不能为空', 'VALIDATION_ERROR', 400);
   }
@@ -143,13 +130,15 @@ export async function handle(request) {
   if (target.protocol !== 'http:' && target.protocol !== 'https:') {
     return errorResponse('仅支持 http/https 链接', 'VALIDATION_ERROR', 400);
   }
+  // 域名白名单（与图标代理同口径）：只放行公网域名。抓取由云端发起，本就够不着调用方局域网，
+  // 早拒绝省一次超时等待，也堵住借道探测内网的口子；内网书签标题由用户手动填写
+  if (!isAllowedDomain(target.hostname.toLowerCase())) {
+    return errorResponse('域名格式不合法', 'VALIDATION_ERROR', 400);
+  }
 
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(target.href, {
-      redirect: 'follow',
-      signal: ctl.signal,
+    const res = await fetchWithRedirects(target.href, {
+      timeout: FETCH_TIMEOUT_MS,
       headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html,application/xhtml+xml' }
     });
     if (!res.ok) return emptyResult();
@@ -163,7 +152,5 @@ export async function handle(request) {
     }, 200);
   } catch {
     return emptyResult();
-  } finally {
-    clearTimeout(timer);
   }
 }

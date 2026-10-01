@@ -1,15 +1,23 @@
 # NavBase
 
-自用开源的网址书签导航管理平台，替代浏览器书签和主页功能；基于 [Cloudflare Workers](https://workers.cloudflare.com/) 和 [Cloudflare D1数据库](https://developers.cloudflare.com/d1/)开发，实现**零成本部署**，免费计划额度远超个人书签站用量。
-
-> **部署流程**：先 [Fork](https://github.com/baisuMr/NavBase/fork) 本仓库 → 在你 Fork 后的仓库里点击下方按钮一键部署 → 向导中选择你 Fork 的仓库。详细步骤见 [部署步骤](#部署步骤)。
+自用开源的网址书签导航管理平台，替代浏览器书签和主页功能。基于 [Cloudflare Workers](https://workers.cloudflare.com/) 与 [Cloudflare D1](https://developers.cloudflare.com/d1/) 开发，**零服务器、零运维、零成本部署**，免费计划额度远超个人书签站用量。
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/baisuMr/NavBase)
+
+> **5 分钟上手**：[Fork](https://github.com/baisuMr/NavBase/fork) 本仓库 → 点上方按钮一键部署 → 向导中选择你 Fork 的仓库 → 补配登录密码。详细步骤见 [部署步骤](#部署步骤)。
+
+## 目录
+
+- [界面预览](#界面预览) · [功能特性](#功能特性) · [技术栈](#技术栈)
+- [部署步骤](#部署步骤) · [环境变量](#环境变量) · [常见问题](#常见问题)
+- [日常更新](#日常更新) · [数据备份](#数据备份) · [从旧版本升级](#从旧版本升级)
+- [本地开发](#本地开发) · [项目结构](#项目结构) · [安全说明](#安全说明)
+- [项目边界](#项目边界) · [文档](#文档)
 
 ## 界面预览
 
 | **导航首页**               | 书签库                   |
-| -------------------------- | ------------------------ |
+| --- | --- |
 | ![导航首页](./docs/01.png) | ![书签库](./docs/02.png) |
 
 ## 功能特性
@@ -36,7 +44,7 @@
 
 ---
 
-## 一键部署
+## 部署
 
 部署目标为 **Cloudflare Workers**：静态资源由 Workers Static Assets 托管，API 由同一个 Worker 处理，数据存 D1。全程无需本地环境，**Cloudflare 免费计划即可运行**（Workers 免费 10 万请求/天 + D1 免费 5GB 存储，个人书签站用量远低于额度，零成本）。
 
@@ -47,7 +55,7 @@
 3. 在「设置您的应用程序」页按下表填写（关键是**选择你 Fork 后的仓库**）：
 
    | 页面字段 | 怎么填 |
-   |--------|--------|
+   | --- | --- |
    | Git 帐户 | 选择你的 GitHub 账号，并选中你 Fork 后的仓库（NavBase）进行连接，对生产分支的每次推送都会自动部署 |
    | 创建专用 Git 存储库 | 不勾选——部署直接使用你 Fork 的仓库，无需另建仓库 |
    | 项目名称 | 默认 `navbase`，可自定义；这是 Worker 名，决定访问地址 |
@@ -77,6 +85,37 @@
 - 配置 Workers Builds：之后 `git push` 到 main 分支即自动构建重新部署，Pull Request 自动生成预览 URL
 - ⚠️ **不包括** `ADMIN_USERNAME` / `ADMIN_PASSWORD`：向导里填写的值只作为构建环境变量，需按上文第 5 步手动补配为 Worker Secret
 
+### 绑定自定义域名（可选）
+
+1. 将域名的 DNS 托管到 Cloudflare
+2. Cloudflare 控制台 → Workers & Pages → 你的 Worker → **Settings → Domains & Routes → Add → Custom Domain**，填入域名
+3. 绑定后站点图标代理的边缘缓存随之启用（`*.workers.dev` 下不缓存，仅略慢）
+
+### 环境变量
+
+| 变量名 | 说明 | 配置方式 |
+| --- | --- | --- |
+| `ADMIN_USERNAME` | 管理员用户名 | Secret（部署后在 Settings → Variables and Secrets 手动添加，默认 `admin`） |
+| `ADMIN_PASSWORD` | 管理员密码 | Secret（同上，**必填**） |
+| `LOGIN_DURATION_DAYS` | 登录保持天数 | `wrangler.toml` [vars]（默认 `7`） |
+| `REMEMBER_DURATION_DAYS` | 勾选「记住此设备」时的登录保持天数 | `wrangler.toml` [vars]（默认 `30`） |
+
+> ⚠️ 密码属于凭据，不要写入 `wrangler.toml`（该文件会被 git 跟踪并随部署生效）。部署向导里填写的 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 只会保存为构建环境变量，不会成为 Worker Secret，必须在控制台手动添加。
+
+### 常见问题
+
+| 现象 | 原因与解决 |
+| --- | --- |
+| 所有 API 返回 500 `NOT_CONFIGURED` | 未配置 `ADMIN_PASSWORD` Secret：部署向导里填的值不会自动生效，前往 Worker **Settings → Variables and Secrets** 添加 `ADMIN_PASSWORD`（类型选 Secret）后重试；预览环境则是缺预览凭据，按上文「预览登录凭据」一次配置即可持久 |
+| 部署设置页黄条提示 API 令牌缺少权限 | 缺少的是 `ssl_and_certificates_write`、`email_routing_*` 等本项目用不到的权限，直接点「部署」即可 |
+| 所有 API 返回 500 `DB_INIT_FAILED` | D1 初始化失败：检查 Worker 的 **Settings → Bindings** 中 D1 绑定是否存在，修复后重试（worker 会自动重试建表） |
+| 登录提示「用户名或密码错误」 | 核对 Secret 中的凭据；修改后需重新部署或等待缓存刷新 |
+| 线上 favicon 每次都重新探测 | `*.workers.dev` 域名下 Cache API 不生效；绑定自定义域名后恢复 7 天缓存 |
+
+---
+
+## 使用与维护
+
 ### 日常更新
 
 约定：**`main` 分支即线上**（Workers Builds 仅监听 `main` 的推送），日常开发在 **`dev` 分支**进行：
@@ -96,42 +135,28 @@ git push
 
 - 未完成功能想在线验收：推送到非生产分支会自动构建 Preview，稳定 URL 为 `https://<分支名>-<Worker 名>.<账号子域>.workers.dev`，开 PR 还会把 URL 评论到 PR，满意后再合并
 - 合并上线前的检查清单：全量测试通过；若改过 `schema.sql`，先对生产库执行迁移（见 `migrations/` 脚本头部用法，加列类迁移对旧代码无害，务必先于新代码上线）
-
-  > ⚠️ **合并/部署前必做——执行 `migrations/2026-09-26-unique-bookmark-url.sql`**（bookmarks.url 唯一索引换建，幂等可重复执行）：对**生产库**与**预览库**各执行一次，命令见迁移文件头部注释。
-
 - 预览构建使用 `wrangler.toml` 的 `[previews]` 独立配置（变量与绑定不复用生产设置）：自己部署时请把 `previews.d1_databases.database_id` 换成你自己的预览库（`wrangler d1 create <名称>` 获取）；预览登录凭据一次配置后持久生效——`wrangler preview base-config secret put ADMIN_PASSWORD`（之后新建的预览自动继承）+ `wrangler preview secret put ADMIN_PASSWORD --name dev`（补设已存在的预览，Base 配置不回溯）；勿在控制台「Runtime variables and secrets」里配预览凭据（部署级设置，下次构建即丢失）
 - 紧急修复线上问题：可在 `main` 直接修复并推送上线，之后执行 `git checkout dev && git merge main` 把修复同步回 `dev`
 
-### 绑定自定义域名（可选）
+### 数据备份
 
-1. 将域名的 DNS 托管到 Cloudflare
-2. Cloudflare 控制台 → Workers & Pages → 你的 Worker → **Settings → Domains & Routes → Add → Custom Domain**，填入域名
-3. 绑定后站点图标代理的边缘缓存随之启用（`*.workers.dev` 下不缓存，仅略慢）
+数据都在 D1 里，双保险：
 
-### 环境变量
+1. **随手备份**：设置面板 →「导出 JSON」，每月存一份本地文件（导入走同一面板，可整站恢复）
+2. **误操作回滚**：Cloudflare D1 自带 Time Travel，可把数据库恢复到过去 7 天内的任意时刻
 
-| 变量名 | 说明 | 配置方式 |
-|--------|------|----------|
-| `ADMIN_USERNAME` | 管理员用户名 | Secret（部署后在 Settings → Variables and Secrets 手动添加，默认 `admin`） |
-| `ADMIN_PASSWORD` | 管理员密码 | Secret（同上，**必填**） |
-| `LOGIN_DURATION_DAYS` | 登录保持天数 | `wrangler.toml` [vars]（默认 `7`） |
-| `REMEMBER_DURATION_DAYS` | 勾选「记住此设备」时的登录保持天数 | `wrangler.toml` [vars]（默认 `30`） |
+### 从旧版本升级
 
-> ⚠️ 密码属于凭据，不要写入 `wrangler.toml`（该文件会被 git 跟踪并随部署生效）。部署向导里填写的 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 只会保存为构建环境变量，不会成为 Worker Secret，必须在控制台手动添加。
+升级到新版本时，若版本间有数据库变更，按时间顺序执行 `migrations/` 里的一次性脚本（**命令以脚本头部注释为准**，此处不复制）。每个脚本幂等可重复执行，且加列类迁移对旧代码无害——务必**先执行迁移，再合并部署新代码**。
 
-### 常见问题
-
-| 现象 | 原因与解决 |
-|------|-----------|
-| 所有 API 返回 500 `NOT_CONFIGURED` | 未配置 `ADMIN_PASSWORD` Secret：部署向导里填的值不会自动生效，前往 Worker **Settings → Variables and Secrets** 添加 `ADMIN_PASSWORD`（类型选 Secret）后重试；预览环境则是缺预览凭据，按上文「预览登录凭据」一次配置即可持久 |
-| 部署设置页黄条提示 API 令牌缺少权限 | 缺少的是 `ssl_and_certificates_write`、`email_routing_*` 等本项目用不到的权限，直接点「部署」即可 |
-| 所有 API 返回 500 `DB_INIT_FAILED` | D1 初始化失败：检查 Worker 的 **Settings → Bindings** 中 D1 绑定是否存在，修复后重试（worker 会自动重试建表） |
-| 登录提示「用户名或密码错误」 | 核对 Secret 中的凭据；修改后需重新部署或等待缓存刷新 |
-| 线上 favicon 每次都重新探测 | `*.workers.dev` 域名下 Cache API 不生效；绑定自定义域名后恢复 7 天缓存 |
+- 全新部署（刚建的空库）：**无需任何迁移**，首次请求自动建表已是最新结构
+- 老库升级：只需手动执行 `migrations/2026-09-26-unique-bookmark-url.sql`（bookmarks.url 换建唯一索引）一次；`is_pinned` 列不用手动补（worker 检测到缺列会自动 ALTER），`2026-09-22-resort-sort-order.sql` 只是对 v1.0 之前的乱序数据做整理，顺序正常则无需执行
 
 ---
 
-## 本地开发
+## 开发
+
+### 本地开发
 
 需要 Node.js 22.12+（或 24 / 26）与 pnpm 12。
 
@@ -148,9 +173,9 @@ pnpm build      # 生成 dist/（wrangler dev 需托管静态资源，首次必�
 pnpm dev:full   # 同时启动前端 (5173) 与本地 API (8788)
 ```
 
-访问 http://localhost:5173。本地 D1 位于 `.wrangler/state`，首次 API 请求自动建表，无需手动执行 `schema.sql`。
+访问 `http://localhost:5173`。本地 D1 位于 `.wrangler/state`，首次 API 请求自动建表，无需手动执行 `schema.sql`。
 
-### 测试
+#### 测试
 
 ```bash
 pnpm test                                    # 全量运行
@@ -159,11 +184,30 @@ pnpm test src/composables/useLunar.test.js   # 运行单个测试文件
 bash scripts/test-api.sh                     # 本地 API 冒烟（需本地 API 在跑）
 ```
 
+#### 字体与图标子集再生成
+
+字体和图标都以子集形式打包在 `src/assets/fonts/`，**只在改动它们时才需要重跑**（需可访问 fonts.googleapis.com）：
+
+```bash
+node scripts/generate-fonts.mjs        # 正文字体（Inter / JetBrains Mono）子集
+node scripts/generate-icon-subset.mjs  # Remix Icon 图标子集
+```
+
+新增图标的做法：先在组件里写 `ri-xxx-line` 类名（对照 [remixicon.com](https://remixicon.com/)），**再重跑图标子集脚本**，否则新图标不显示。
+
+#### 灌入测试数据
+
+```bash
+pnpm exec wrangler d1 execute navbase-db --file=scripts/seed-test-data.sql
+```
+
+可重复执行（幂等），仅用于本地调试；`wrangler d1` 默认操作本地库。
+
 ---
 
 ## 项目结构
 
-```
+```text
 NavBase/
 ├── src/
 │   ├── components/        # Vue 组件
@@ -174,17 +218,17 @@ NavBase/
 │   ├── composables/      # 组合式函数
 │   ├── stores/           # Pinia 状态
 │   ├── api/              # API 封装
-│   ├── utils/            # 工具函数（书签导入解析等）
-│   ├── styles/           # CSS 样式
+│   ├── utils/            # 工具函数（书签导入解析、域名校验等）
+│   ├── styles/           # CSS 样式（变量表 → components / layout）
 │   └── views/            # 页面视图
 ├── worker/               # Cloudflare Worker
 │   ├── index.js          # 入口：认证门 + 路由表 + schema 惰性初始化 + ASSETS 兜底
 │   ├── auth.js           # Basic Auth 认证门
 │   ├── schema-init.js    # D1 schema 自动初始化（空库幂等建表）
 │   ├── routes/           # API 端点处理函数
-│   └── utils/            # 共享校验工具与测试 D1 mock
-├── scripts/              # 构建与辅助脚本（正文字体子集生成、API 冒烟测试）
-├── migrations/           # 数据库迁移 SQL
+│   └── utils/            # 共享工具（域名/URL 校验、流式读取、抓取、测试 D1 mock）
+├── scripts/              # 辅助脚本（字体/图标子集生成、测试数据、API 冒烟）
+├── migrations/           # 数据库迁移 SQL（头部注释为命令唯一来源）
 ├── schema.sql            # 数据库 Schema（幂等，worker 首次请求自动执行）
 └── wrangler.toml         # Cloudflare 配置
 ```
@@ -193,15 +237,26 @@ NavBase/
 
 - token 为 Basic Auth 凭据的 Base64 编码，存储于 localStorage（勾选记住此设备）或 sessionStorage；请勿在不受信任的设备上登录
 - 登录接口对失败尝试做了简易延迟防护；公网部署建议在 Cloudflare 侧再配置 WAF 速率限制
+- 站点图标走服务端代理：校验目标域名格式（内网地址一律拒绝）、限制重定向跳数、限制响应体大小，响应带 CSP sandbox 与 nosniff 头
 - 页面已设置 `robots noindex`，避免个人书签站被搜索引擎收录
 
-## API 文档
+## 项目边界
 
-详见 [API.md](./API.md)
+项目处于维护期，目标是「一个人用得舒服」。以下方向**明确不做**，提 issue 前可以先看这里：
 
-## 更新日志
+- 多用户、权限体系、团队协作
+- 插件系统、主题市场、深色模式
+- 浏览器扩展 / 移动端 App
+- 与浏览器书签自动双向同步
 
-详见 [CHANGELOG.md](./CHANGELOG.md)
+一切改动保持小而必要：新想法先记进 `TODO.md` 沉淀一段时间，确有需要再做。
+
+## 文档
+
+- [API.md](./API.md) — 接口契约
+- [CHANGELOG.md](./CHANGELOG.md) — 更新日志
+- `CLAUDE.md` — 代码约定与维护原则（改动前请先读）
+- `migrations/` 头部注释 — 数据库迁移的执行命令
 
 ## 友情链接
 

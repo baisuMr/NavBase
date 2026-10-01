@@ -1,18 +1,19 @@
 import { isValidFaviconKey } from '../utils/faviconKey.js';
 import { acceptImageType } from '../utils/imageType.js';
+import { isAllowedDomain } from '../utils/domain.js';
+import { readBytes } from '../utils/readBytes.js';
+import { fetchWithRedirects } from '../utils/fetch.js';
 import { errorResponse, notConfiguredError } from '../utils/http.js';
 
 // GET /api/favicon/:domain - 代理并缓存网站图标
 // <img> 标签无法携带 Basic Auth 头，此端点在认证门中放行（详见 auth.js）、由处理器自验 ?k= 持证；
 // 域名由调用方提供、输出为公开网站图标，不含任何用户数据
-const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 export const MAX_ICON_BYTES = 512 * 1024; // 512KB 上限，拦截异常大文件（导出供测试断言流式截断阈值）
 const CACHE_TTL = 2592000; // 成功结果缓存 30 天（Cloudflare Cache API + 浏览器）
 const REFRESH_AFTER = 604800; // SWR 后台重探周期 7 天：过期即回旧图、后台刷新，用户永不为重探等待
 const MISS_TTL = 600; // 失败结果缓存 10 分钟，避免对不可达站点反复探测
 const SOURCE_TIMEOUT = 3000; // 单源超时（毫秒）
 const TOTAL_BUDGET_MS = 5000; // 整个请求的硬预算（含 body 读取），到点统一取消
-const MAX_REDIRECTS = 3; // 手动跟随重定向上限
 const MAX_HTML_CANDIDATES = 3; // HTML 图标声明最多尝试的候选数
 const MAX_HTML_BYTES = 256 * 1024; // 首页 HTML 只读前 256KB（图标声明集中在 head 区）
 
@@ -25,77 +26,9 @@ const SECURITY_HEADERS = {
 
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
-/**
- * 手动跟随重定向的 fetch：
- *  - redirect: 'manual' 防上游把探测请求带到不可控目标（安全）
- *  - 仅允许 http/https 且最多 MAX_REDIRECTS 跳，兼容 http→https 升级等常见跳转
- *  - 支持外部 signal（竞速取消）与内部超时
- */
-async function fetchWithRedirects(url, { signal, timeout, headers }) {
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), timeout);
-  const onOuterAbort = () => ctl.abort();
-  if (signal) signal.addEventListener('abort', onOuterAbort, { once: true });
-  try {
-    let current = url;
-    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      const res = await fetch(current, { redirect: 'manual', signal: ctl.signal, headers });
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get('location');
-        if (!location) return res;
-        const next = new URL(location, current);
-        if (next.protocol !== 'http:' && next.protocol !== 'https:') {
-          throw new Error('重定向到非 http(s) 协议');
-        }
-        // 跳转目标同样必须是合法域名格式：杜绝跳到内网 IP / localhost 等地址
-        if (!ALLOWED_DOMAIN.test(next.hostname.toLowerCase())) {
-          throw new Error('重定向到非法域名');
-        }
-        current = next.href;
-        continue;
-      }
-      return res;
-    }
-    throw new Error('重定向次数过多');
-  } finally {
-    clearTimeout(timer);
-    if (signal) signal.removeEventListener('abort', onOuterAbort);
-  }
-}
+// 手动跟随重定向已下沉 utils/fetch.js（与 pageMeta 共用）
 
-// 把 abort 事件转成可与 reader.read() 竞速的 rejected promise（信号触发时让读取立即失败）
-function abortPromise(signal) {
-  return new Promise((_, reject) => {
-    if (!signal) return;
-    if (signal.aborted) return reject(new Error('已取消'));
-    signal.addEventListener('abort', () => reject(new Error('已取消')), { once: true });
-  });
-}
-
-// 流式读取响应体的前 maxBytes 字节（提前取消剩余流，不等整个响应下载完，
-// 防止恶意源慢慢滴流拖住内存）；返回已读字节的 Uint8Array，长度可能略超 maxBytes（最后一块整块计入）
-async function readBytes(res, maxBytes, signal) {
-  const reader = res.body.getReader();
-  const chunks = [];
-  let received = 0;
-  try {
-    while (received <= maxBytes) {
-      const { done, value } = await Promise.race([reader.read(), abortPromise(signal)]);
-      if (done) break;
-      chunks.push(value);
-      received += value.byteLength;
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-  }
-  const all = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    all.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return all;
-}
+// 流式读取与 abort 竞速已下沉 utils/readBytes.js（与 pageMeta 共用）
 
 // 流式读取图片体，超过 maxBytes 拒收（大小校验内聚在此，调用方只管定型）
 async function readImageBytes(res, maxBytes, signal) {
@@ -238,13 +171,20 @@ export async function handle(request, env, params, ctx) {
   }
 
   // 持证校验：k 由登录凭据派生（详见 src/utils/faviconKey.js），未持证不进入任何探测
-  const k = new URL(request.url).searchParams.get('k');
+  // （request.url 解析包 try/catch：异常 URL 不裸抛，统一落 400）
+  let searchParams;
+  try {
+    searchParams = new URL(request.url).searchParams;
+  } catch {
+    return errorResponse('请求 URL 不合法', 'VALIDATION_ERROR', 400, SECURITY_HEADERS);
+  }
+  const k = searchParams.get('k');
   if (!(await isValidFaviconKey(k, env))) {
     return errorResponse('未授权访问', 'UNAUTHORIZED', 401, SECURITY_HEADERS);
   }
 
   // 域名格式校验：只放行合法 hostname，杜绝把路径/凭据拼进上游 URL（SSRF）
-  if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain)) {
+  if (!isAllowedDomain(domain)) {
     return errorResponse('域名格式不合法', 'VALIDATION_ERROR', 400, SECURITY_HEADERS);
   }
 
@@ -252,7 +192,7 @@ export async function handle(request, env, params, ctx) {
   const cache = caches.default;
   // 键含缓存世代 v（前端随站点设置下发拼进图标 URL）：换代即缓存键整体变化、旧条目作废，
   // 服务端无需每次读库；v4 前缀为响应头策略版本（类型强制/nosniff + X-Fetched-At）
-  const rawVer = new URL(request.url).searchParams.get('v') || '1';
+  const rawVer = searchParams.get('v') || '1';
   const ver = /^\d{1,12}$/.test(rawVer) ? rawVer : '1';
   const cacheKey = new Request(`https://favicon-cache.local/v4/${ver}/${domain}`);
   const cached = await cache.match(cacheKey);

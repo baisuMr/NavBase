@@ -12,6 +12,8 @@
   font-size: var(--fs-body-sm);
   font-weight: var(--fw-medium);
   border: 1px solid transparent;
+  /* 按钮文字不供选中：点击微动会被浏览器判成「拖选文字」而不生成 click（同分类 tab） */
+  user-select: none;
   transition: all var(--t-fast);
 }
 
@@ -249,6 +251,8 @@
   font-size: var(--fs-body-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
+  /* 菜单项文字不供选中：同 .btn，避免点击微动被吞 */
+  user-select: none;
   transition: all var(--t-fast);
 }
 
