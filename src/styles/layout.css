@@ -204,6 +204,8 @@
   align-items: center;
   gap: 6px;
   padding: var(--space-sm) var(--space-md);
+  /* 引擎切换按钮文字不供选中：同 .btn，避免点击微动被吞 */
+  user-select: none;
   background-color: var(--color-surface-muted);
   border-radius: var(--radius-md);
   font-size: var(--fs-body-sm);
@@ -560,6 +562,8 @@
   font-weight: var(--fw-medium);
   color: var(--color-text-secondary);
   white-space: nowrap;
+  /* 禁止选中文字：点击微动会被浏览器判成「拖选文字」而不生成 click，导致点击失效 */
+  user-select: none;
   transition: all var(--t-fast);
 }
 
@@ -731,6 +735,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-icon);
   color: inherit;
+  /* 禁止选中文字：同分类 tab，避免点击微动被浏览器判成「拖选文字」吞掉 click */
+  user-select: none;
   transition: all var(--t-fast);
 }
 
@@ -885,6 +891,8 @@
 .app-footer-links a {
   font-size: var(--fs-body-sm);
   color: var(--color-text-muted);
+  /* footer 按钮/链接文字不供选中：同 .btn，避免点击微动被吞 */
+  user-select: none;
   transition: color var(--t-fast);
 }
 

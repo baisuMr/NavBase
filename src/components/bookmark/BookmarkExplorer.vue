@@ -151,6 +151,14 @@ function armClickSwallow(el) {
   setTimeout(() => {
     document.removeEventListener('click', swallowClick, { capture: true })
     swallowEl = null
+    // 吞掉 Sortable 防误击开关的残留（fallback 拖拽启动时置位、靠吞一次 click 复位；
+    // 拖拽松手若未产生 click 就残留，会吞掉用户下一次真实点击）：诱饵点击会被其拦截复位；
+    // 自带 capture stopPropagation，开关未置位时诱饵也不会冒泡触发业务点击
+    const decoy = document.createElement('div')
+    decoy.addEventListener('click', (e) => e.stopPropagation(), { capture: true })
+    document.body.appendChild(decoy)
+    decoy.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
+    decoy.remove()
   }, 300)
 }
 
@@ -167,6 +175,8 @@ function bindGridSortables() {
         // 拖影挂到 body 下，避免被网格容器裁切
         forceFallback: true,
         fallbackOnBody: true,
+        // 3px 容差：点击时手抖微动不误启动拖拽（否则浏览器/拖拽库的防误击逻辑会吞掉本次点击）
+        fallbackTolerance: 3,
         draggable: '.bookmark-card',
         ghostClass: 'bookmark-card-ghost',
         // 各块独立列表（pull/put 关闭）：跨块拖不动，只在所属分类内重排
@@ -203,6 +213,8 @@ onMounted(async () => {
     easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
     forceFallback: true,
     fallbackOnBody: true,
+    // 3px 容差：同网格拖拽，点击手抖微动不误启动拖拽
+    fallbackTolerance: 3,
     draggable: '.category-tab-cat',
     ghostClass: 'category-tab-ghost',
     onMove(evt) {
