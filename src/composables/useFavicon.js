@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { getFaviconKey, getFaviconCacheVer } from '../utils/faviconKey'
+import { isAllowedDomain } from '../utils/domain'
 
 // 失败回退的持续时长：与后端负面缓存 MISS_TTL（10 分钟）对齐，
 // 到期后自动恢复重试（如后端图标已可获取）
@@ -22,16 +23,15 @@ export function domainOf(url) {
   return domain
 }
 
-// 与 worker/routes/favicon.js 的 ALLOWED_DOMAIN 口径一致（含 ≤253 长度）：
+// 域名合法性判定统一走 utils/domain.js（与 worker 同口径，测试向量锁定）：
 // localhost / 内网 IP / 单段主机名等不合法域名不拼代理地址，直接回退首字头像
-const ALLOWED_DOMAIN = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/
 
 // 拼 /api/favicon 代理地址（带持证参数 k 与缓存世代 v）；域名不合法或 k 缺失返回 ''
 // v 随站点设置换代即 URL 变化：浏览器缓存与服务端缓存键同时作废（清除图标缓存按钮）
 export function faviconSrc(url) {
   const domain = domainOf(url)
   const k = getFaviconKey()
-  if (!domain || domain.length > 253 || !ALLOWED_DOMAIN.test(domain) || !k) return ''
+  if (!isAllowedDomain(domain) || !k) return ''
   return `/api/favicon/${domain}?k=${encodeURIComponent(k)}&v=${getFaviconCacheVer()}`
 }
 

@@ -289,11 +289,12 @@ import { useSettingsStore } from '../stores/settings'
 import { useBookmarksStore } from '../stores/bookmarks'
 import { CATEGORY_ICONS } from '../constants/categoryIcons'
 import { selectPinnedBookmarks } from '../utils/pinned'
-import pkg from '../../package.json'
+// 具名导入取版本号：default 整包导入会把 package.json 全文（依赖清单/校验串）打进产物
+import { version } from '../../package.json'
 
 const settingsStore = useSettingsStore()
 const bookmarksStore = useBookmarksStore()
-const appVersion = pkg.version
+const appVersion = version
 
 // ── 预设数据 ──
 const presetColors = [
