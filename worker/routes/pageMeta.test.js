@@ -67,6 +67,22 @@ describe('GET /api/page-meta 参数校验', () => {
     expect(res.status).toBe(400)
     expect((await res.json()).error).toBe('URL 不能超过 2048 个字符')
   })
+
+  it('内网 IP / localhost / 机器名返回 400，且不发起抓取', async () => {
+    const calls = stubFetch({})
+    for (const bad of [
+      'http://192.168.1.1/admin',
+      'http://10.0.0.1:8080/',
+      'http://127.0.0.1/',
+      'http://localhost:5000/',
+      'http://nas/'
+    ]) {
+      const res = await invoke(makeRequest(bad))
+      expect(res.status, bad).toBe(400)
+      expect((await res.json()).error).toBe('域名格式不合法')
+    }
+    expect(calls).toHaveLength(0)
+  })
 })
 
 describe('GET /api/page-meta 提取规则', () => {
@@ -196,5 +212,28 @@ describe('GET /api/page-meta 失败语义', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('重定向到内网地址时不跟随跳转，返回 200 空字段', async () => {
+    stubFetch({
+      'https://example.com/': new Response(null, { status: 302, headers: { Location: 'http://192.168.1.1/' } })
+    })
+    const res = await invoke(makeRequest('https://example.com/'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual(EMPTY)
+  })
+
+  it('重定向跳数超限返回 200 空字段', async () => {
+    const byUrl = {}
+    for (let i = 0; i <= 4; i++) {
+      byUrl[`https://example.com/${i}`] = new Response(null, {
+        status: 302,
+        headers: { Location: `https://example.com/${i + 1}` }
+      })
+    }
+    stubFetch(byUrl)
+    const res = await invoke(makeRequest('https://example.com/0'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual(EMPTY)
   })
 })
